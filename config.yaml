@@ -1,0 +1,30 @@
+# 个人 AI 深度阅读助手 — 工具与存储层配置
+
+# 生成笔记的输出目录（相对于项目根目录）
+output_dir: "output"
+
+# Obsidian Vault 目录；留空则使用环境变量 OBSIDIAN_VAULT_PATH
+vault_dir: ""
+
+# 缓存目录（搜索来源、中间结果等）
+cache_dir: ".cache"
+
+# 默认使用的大模型名称
+model: "qwen-plus"
+
+# 可信搜索域白名单：Agent 搜索时优先使用这些来源
+trusted_domains:
+  - "zh.wikipedia.org"          # 中文维基百科
+  - "baike.baidu.com"           # 百度百科
+  - "ctext.org"                 # 中国哲学书电子化计划
+  - "guoxue123.com"             # 国学网
+  - "zhihu.com"                 # 知乎（专栏/回答需人工校验）
+  - "xuewen.cnki.net"           # CNKI 学问
+  - "zggds.org"                 # 中国古代史
+  - "sinica.edu.tw"             # 中央研究院
+  - "himalaya.socanth.cam.ac.uk" # 剑桥喜马拉雅数字图书馆（可选）
+
+# MCP 服务器名称映射
+mcp_servers:
+  pdf_reader: "mcp_pdf-reader-mcp"  # 读取本地 PDF 史料
+  obsidian: "mcp_mcp-obsidian"      # 读写 Obsidian Vault
