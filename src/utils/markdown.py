@@ -10,15 +10,16 @@ def build_frontmatter(
     event: str,
     source_agents: List[str],
 ) -> str:
-    created_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    agents_str = ", ".join(source_agents)
+    created_at = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    agents_yaml = "\n".join(f"  - {agent}" for agent in source_agents)
     return f"""---
-title: {title}
-book: {book}
-chapter: {chapter}
-event: {event}
-created_at: {created_at}
-source_agents: {agents_str}
+title: "{title}"
+book: "{book}"
+chapter: "{chapter}"
+event: "{event}"
+created_at: "{created_at}"
+source_agents:
+{agents_yaml}
 ---
 
 """

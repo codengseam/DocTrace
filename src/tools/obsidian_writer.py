@@ -150,7 +150,11 @@ class ObsidianWriter:
     def _write_via_mcp(
         self, note_path: str, content: str, metadata: Optional[dict]
     ) -> Optional[dict]:
-        """尝试通过 MCP 服务器写入笔记。"""
+        """尝试通过 MCP 服务器写入笔记。
+
+        MCP API（``mcp.Client`` / ``client.call``）在当前环境中不可用，
+        此处通过 try/except 优雅降级，返回 ``None`` 以触发文件系统 fallback。
+        """
         try:
             import mcp  # type: ignore
 
@@ -177,7 +181,7 @@ class ObsidianWriter:
                 "detail": result,
             }
         except Exception as exc:  # noqa: BLE001
-            logger.warning("MCP Obsidian writer unavailable: %s", exc)
+            logger.info("MCP not available, falling back to file system: %s", exc)
             return None
 
     def _full_path(self, note_path: str) -> Path:

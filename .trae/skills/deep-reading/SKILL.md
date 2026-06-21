@@ -50,16 +50,15 @@ version: 1.0.0
 
 ## 第三步：加载 RULES.md
 
-在调用引擎前，读取项目根目录下的 RULES.md，将其完整内容作为生成要求的一部分注入到引擎调用中。不要向用户展示全文，只需在后续步骤中隐式约束输出。
-
-注意：核心引擎的 Editor Agent 会自动读取 RULES.md，但你在构造命令或解释输出时也应遵守其中规则。
+核心引擎的 Editor Agent 会自动读取 RULES.md，你在解释输出时应遵守其中规则。
 
 ## 第四步：调用本地 Python 引擎
 
 **真实生成需要配置 API Key**：
+- 可以先用文件读取工具查看 `.env` 是否存在且包含非空的 `LLM_API_KEY=`。
 - 如果项目根目录已有 `.env` 且包含 `LLM_API_KEY`，直接调用真实引擎。
 - 如果 `.env` 不存在或 `LLM_API_KEY` 为空，提示用户先配置：「请复制 .env.example 为 .env 并填写 LLM_API_KEY」。
-- 如果用户只想测试文件路径和界面联动，可以设置 `DEEP_READING_STUB=1` 使用占位生成模式，但需明确告知这是占位内容。
+- 如果用户只想测试文件路径和界面联动，可以在命令中添加 `--stub` 标志使用占位生成模式，但需明确告知这是占位内容。
 
 使用终端命令调用核心引擎。优先使用自然语言输入方式：
 
@@ -73,21 +72,23 @@ python src/main.py --input "{用户原始输入}"
 python src/main.py --book "{book}" --chapter "{chapter}" --event "{event}"
 ```
 
-命令执行目录为项目根目录 `/Users/dengxiongshihao/Documents/trae_projects/doc`。
+命令执行目录为项目根目录（即包含 `src/main.py` 和 `RULES.md` 的目录）。
+
+**占位模式（--stub）说明**：使用 `--stub` 标志时必须显式传 `--book`/`--chapter`/`--event`，不能只用 `--input`，因为占位生成器需要明确的三个槽位来构造文件路径和占位内容。
 
 ## 第五步：返回结果
 
 命令执行成功后，向用户返回：
 1. 一句话摘要："已为你生成《{book}·{chapter}·{event}》的讲书笔记。"
 2. 文件路径：`output/{book}/{chapter}_{event}.md`
-3. 内容预览：取生成的 Markdown 正文前 500-800 字。
+3. 内容预览：取生成的 Markdown 正文前 1500 字。
 4. 可选：提示用户可以在 Obsidian 或 HTML 管理界面中查看。
 
 # 错误处理
 
 - **核心引擎未找到 / src/main.py 不存在**：提示用户「核心引擎尚未就绪，请先实现或拉取 src/main.py」。
-- **LLM_API_KEY 未配置 / .env 缺失**：提示用户「请复制 .env.example 为 .env 并填写 API Key」，或询问是否先用 `DEEP_READING_STUB=1` 占位测试。
-- **生成结果为占位内容**：如果用户期望真实生成但得到占位内容，检查是否设置了 `DEEP_READING_STUB=1`，并提醒用户配置 API Key 后重新生成。
+- **LLM_API_KEY 未配置 / .env 缺失**：提示用户「请复制 .env.example 为 .env 并填写 API Key」，或询问是否先用 `--stub` 标志占位测试。
+- **生成结果为占位内容**：如果用户期望真实生成但得到占位内容，检查是否使用了 `--stub` 标志，并提醒用户配置 API Key 后重新生成。
 - **生成失败或命令返回非零**：返回错误信息，并建议用户检查日志目录 `logs/`。
 - **输出文件为空**：提示用户检查网络或模型配置。
 
@@ -112,7 +113,7 @@ python src/main.py --book 资治通鉴 --chapter 周纪二 --event 商鞅变法
 生成完成！文件已保存至 `output/资治通鉴/周纪二_商鞅变法.md`。
 
 --- 内容预览 ---
-（前 500-800 字）
+（前 1500 字）
 
 ## 示例 2：只有书名
 
@@ -143,3 +144,21 @@ python src/main.py --input "帮我写一下史记里面鸿门宴那段"
 用户：生成资治通鉴周纪二商鞅变法
 
 助手：检测到 API Key 未配置。请复制 `.env.example` 为 `.env` 并填写 `LLM_API_KEY`，然后再试。
+
+是否先用 `--stub` 模式测试文件路径和界面联动？
+
+```bash
+python src/main.py --book 资治通鉴 --chapter 周纪二 --event 商鞅变法 --stub
+```
+
+## 示例 6：占位模式测试
+
+用户：我想测试一下生成流程，但还没配置 API Key
+
+助手：可以使用占位模式测试文件路径和界面联动。
+
+```bash
+python src/main.py --book 资治通鉴 --chapter 周纪二 --event 商鞅变法 --stub
+```
+
+注意：占位模式生成的是占位内容，需要配置 API Key 后才能生成真实笔记。

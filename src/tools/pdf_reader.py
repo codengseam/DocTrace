@@ -27,7 +27,11 @@ class PDFReader:
         ) or "mcp_pdf-reader-mcp"
 
     def _read_with_mcp(self, file_path: Path) -> Optional[dict]:
-        """尝试通过 MCP 服务器读取 PDF。"""
+        """尝试通过 MCP 服务器读取 PDF。
+
+        MCP API（``mcp.Client`` / ``client.call``）在当前环境中不可用，
+        此处通过 try/except 优雅降级，返回 ``None`` 以触发文件系统 fallback。
+        """
         try:
             import mcp  # type: ignore
 
@@ -46,7 +50,7 @@ class PDFReader:
                 "source": f"mcp:{self.mcp_server_name}",
             }
         except Exception as exc:  # noqa: BLE001
-            logger.warning("MCP PDF reader unavailable: %s", exc)
+            logger.info("MCP not available, falling back to file system: %s", exc)
             return None
 
     def _read_with_pypdf2(self, file_path: Path) -> Optional[dict]:

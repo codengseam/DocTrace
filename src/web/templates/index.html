@@ -4,11 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>深度阅读助手</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js" defer></script>
     <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
 </head>
 <body>
@@ -17,9 +14,10 @@
             <h1>深度阅读助手</h1>
         </div>
         <div class="toolbar-search">
-            <input type="text" id="searchInput" placeholder="搜索书名、章节或事件…" autocomplete="off">
+            <input type="text" id="searchInput" placeholder="搜索书名、章节或事件…（回车搜索正文）" autocomplete="off">
         </div>
         <div class="toolbar-actions">
+            <button id="refreshBtn" class="btn-secondary" type="button">刷新目录</button>
             <button id="newNoteBtn" class="btn-primary" type="button">生成新笔记</button>
         </div>
     </header>
@@ -49,16 +47,22 @@
             </div>
             <form id="generateForm" class="modal-body">
                 <div class="form-group">
+                    <label for="inputArea">自然语言输入</label>
+                    <textarea id="inputArea" name="input" rows="3" placeholder="例如：资治通鉴 周纪二 商鞅变法"></textarea>
+                    <div class="form-hint">填写后将使用自然语言模式生成；留空则使用下方结构化字段。</div>
+                </div>
+                <div class="form-divider">或填写结构化字段</div>
+                <div class="form-group">
                     <label for="bookInput">书名</label>
-                    <input type="text" id="bookInput" name="book" placeholder="例如：《三体》" required>
+                    <input type="text" id="bookInput" name="book" placeholder="例如：《三体》">
                 </div>
                 <div class="form-group">
                     <label for="chapterInput">章节</label>
-                    <input type="text" id="chapterInput" name="chapter" placeholder="例如：第一部 地球往事" required>
+                    <input type="text" id="chapterInput" name="chapter" placeholder="例如：第一部 地球往事">
                 </div>
                 <div class="form-group">
                     <label for="eventInput">事件</label>
-                    <input type="text" id="eventInput" name="event" placeholder="例如：叶文洁收到外星信号" required>
+                    <input type="text" id="eventInput" name="event" placeholder="例如：叶文洁收到外星信号">
                 </div>
                 <div class="modal-actions">
                     <button type="button" id="cancelBtn" class="btn-secondary">取消</button>

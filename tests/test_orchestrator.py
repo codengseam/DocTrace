@@ -66,4 +66,4 @@ def test_orchestrator_fills_defaults_when_missing():
         result = run(state)
     assert result["event"] == "商鞅变法"
     assert result["chapter"] == "未知章节"
-    assert result["book"] == "商鞅变法"
+    assert result["book"] == "未知书籍"

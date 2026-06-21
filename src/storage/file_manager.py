@@ -145,16 +145,21 @@ class FileManager:
 
 
 def split_markdown(text: str) -> dict[str, Any]:
-    """切分 Markdown 文本的 frontmatter 与正文。"""
-    if not text.startswith("---"):
+    """切分 Markdown 文本的 frontmatter 与正文。
+
+    使用与 ``obsidian_writer.py`` 一致的正则表达式解析 frontmatter，
+    避免 ``split("---", 2)`` 在 frontmatter 值包含 ``---`` 时错误切分。
+    """
+    pattern = r"^---\s*\n(.*?)\n---\s*\n?"
+    match = re.match(pattern, text, re.DOTALL)
+    if not match:
         return {"frontmatter": {}, "content": text}
 
-    parts = text.split("---", 2)
-    if len(parts) < 3 or parts[1].strip() == "":
+    fm_text = match.group(1).strip()
+    if fm_text == "":
         return {"frontmatter": {}, "content": text}
 
-    fm_text = parts[1].strip()
-    content = parts[2].lstrip("\n")
+    content = text[match.end():]
 
     if yaml is not None:
         try:

@@ -4,7 +4,8 @@
     const state = {
         treeData: [],
         activePath: null,
-        searchQuery: ''
+        searchQuery: '',
+        searchMode: false
     };
 
     const elements = {
@@ -12,10 +13,12 @@
         reader: document.getElementById('reader'),
         searchInput: document.getElementById('searchInput'),
         newNoteBtn: document.getElementById('newNoteBtn'),
+        refreshBtn: document.getElementById('refreshBtn'),
         modalOverlay: document.getElementById('modalOverlay'),
         modalClose: document.getElementById('modalClose'),
         cancelBtn: document.getElementById('cancelBtn'),
         generateForm: document.getElementById('generateForm'),
+        inputArea: document.getElementById('inputArea'),
         bookInput: document.getElementById('bookInput'),
         chapterInput: document.getElementById('chapterInput'),
         eventInput: document.getElementById('eventInput'),
@@ -97,7 +100,10 @@
 
     function renderTree(nodes, depth = 0) {
         if (!nodes || nodes.length === 0) {
-            return '<div class="empty-state">暂无笔记</div>';
+            const empty = document.createElement('div');
+            empty.className = 'empty-state';
+            empty.textContent = '暂无笔记';
+            return empty;
         }
         const ul = document.createElement('ul');
         ul.className = 'tree-list';
@@ -123,12 +129,7 @@
 
                 const childrenContainer = document.createElement('ul');
                 childrenContainer.className = 'tree-children';
-                const childrenHtml = renderTree(node.children, depth + 1);
-                if (typeof childrenHtml === 'string') {
-                    childrenContainer.innerHTML = childrenHtml;
-                } else {
-                    childrenContainer.appendChild(childrenHtml);
-                }
+                childrenContainer.appendChild(renderTree(node.children, depth + 1));
                 li.appendChild(childrenContainer);
             } else {
                 const leaf = document.createElement('button');
@@ -153,9 +154,14 @@
         try {
             const data = await fetchJson('/api/notes');
             state.treeData = normalizeTree(data);
+            state.searchMode = false;
             refreshTreeView();
         } catch (err) {
-            elements.treeNav.innerHTML = '<div class="empty-state">加载目录失败</div>';
+            elements.treeNav.innerHTML = '';
+            const empty = document.createElement('div');
+            empty.className = 'empty-state';
+            empty.textContent = '加载目录失败';
+            elements.treeNav.appendChild(empty);
             showError('无法加载笔记目录，请检查后端服务是否正常运行。', err);
         }
     }
@@ -164,12 +170,24 @@
         const filtered = filterTree(state.treeData, state.searchQuery);
         const rendered = renderTree(filtered);
         elements.treeNav.innerHTML = '';
-        if (typeof rendered === 'string') {
-            elements.treeNav.innerHTML = rendered;
-        } else {
-            elements.treeNav.appendChild(rendered);
-        }
+        elements.treeNav.appendChild(rendered);
         expandMatchedNodes(elements.treeNav);
+    }
+
+    function parseFrontmatter(content) {
+        const match = content.match(/^---\n([\s\S]*?)\n---\n*/);
+        if (!match) return { meta: null, body: content };
+        const metaBlock = match[1];
+        const body = content.slice(match[0].length);
+        const meta = {};
+        metaBlock.split('\n').forEach((line) => {
+            const idx = line.indexOf(':');
+            if (idx === -1) return;
+            const key = line.slice(0, idx).trim();
+            const value = line.slice(idx + 1).trim().replace(/^["']|["']$/g, '');
+            if (key) meta[key] = value;
+        });
+        return { meta, body };
     }
 
     async function loadNote(path, targetElement) {
@@ -180,14 +198,30 @@
         allLeaves.forEach((leaf) => leaf.classList.remove('active'));
         if (targetElement) {
             targetElement.classList.add('active');
+        } else {
+            const match = elements.treeNav.querySelector(`.tree-leaf[data-path="${CSS.escape(path)}"]`);
+            if (match) match.classList.add('active');
         }
 
         elements.reader.innerHTML = '<div class="reader-placeholder">正在加载笔记…</div>';
         try {
             const encodedPath = encodeURI(path);
             const content = await fetchJson(`/api/notes/${encodedPath}`);
-            const html = marked.parse(content || '', { gfm: true });
-            elements.reader.innerHTML = `<article class="markdown-body">${html}</article>`;
+            const { meta, body } = parseFrontmatter(content || '');
+            const html = marked.parse(body, { gfm: true });
+
+            let metaHtml = '';
+            if (meta && (meta.title || meta.created_at)) {
+                metaHtml = '<div class="note-meta">';
+                if (meta.title) metaHtml += `<span class="note-meta-title">${escapeHtml(meta.title)}</span>`;
+                if (meta.book || meta.chapter) {
+                    metaHtml += `<span class="note-meta-path">${escapeHtml([meta.book, meta.chapter].filter(Boolean).join(' / '))}</span>`;
+                }
+                if (meta.created_at) metaHtml += `<span class="note-meta-date">${escapeHtml(meta.created_at)}</span>`;
+                metaHtml += '</div>';
+            }
+
+            elements.reader.innerHTML = `<article class="markdown-body">${metaHtml}${html}</article>`;
         } catch (err) {
             elements.reader.innerHTML = '<div class="reader-placeholder">加载失败，请重试。</div>';
             showError('无法加载笔记内容。', err);
@@ -197,7 +231,7 @@
     function openModal() {
         elements.modalOverlay.classList.add('open');
         elements.modalOverlay.setAttribute('aria-hidden', 'false');
-        elements.bookInput.focus();
+        elements.inputArea.focus();
     }
 
     function closeModal() {
@@ -211,13 +245,20 @@
 
     async function handleGenerate(event) {
         event.preventDefault();
+        const userInput = elements.inputArea.value.trim();
         const book = elements.bookInput.value.trim();
         const chapter = elements.chapterInput.value.trim();
         const eventName = elements.eventInput.value.trim();
 
-        if (!book || !chapter || !eventName) {
-            alert('请填写完整的书名、章节和事件信息。');
-            return;
+        let payload;
+        if (userInput) {
+            payload = { input: userInput };
+        } else {
+            if (!book || !chapter || !eventName) {
+                alert('请填写自然语言输入，或完整的书名、章节和事件信息。');
+                return;
+            }
+            payload = { book, chapter, event: eventName };
         }
 
         const originalText = elements.submitBtn.textContent;
@@ -225,14 +266,17 @@
         elements.submitBtn.textContent = '生成中…';
 
         try {
-            await fetchJson('/api/generate', {
+            const result = await fetchJson('/api/generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ book, chapter, event: eventName })
+                body: JSON.stringify(payload)
             });
             closeModal();
             resetForm();
             await loadTree();
+            if (result && result.path) {
+                await loadNote(result.path);
+            }
             alert('笔记生成成功，目录已刷新。');
         } catch (err) {
             showError('笔记生成失败，请检查后端服务或输入内容。', err);
@@ -244,7 +288,81 @@
 
     function handleSearch(event) {
         state.searchQuery = event.target.value.trim().toLowerCase();
-        refreshTreeView();
+        if (!state.searchQuery) {
+            state.searchMode = false;
+            refreshTreeView();
+            return;
+        }
+        if (state.searchMode) {
+            state.searchMode = false;
+            refreshTreeView();
+        } else {
+            refreshTreeView();
+        }
+    }
+
+    async function handleSearchEnter(event) {
+        if (event.key !== 'Enter') return;
+        event.preventDefault();
+        const query = elements.searchInput.value.trim();
+        if (!query) {
+            state.searchMode = false;
+            refreshTreeView();
+            return;
+        }
+        try {
+            const data = await fetchJson(`/api/search?q=${encodeURIComponent(query)}`);
+            state.searchMode = true;
+            renderSearchResults(data.results || [], query);
+        } catch (err) {
+            showError('搜索失败，请检查后端服务。', err);
+        }
+    }
+
+    function renderSearchResults(results, query) {
+        elements.treeNav.innerHTML = '';
+        if (results.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'empty-state';
+            empty.textContent = `未找到与「${query}」相关的笔记`;
+            elements.treeNav.appendChild(empty);
+            return;
+        }
+        const header = document.createElement('div');
+        header.className = 'search-results-header';
+        header.textContent = `找到 ${results.length} 条结果`;
+        elements.treeNav.appendChild(header);
+
+        const list = document.createElement('ul');
+        list.className = 'search-results';
+        results.forEach((item) => {
+            const li = document.createElement('li');
+            li.className = 'search-result-item';
+
+            const title = document.createElement('button');
+            title.className = 'search-result-title';
+            title.type = 'button';
+            title.textContent = item.title || item.path;
+            title.addEventListener('click', () => loadNote(item.path));
+            li.appendChild(title);
+
+            if (item.book || item.chapter) {
+                const meta = document.createElement('div');
+                meta.className = 'search-result-meta';
+                meta.textContent = [item.book, item.chapter].filter(Boolean).join(' / ');
+                li.appendChild(meta);
+            }
+
+            if (item.snippet) {
+                const snippet = document.createElement('div');
+                snippet.className = 'search-result-snippet';
+                snippet.textContent = item.snippet;
+                li.appendChild(snippet);
+            }
+
+            list.appendChild(li);
+        });
+        elements.treeNav.appendChild(list);
     }
 
     function handleKeyDown(event) {
@@ -260,7 +378,11 @@
         }
 
         elements.searchInput.addEventListener('input', handleSearch);
+        elements.searchInput.addEventListener('keydown', handleSearchEnter);
         elements.newNoteBtn.addEventListener('click', openModal);
+        if (elements.refreshBtn) {
+            elements.refreshBtn.addEventListener('click', loadTree);
+        }
         elements.modalClose.addEventListener('click', closeModal);
         elements.cancelBtn.addEventListener('click', closeModal);
         elements.generateForm.addEventListener('submit', handleGenerate);

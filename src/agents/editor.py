@@ -61,12 +61,14 @@ def run(state: AgentState) -> Dict[str, Any]:
     # 若 LLM 未生成 frontmatter，则自行补齐
     if not _has_frontmatter(content):
         title = f"{book}·{chapter}·{event}"
+        # 列出所有贡献内容的 Specialist Agent 名称
+        agent_names = list(sections.keys()) if sections else ["Editor Agent"]
         frontmatter = build_frontmatter(
             title=title,
             book=book,
             chapter=chapter,
             event=event,
-            source_agents=["Editor Agent"],
+            source_agents=agent_names,
         )
         body_title = f"# {title}\n\n"
         content = frontmatter + body_title + content

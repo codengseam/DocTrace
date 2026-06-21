@@ -125,7 +125,7 @@ class WebSearch:
         if not self.trusted_domains:
             return results
 
-        trusted = {d.lower().lstrip("www.") for d in self.trusted_domains}
+        trusted = {d.lower().removeprefix("www.") for d in self.trusted_domains}
         filtered: list[Any] = []
         for result in results:
             if isinstance(result, dict):
@@ -134,7 +134,7 @@ class WebSearch:
                 url = str(result)
             hostname = urlparse(url).hostname or ""
             if hostname:
-                hostname = hostname.lower().lstrip("www.")
+                hostname = hostname.lower().removeprefix("www.")
                 if hostname in trusted:
                     filtered.append(result)
         return filtered

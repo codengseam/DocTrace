@@ -121,10 +121,18 @@ class MetadataStore:
         return sorted(chapters)
 
     def _save_unsafe(self) -> None:
-        """实际写入 JSON，调用方需自行持有锁。"""
+        """实际写入 JSON，调用方需自行持有锁。
+
+        使用临时文件 + replace 的原子写入模式，避免写入过程中进程被中断
+        导致 metadata 文件损坏。
+        """
         data = list(self._records.values())
-        with open(self.path, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+        temp_path = self.path.with_suffix(".tmp")
+        temp_path.write_text(
+            json.dumps(data, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        temp_path.replace(self.path)
 
     def save(self) -> None:
         """将当前记录持久化到 JSON 文件。"""

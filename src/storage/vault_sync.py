@@ -52,7 +52,7 @@ class VaultSync:
             1. 若 Vault 中不存在，直接创建。
             2. 若存在，比较正文 SHA-256 hash；相同则跳过。
             3. 若 hash 不同，再比较 frontmatter 中的 ``updated_at``；相同则跳过。
-            4. 否则覆盖更新。
+            4. 否则合并更新（保留 Vault 中已有的 frontmatter 修改）。
 
         同步成功后，会在本地 Markdown 的 frontmatter 中记录 ``vault_path`` 和
         ``sources``（若尚未记录）。
@@ -100,8 +100,13 @@ class VaultSync:
                     "vault_path": vault_relative_path,
                 }
 
-        result = self.writer.write_note(vault_relative_path, content, frontmatter)
-        status = "updated" if exists else "created"
+            # 笔记已存在且内容有变化：使用 update_note 合并 frontmatter，
+            # 避免覆盖 Vault 中已有的 frontmatter 修改。
+            result = self.writer.update_note(vault_relative_path, content, frontmatter)
+            status = "updated"
+        else:
+            result = self.writer.write_note(vault_relative_path, content, frontmatter)
+            status = "created"
         logger.info("同步到 Vault: %s (%s)", vault_relative_path, status)
         return {
             "status": status,

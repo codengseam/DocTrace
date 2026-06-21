@@ -5,10 +5,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, request
-from flask_cors import CORS
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
-CORS(app, resources={r"/api/*": {"origins": ["http://localhost:*", "http://127.0.0.1:*"]}})
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 OUTPUT_DIR = BASE_DIR / "output"
@@ -40,6 +38,23 @@ def _iter_notes():
             chapter = stem
             event = ""
         yield str(rel).replace(os.sep, "/"), book, chapter, event
+
+
+def _extract_path_from_output(stdout):
+    """Extract the generated note's relative path from main.py stdout."""
+    if not stdout:
+        return None
+    prefixes = ("Saved: ", "File already exists: ", "已生成笔记：")
+    for line in stdout.splitlines():
+        for prefix in prefixes:
+            if line.startswith(prefix):
+                abs_path = line[len(prefix):].strip()
+                try:
+                    rel = Path(abs_path).resolve().relative_to(OUTPUT_DIR.resolve())
+                    return str(rel).replace(os.sep, "/")
+                except (ValueError, OSError):
+                    return abs_path
+    return None
 
 
 @app.route("/api/notes", methods=["GET"])
@@ -87,12 +102,105 @@ def get_note(filepath):
     return file_path.read_text(encoding="utf-8")
 
 
+@app.route("/api/search", methods=["GET"])
+def search_notes():
+    """Search notes by keyword in filename and content."""
+    query = (request.args.get("q") or "").strip()
+    if not query:
+        return jsonify({"query": "", "results": []})
+
+    query_lower = query.lower()
+    results = []
+    for rel_path, book, chapter, event in _iter_notes():
+        title = event or chapter
+        matched_in_name = (
+            query_lower in rel_path.lower() or query_lower in title.lower()
+        )
+
+        file_path = OUTPUT_DIR / rel_path
+        content = ""
+        try:
+            content = file_path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            pass
+
+        matched_in_content = query_lower in content.lower()
+        if not (matched_in_name or matched_in_content):
+            continue
+
+        snippet = ""
+        if matched_in_content:
+            idx = content.lower().find(query_lower)
+            if idx >= 0:
+                start = max(0, idx - 30)
+                end = min(len(content), idx + len(query) + 60)
+                snippet = content[start:end].replace("\n", " ")
+                if start > 0:
+                    snippet = "…" + snippet
+                if end < len(content):
+                    snippet = snippet + "…"
+
+        results.append(
+            {
+                "path": rel_path,
+                "book": book,
+                "chapter": chapter,
+                "event": event,
+                "title": title,
+                "snippet": snippet,
+            }
+        )
+
+    return jsonify({"query": query, "results": results})
+
+
 @app.route("/api/generate", methods=["POST"])
 def generate():
     data = request.get_json(force=True, silent=True) or {}
     book = data.get("book")
     chapter = data.get("chapter")
     event = data.get("event")
+    user_input = data.get("input")
+
+    use_stub = os.environ.get("DEEP_READING_STUB") in ("1", "true", "yes")
+
+    if user_input:
+        if not use_stub and not _has_api_key():
+            return jsonify({
+                "success": False,
+                "error": "未配置 LLM_API_KEY。请复制 .env.example 为 .env 并填写 API Key，或设置 DEEP_READING_STUB=1 使用占位模式。"
+            }), 400
+
+        cmd = [sys.executable, str(MAIN_SCRIPT), "--input", user_input]
+        if use_stub:
+            cmd.append("--stub")
+
+        try:
+            result = subprocess.run(
+                cmd,
+                cwd=str(BASE_DIR),
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                check=False,
+                timeout=300,
+            )
+        except subprocess.TimeoutExpired:
+            return jsonify({"success": False, "error": "生成超时（300 秒），请稍后重试或简化输入。"}), 504
+        except Exception as exc:  # pragma: no cover - unexpected execution error
+            return jsonify({"success": False, "error": str(exc)}), 500
+
+        if result.returncode != 0:
+            message = (result.stderr or result.stdout or "Generation failed").strip()
+            return jsonify({"success": False, "error": message}), 500
+
+        generated_path = _extract_path_from_output(result.stdout)
+        return jsonify({
+            "success": True,
+            "path": generated_path,
+            "stub": use_stub,
+            "message": "占位生成完成" if use_stub else "笔记生成完成",
+        })
 
     missing = [field for field in ("book", "chapter", "event") if not data.get(field)]
     if missing:
@@ -100,8 +208,6 @@ def generate():
             jsonify({"success": False, "error": f"Missing fields: {', '.join(missing)}"}),
             400,
         )
-
-    use_stub = os.environ.get("DEEP_READING_STUB") in ("1", "true", "yes")
 
     if not use_stub and not _has_api_key():
         return jsonify({
@@ -130,7 +236,10 @@ def generate():
             text=True,
             encoding="utf-8",
             check=False,
+            timeout=300,
         )
+    except subprocess.TimeoutExpired:
+        return jsonify({"success": False, "error": "生成超时（300 秒），请稍后重试或简化输入。"}), 504
     except Exception as exc:  # pragma: no cover - unexpected execution error
         return jsonify({"success": False, "error": str(exc)}), 500
 
@@ -154,4 +263,4 @@ def index():
 
 if __name__ == "__main__":
     port = int(os.environ.get("DEEP_READING_WEB_PORT", "8080"))
-    app.run(host="127.0.0.1", port=port, debug=True)
+    app.run(host="127.0.0.1", port=port, debug=os.environ.get("FLASK_DEBUG") == "1")
