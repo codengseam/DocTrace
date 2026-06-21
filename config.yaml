@@ -43,6 +43,7 @@ quality_check:
     - 讲背景
     - 讲道理
     - 问道悟道
+    - 结语
 
 # MCP 服务器名称映射
 mcp_servers:

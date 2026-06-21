@@ -8,8 +8,40 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
-def _generate_stub(book: str, chapter: str, event: str, output_dir: str) -> Path:
+def _parse_slots_from_input(user_input: str) -> tuple[str, str, str]:
+    """从自然语言输入中按空白符切分，尝试提取书名/章节/事件。
+
+    仅用于 stub 模式下的简单解析；真实生成仍由 Orchestrator 调用 LLM 处理。
+    """
+    parts = [p for p in user_input.split() if p]
+    if len(parts) >= 3:
+        return parts[0], parts[1], " ".join(parts[2:])
+    if len(parts) == 2:
+        return parts[0], parts[1], ""
+    if len(parts) == 1:
+        return parts[0], "", ""
+    return "", "", ""
+
+
+def _generate_stub(
+    book: str, chapter: str, event: str, user_input: str, output_dir: str
+) -> Path:
     """Generate a placeholder note for testing the web interface without API keys."""
+    # stub 模式支持从 --input 简单解析三个槽位
+    if not (book and chapter and event) and user_input:
+        parsed_book, parsed_chapter, parsed_event = _parse_slots_from_input(user_input)
+        book = book or parsed_book
+        chapter = chapter or parsed_chapter
+        event = event or parsed_event
+
+    if not (book and chapter and event):
+        print(
+            "Error: --stub 模式需要明确指定 --book、--chapter、--event，"
+            "或提供包含这三项的 --input。",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
     target_dir = Path(output_dir) / book
     target_dir.mkdir(parents=True, exist_ok=True)
     output_path = target_dir / f"{chapter}_{event}.md"
@@ -18,7 +50,7 @@ def _generate_stub(book: str, chapter: str, event: str, output_dir: str) -> Path
         print(f"File already exists: {output_path}")
         return output_path
 
-    created_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    created_at = datetime.now().astimezone().replace(microsecond=0).isoformat()
     sections = ["讲事情", "讲人物", "讲背景", "讲道理", "问道悟道", "结语"]
     lines = [
         f'---',
@@ -68,7 +100,7 @@ def main() -> int:
         user_input = " ".join(parts)
 
     if args.stub:
-        output_path = _generate_stub(book, chapter, event, args.output_dir)
+        output_path = _generate_stub(book, chapter, event, user_input, args.output_dir)
         if args.dry_run:
             print(f"[STUB DRY RUN] 预期保存路径：{output_path}")
         return 0

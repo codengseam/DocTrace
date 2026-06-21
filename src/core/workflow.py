@@ -61,7 +61,7 @@ def build_workflow(output_base: Optional[str] = None) -> StateGraph:
         cfg = load_config()
         required_sections = cfg.get("quality_check", {}).get(
             "required_sections",
-            ["讲事情", "讲人物", "讲背景", "讲道理", "问道悟道"],
+            ["讲事情", "讲人物", "讲背景", "讲道理", "问道悟道", "结语"],
         )
         required_frontmatter = [
             "title", "book", "chapter", "event", "created_at", "source_agents"
@@ -76,6 +76,13 @@ def build_workflow(output_base: Optional[str] = None) -> StateGraph:
         else:
             logger.warning("质量检查发现问题：%s", "; ".join(report.issues))
         return {"errors": report.issues}
+
+    def quality_router(state: AgentState) -> str:
+        """根据质量检查结果决定下一步：通过则保存，失败则结束。"""
+        if state.get("errors"):
+            logger.warning("质量检查未通过，跳过保存")
+            return END
+        return "save"
 
     def save_node(state: AgentState) -> dict:
         # 记录日志
@@ -128,7 +135,7 @@ def build_workflow(output_base: Optional[str] = None) -> StateGraph:
     graph.add_edge("critic", "editor")
     graph.add_edge("philosopher", "editor")
     graph.add_edge("editor", "quality")
-    graph.add_edge("quality", "save")
+    graph.add_conditional_edges("quality", quality_router)
     graph.add_edge("save", END)
 
     return graph.compile()
