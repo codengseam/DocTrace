@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from ..tools.obsidian_writer import ObsidianWriter
 from .file_manager import FileManager
+
+
+logger = logging.getLogger(__name__)
 
 
 class VaultSync:
@@ -49,6 +53,9 @@ class VaultSync:
             2. 若存在，比较正文 SHA-256 hash；相同则跳过。
             3. 若 hash 不同，再比较 frontmatter 中的 ``updated_at``；相同则跳过。
             4. 否则覆盖更新。
+
+        同步成功后，会在本地 Markdown 的 frontmatter 中记录 ``vault_path`` 和
+        ``sources``（若尚未记录）。
         """
         local_path = Path(local_path)
         data = self.fm.read_markdown(local_path)
@@ -62,6 +69,12 @@ class VaultSync:
                 rel = Path(local_path.name)
             vault_relative_path = str(rel).replace("\\", "/")
 
+        # 将实际使用的 Vault 路径与来源回写到本地 frontmatter
+        frontmatter.setdefault("vault_path", vault_relative_path)
+        if not frontmatter.get("sources"):
+            frontmatter["sources"] = frontmatter.get("source_agents", [])
+        self.fm.write_markdown(local_path, content, frontmatter)
+
         current_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
         exists = self.note_exists(vault_relative_path)
 
@@ -70,6 +83,7 @@ class VaultSync:
             existing_hash = hashlib.sha256(existing["content"].encode("utf-8")).hexdigest()
 
             if existing_hash == current_hash:
+                logger.info("Vault 笔记未变化，跳过同步: %s", vault_relative_path)
                 return {
                     "status": "skipped",
                     "reason": "content_hash_match",
@@ -79,6 +93,7 @@ class VaultSync:
             existing_updated = existing["frontmatter"].get("updated_at") or existing["frontmatter"].get("created_at")
             new_updated = frontmatter.get("updated_at") or frontmatter.get("created_at")
             if existing_updated and new_updated and existing_updated == new_updated:
+                logger.info("Vault 笔记 updated_at 未变化，跳过同步: %s", vault_relative_path)
                 return {
                     "status": "skipped",
                     "reason": "updated_at_unchanged",
@@ -86,8 +101,10 @@ class VaultSync:
                 }
 
         result = self.writer.write_note(vault_relative_path, content, frontmatter)
+        status = "updated" if exists else "created"
+        logger.info("同步到 Vault: %s (%s)", vault_relative_path, status)
         return {
-            "status": "updated" if exists else "created",
+            "status": status,
             "vault_path": vault_relative_path,
             "details": result,
         }
@@ -109,11 +126,18 @@ class VaultSync:
             title = fm.get("title") or note.stem
             chapter = fm.get("chapter") or note.stem
             event = fm.get("event") or ""
+            # 链接使用笔记在 Vault 内的相对路径，与 MOC 同目录时只保留文件名
             try:
                 rel = note.relative_to(self.fm.output_dir)
-                link = str(rel).replace("\\", "/")
+                rel_str = str(rel).replace("\\", "/")
             except ValueError:
-                link = str(note)
+                rel_str = str(note)
+            # MOC 位于 {book}/MOC.md，同一目录下的笔记链接无需前缀
+            if "/" in rel_str:
+                parts = rel_str.rsplit("/", 1)
+                link = parts[1] if parts[0] == safe_book else rel_str
+            else:
+                link = rel_str
             lines.append(f"- [[{link}|{title}]]（{chapter} {event}）".strip())
 
         lines.extend(["", "## 标签", "", f"#{safe_book} #MOC"])
@@ -127,8 +151,10 @@ class VaultSync:
             "updated_at": now,
         }
         result = self.writer.write_note(moc_path, moc_content, metadata)
+        status = "updated" if self.note_exists(moc_path) else "created"
+        logger.info("生成 MOC 索引: %s (%s)", moc_path, status)
         return {
-            "status": "updated" if self.note_exists(moc_path) else "created",
+            "status": status,
             "vault_path": moc_path,
             "details": result,
         }

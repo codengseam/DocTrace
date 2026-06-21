@@ -1,0 +1,19 @@
+# 个人 AI 深度阅读助手 — Python 依赖
+
+# 核心依赖
+PyYAML>=6.0
+
+# LLM / Agent 编排（Track 1 核心引擎使用）
+langgraph>=0.2.0
+langchain>=0.3.0
+
+# 可选：搜索能力
+# duckduckgo-search>=7.0
+# tavily-python>=0.5
+
+# 可选：PDF 本地解析（MCP 不可用时 fallback）
+# PyPDF2>=3.0
+# pdfplumber>=0.11
+
+# 开发 / 测试
+pytest>=8.0

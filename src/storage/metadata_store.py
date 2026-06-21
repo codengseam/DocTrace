@@ -3,15 +3,30 @@
 from __future__ import annotations
 
 import json
+import logging
 import threading
+from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from ..utils.config import load_config
 from .file_manager import FileManager
 
 
+logger = logging.getLogger(__name__)
 DEFAULT_STORE_PATH = Path("/workspace/.cache/metadata_store.json")
+
+
+def _resolve_store_path(store_path: str | Path | None) -> Path:
+    """解析 metadata store 路径，优先使用传入值，否则读取 config.yaml 的 cache_dir。"""
+    if store_path is not None:
+        return Path(store_path)
+    config = load_config(Path("/workspace/config.yaml"))
+    cache_dir = config.get("cache_dir")
+    if cache_dir:
+        return Path(cache_dir).expanduser().resolve() / "metadata_store.json"
+    return DEFAULT_STORE_PATH
 
 
 class MetadataStore:
@@ -22,7 +37,7 @@ class MetadataStore:
     """
 
     def __init__(self, store_path: str | Path | None = None):
-        self.path = Path(store_path or DEFAULT_STORE_PATH)
+        self.path = _resolve_store_path(store_path)
         self._lock = threading.RLock()
         self._records: dict[str, dict[str, Any]] = {}
         self.load()
@@ -46,25 +61,20 @@ class MetadataStore:
         if isinstance(key_or_record, str) and record is not None:
             key = key_or_record
             data = record
-            add_timestamps = False
         elif isinstance(key_or_record, dict):
             key = self._key(key_or_record)
             data = key_or_record
-            add_timestamps = True
         else:
             raise TypeError("add_or_update 接受 (record) 或 (key, record) 两种调用方式")
 
         with self._lock:
             existing = self._records.get(key)
-            if existing and add_timestamps:
+            if existing:
                 merged = {**existing, **data, "updated_at": now}
-            elif existing:
-                merged = dict(data)
             else:
                 merged = dict(data)
-                if add_timestamps:
-                    merged.setdefault("created_at", now)
-                    merged.setdefault("updated_at", now)
+                merged.setdefault("created_at", now)
+                merged.setdefault("updated_at", now)
             self._records[key] = merged
             self.path.parent.mkdir(parents=True, exist_ok=True)
             self._save_unsafe()
@@ -80,12 +90,12 @@ class MetadataStore:
         """
         if chapter is None and event is None:
             with self._lock:
-                return self._records.get(book_or_key)
+                record = self._records.get(book_or_key)
+                return deepcopy(record) if record is not None else None
 
         with self._lock:
-            records = list(self._records.values())
+            results = [deepcopy(r) for r in self._records.values()]
 
-        results = records
         if book_or_key is not None:
             results = [r for r in results if r.get("book") == book_or_key]
         if chapter is not None:
@@ -125,22 +135,25 @@ class MetadataStore:
     def load(self) -> None:
         """从 JSON 文件加载记录；文件不存在或损坏时初始化为空。"""
         if not self.path.exists():
-            self._records = {}
+            with self._lock:
+                self._records = {}
             return
         try:
             with self._lock:
                 with open(self.path, "r", encoding="utf-8") as f:
                     data = json.load(f)
-            if isinstance(data, list):
-                self._records = {
-                    self._key(r): r
-                    for r in data
-                    if all(r.get(k) for k in ("book", "chapter", "event"))
-                }
-            else:
+                if isinstance(data, list):
+                    self._records = {
+                        self._key(r): r
+                        for r in data
+                        if all(r.get(k) for k in ("book", "chapter", "event"))
+                    }
+                else:
+                    self._records = {}
+        except Exception as exc:
+            logger.warning("Failed to load metadata store %s: %s", self.path, exc)
+            with self._lock:
                 self._records = {}
-        except Exception:
-            self._records = {}
 
     def build_from_output_dir(self, output_dir: str | Path | None = None) -> dict[str, Any]:
         """扫描 ``output/`` 目录，从现有 Markdown 的 frontmatter 重建索引。
@@ -174,7 +187,8 @@ class MetadataStore:
                 }
                 self.add_or_update(record)
                 count += 1
-            except Exception:
+            except Exception as exc:
+                logger.warning("跳过文件 %s: %s", path, exc, exc_info=True)
                 continue
         return {"scanned": str(root), "count": count}
 

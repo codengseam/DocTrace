@@ -6,9 +6,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from src.storage.file_manager import FileManager
+from src.storage.file_manager import FileManager, split_markdown
 from src.storage.metadata_store import MetadataStore
+from src.storage.vault_sync import VaultSync
 from src.tools.obsidian_writer import ObsidianWriter
+from src.tools.pdf_reader import PDFReader
 from src.tools.source_cache import SourceCache
 from src.tools.web_search import WebSearch
 from src.utils.config import load_config, load_env
@@ -62,6 +64,32 @@ class TestFileManager(unittest.TestCase):
         self.assertEqual(fm.sanitize_filename("a/b\\c?d.txt"), "a_b_c_d.txt")
         self.assertEqual(fm.sanitize_filename("  hello   world  "), "hello_world")
 
+    def test_write_and_read_markdown_roundtrip(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            fm = FileManager(output_dir=tmp)
+            path = fm.get_output_path("资治通鉴", "周纪一", "三家分晋")
+            content = "## 讲事情\n\n三家分晋...\n"
+            metadata = {
+                "title": "三家分晋",
+                "book": "资治通鉴",
+                "chapter": "周纪一",
+                "event": "三家分晋",
+                "source_agents": ["historian"],
+            }
+            written = fm.write_markdown(path, content, metadata)
+            self.assertTrue(written.exists())
+
+            data = fm.read_markdown(written)
+            self.assertEqual(data["frontmatter"]["book"], "资治通鉴")
+            self.assertEqual(data["frontmatter"]["event"], "三家分晋")
+            self.assertIn("## 讲事情", data["content"])
+
+            # 验证 frontmatter 格式合法：能被 split_markdown 重新切分
+            text = written.read_text(encoding="utf-8")
+            self.assertTrue(text.startswith("---\n"))
+            split = split_markdown(text)
+            self.assertEqual(split["frontmatter"]["title"], "三家分晋")
+
 
 class TestMetadataStore(unittest.TestCase):
     """验证元数据增删改查。"""
@@ -69,18 +97,32 @@ class TestMetadataStore(unittest.TestCase):
     def test_add_or_update_and_get(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             store = MetadataStore(Path(tmp) / "metadata.json")
-            store.add_or_update("周纪二_商鞅变法", {"book": "资治通鉴", "event": "商鞅变法"})
+            store.add_or_update("周纪二_商鞅变法", {"book": "资治通鉴", "chapter": "周纪二", "event": "商鞅变法"})
             result = store.get("周纪二_商鞅变法")
-            self.assertEqual(result, {"book": "资治通鉴", "event": "商鞅变法"})
+            self.assertIsNotNone(result)
+            self.assertEqual(result["book"], "资治通鉴")
+            self.assertEqual(result["event"], "商鞅变法")
+            self.assertIn("created_at", result)
+            self.assertIn("updated_at", result)
 
-            store.add_or_update("周纪二_商鞅变法", {"event": "卫鞅变法", "chapter": "周纪二"})
+            store.add_or_update("周纪二_商鞅变法", {"event": "卫鞅变法"})
             result = store.get("周纪二_商鞅变法")
-            self.assertEqual(result, {"event": "卫鞅变法", "chapter": "周纪二"})
+            self.assertEqual(result["event"], "卫鞅变法")
+            self.assertIn("updated_at", result)
 
     def test_get_missing_key_returns_none(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             store = MetadataStore(Path(tmp) / "metadata.json")
             self.assertIsNone(store.get("不存在的键"))
+
+    def test_list_books_and_chapters(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = MetadataStore(Path(tmp) / "metadata.json")
+            store.add_or_update({"book": "资治通鉴", "chapter": "周纪一", "event": "三家分晋"})
+            store.add_or_update({"book": "资治通鉴", "chapter": "周纪二", "event": "商鞅变法"})
+            store.add_or_update({"book": "史记", "chapter": "项羽本纪", "event": "鸿门宴"})
+            self.assertEqual(store.list_books(), ["史记", "资治通鉴"])
+            self.assertEqual(store.list_chapters("资治通鉴"), ["周纪一", "周纪二"])
 
 
 class TestSourceCache(unittest.TestCase):
@@ -92,6 +134,15 @@ class TestSourceCache(unittest.TestCase):
             cache.record("商鞅变法", ["https://zh.wikipedia.org/wiki/商鞅变法"])
             sources = cache.get("商鞅变法")
             self.assertEqual(sources, ["https://zh.wikipedia.org/wiki/商鞅变法"])
+
+    def test_record_dict_and_deduplicate(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = SourceCache(Path(tmp) / "cache.json")
+            cache.record("商鞅变法", {"url": "https://a.com", "title": "A", "snippet": "..."})
+            cache.record("商鞅变法", {"url": "https://a.com", "title": "A2", "snippet": "..."})
+            sources = cache.get("商鞅变法")
+            self.assertEqual(len(sources), 1)
+            self.assertEqual(sources[0]["url"], "https://a.com")
 
     def test_get_missing_query_returns_none(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -115,6 +166,16 @@ class TestWebSearch(unittest.TestCase):
         self.assertEqual(len(trusted), 2)
         self.assertIn("https://zh.wikipedia.org/wiki/商鞅变法", trusted)
         self.assertIn("https://baike.baidu.com/item/商鞅变法", trusted)
+
+    def test_filter_trusted_dict_results(self) -> None:
+        searcher = WebSearch(trusted_domains=["zh.wikipedia.org"])
+        results = [
+            {"title": "A", "url": "https://zh.wikipedia.org/wiki/A", "snippet": "..."},
+            {"title": "B", "url": "https://example.com/B", "snippet": "..."},
+        ]
+        trusted = searcher.filter_trusted(results)
+        self.assertEqual(len(trusted), 1)
+        self.assertEqual(trusted[0]["url"], "https://zh.wikipedia.org/wiki/A")
 
 
 class TestObsidianWriter(unittest.TestCase):
@@ -143,6 +204,112 @@ class TestObsidianWriter(unittest.TestCase):
         self.assertIn("book: 旧书名", result)
         self.assertIn("created_at: 2026-06-21", result)
         self.assertIn("正文内容。", result)
+        # 确保只有一份 frontmatter
+        self.assertEqual(result.count("---"), 2)
+
+    def test_update_note_does_not_create_double_frontmatter(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            writer = ObsidianWriter(vault_path=tmp)
+            writer.write_note(
+                "历史/资治通鉴/周纪二_商鞅变法.md",
+                "## 讲事情\n\n商鞅入秦。\n",
+                {"title": "商鞅变法", "book": "资治通鉴"},
+            )
+            result = writer.update_note(
+                "历史/资治通鉴/周纪二_商鞅变法.md",
+                "## 讲事情\n\n商鞅入秦，徙木立信。\n",
+                {"event": "商鞅变法"},
+            )
+            self.assertTrue(result["success"])
+            self.assertTrue(result["updated"])
+            written = Path(tmp) / "历史/资治通鉴/周纪二_商鞅变法.md"
+            text = written.read_text(encoding="utf-8")
+            # 只有开始和结束两处 ---，共 2 次
+            self.assertEqual(text.count("---"), 2)
+            self.assertIn("event: 商鞅变法", text)
+            self.assertIn("title: 商鞅变法", text)
+
+
+class TestVaultSync(unittest.TestCase):
+    """验证 Vault 同步与去重。"""
+
+    def test_sync_to_vault_creates_and_skips(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output_dir = Path(tmp) / "output"
+            vault_dir = Path(tmp) / "vault"
+            fm = FileManager(output_dir=output_dir)
+            note_path = fm.get_output_path("资治通鉴", "周纪一", "三家分晋")
+            fm.write_markdown(
+                note_path,
+                "## 讲事情\n\n三家分晋...\n",
+                {
+                    "title": "三家分晋",
+                    "book": "资治通鉴",
+                    "chapter": "周纪一",
+                    "event": "三家分晋",
+                    "source_agents": ["historian"],
+                },
+            )
+
+            sync = VaultSync(vault_root=vault_dir, file_manager=fm)
+            result1 = sync.sync_to_vault(note_path)
+            self.assertEqual(result1["status"], "created")
+
+            result2 = sync.sync_to_vault(note_path)
+            self.assertEqual(result2["status"], "skipped")
+
+            # 验证本地 frontmatter 被写回 vault_path 和 sources
+            data = fm.read_markdown(note_path)
+            self.assertEqual(data["frontmatter"]["vault_path"], "资治通鉴/周纪一_三家分晋.md")
+            self.assertIn("资治通鉴/周纪一_三家分晋.md", data["frontmatter"]["vault_path"])
+
+    def test_sync_book_index_moc_links(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output_dir = Path(tmp) / "output"
+            vault_dir = Path(tmp) / "vault"
+            fm = FileManager(output_dir=output_dir)
+            note_path = fm.get_output_path("资治通鉴", "周纪一", "三家分晋")
+            fm.write_markdown(
+                note_path,
+                "## 讲事情\n\n三家分晋...\n",
+                {
+                    "title": "三家分晋",
+                    "book": "资治通鉴",
+                    "chapter": "周纪一",
+                    "event": "三家分晋",
+                    "source_agents": ["historian"],
+                },
+            )
+
+            sync = VaultSync(vault_root=vault_dir, file_manager=fm)
+            sync.sync_to_vault(note_path)
+            index_result = sync.sync_book_index("资治通鉴", [note_path])
+            self.assertIn(index_result["status"], ("created", "updated"))
+
+            moc_file = vault_dir / "资治通鉴/MOC.md"
+            self.assertTrue(moc_file.exists())
+            moc_text = moc_file.read_text(encoding="utf-8")
+            # 同一目录下链接应为文件名，而非完整相对路径
+            self.assertIn("[[周纪一_三家分晋.md|三家分晋]]", moc_text)
+
+
+class TestPDFReader(unittest.TestCase):
+    """验证 PDF 读取 fallback（无真实 MCP 环境）。"""
+
+    def test_read_missing_pdf_returns_empty_result(self) -> None:
+        reader = PDFReader()
+        result = reader.read_pdf(Path("/workspace/data/不存在的文件.pdf"))
+        self.assertEqual(result["text"], "")
+        self.assertEqual(result["pages"], 0)
+
+    def test_read_non_pdf_file_returns_empty_result(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_pdf = Path(tmp) / "fake.pdf"
+            fake_pdf.write_text("这不是 PDF 内容", encoding="utf-8")
+            reader = PDFReader()
+            result = reader.read_pdf(fake_pdf)
+            # 无本地 PDF 库时返回空结果
+            self.assertEqual(result["pages"], 0)
 
 
 if __name__ == "__main__":

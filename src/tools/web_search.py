@@ -15,6 +15,8 @@ from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import urlparse
 
+from ..utils.config import load_config
+
 logger = logging.getLogger(__name__)
 
 
@@ -27,7 +29,7 @@ class WebSearch:
         trusted_domains: list[str] | None = None,
     ) -> None:
         self.config_path = Path(config_path)
-        self.config = self._load_config()
+        self.config = load_config(self.config_path) if self.config_path.exists() else {}
         self.trusted_domains: list[str] = trusted_domains or self.config.get("trusted_domains", [])
         self.api_key: Optional[str] = os.getenv("GOOGLE_SEARCH_API_KEY") or self.config.get(
             "google_search_api_key"
@@ -35,24 +37,6 @@ class WebSearch:
         self.search_engine_id: Optional[str] = os.getenv("GOOGLE_CX") or self.config.get(
             "google_search_engine_id"
         )
-
-    def _load_config(self) -> dict:
-        """加载 YAML 配置；不存在或解析失败时返回空字典。"""
-        if not self.config_path.exists():
-            logger.debug("Config file not found: %s", self.config_path)
-            return {}
-
-        try:
-            import yaml  # type: ignore
-
-            with self.config_path.open("r", encoding="utf-8") as fh:
-                return yaml.safe_load(fh) or {}
-        except ImportError:
-            logger.warning("PyYAML not installed, cannot parse config.yaml")
-            return {}
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("Failed to load config %s: %s", self.config_path, exc)
-            return {}
 
     def _search_google(self, query: str, num_results: int) -> list[dict]:
         """使用 Google Custom Search API 搜索。"""

@@ -11,14 +11,20 @@ import logging
 from pathlib import Path
 from typing import Optional
 
+from ..utils.config import load_config
+
 logger = logging.getLogger(__name__)
 
 
 class PDFReader:
     """读取本地 PDF 并返回文本、页数与来源信息。"""
 
-    def __init__(self, mcp_server_name: str = "mcp_pdf-reader-mcp") -> None:
-        self.mcp_server_name = mcp_server_name
+    def __init__(self, mcp_server_name: Optional[str] = None) -> None:
+        config = load_config(Path("/workspace/config.yaml"))
+        mcp_servers = config.get("mcp_servers") or {}
+        self.mcp_server_name = mcp_server_name or (
+            mcp_servers.get("pdf_reader") if isinstance(mcp_servers, dict) else None
+        ) or "mcp_pdf-reader-mcp"
 
     def _read_with_mcp(self, file_path: Path) -> Optional[dict]:
         """尝试通过 MCP 服务器读取 PDF。"""

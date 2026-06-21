@@ -13,14 +13,28 @@ import threading
 from pathlib import Path
 from typing import Optional
 
+from ..utils.config import load_config
+
 logger = logging.getLogger(__name__)
+DEFAULT_CACHE_PATH = Path("/workspace/.cache/source_cache.json")
+
+
+def _resolve_cache_path(cache_path: Path | None) -> Path:
+    """解析来源缓存路径，优先使用传入值，否则读取 config.yaml 的 cache_dir。"""
+    if cache_path is not None:
+        return Path(cache_path)
+    config = load_config(Path("/workspace/config.yaml"))
+    cache_dir = config.get("cache_dir")
+    if cache_dir:
+        return Path(cache_dir).expanduser().resolve() / "source_cache.json"
+    return DEFAULT_CACHE_PATH
 
 
 class SourceCache:
     """按 event_key 记录已使用来源的线程安全缓存。"""
 
-    def __init__(self, cache_path: Path = Path("/workspace/.cache/source_cache.json")) -> None:
-        self.cache_path = Path(cache_path)
+    def __init__(self, cache_path: Path | None = None) -> None:
+        self.cache_path = _resolve_cache_path(cache_path)
         self.cache_path.parent.mkdir(parents=True, exist_ok=True)
         self._data: dict[str, list[dict]] = {}
         self._lock = threading.RLock()

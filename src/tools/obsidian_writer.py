@@ -13,7 +13,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+from ..utils.config import load_config
+
 logger = logging.getLogger(__name__)
+DEFAULT_CONFIG_PATH = Path("/workspace/config.yaml")
 
 
 class ObsidianWriter:
@@ -22,19 +25,33 @@ class ObsidianWriter:
     def __init__(
         self,
         vault_path: Optional[Path] = None,
-        mcp_server_name: str = "mcp_mcp-obsidian",
+        mcp_server_name: Optional[str] = None,
+        config_path: Path = DEFAULT_CONFIG_PATH,
     ) -> None:
-        self.mcp_server_name = mcp_server_name
-        self.vault_path = self._resolve_vault_path(vault_path)
+        config = load_config(config_path) if config_path.exists() else {}
+        self.mcp_server_name = mcp_server_name or self._resolve_mcp_server(config)
+        self.vault_path = self._resolve_vault_path(vault_path, config)
 
-    def _resolve_vault_path(self, vault_path: Optional[Path]) -> Path:
-        """从参数或环境变量解析 vault 根目录。"""
+    @staticmethod
+    def _resolve_mcp_server(config: dict) -> str:
+        """从 config.yaml 的 mcp_servers 节解析 obsidian 服务器名。"""
+        mcp_servers = config.get("mcp_servers") or {}
+        if isinstance(mcp_servers, dict):
+            return mcp_servers.get("obsidian", "mcp_mcp-obsidian")
+        return "mcp_mcp-obsidian"
+
+    def _resolve_vault_path(self, vault_path: Optional[Path], config: dict) -> Path:
+        """从参数、环境变量或 config.yaml 解析 vault 根目录。"""
         if vault_path is not None:
             return Path(vault_path)
 
         env_path = os.getenv("OBSIDIAN_VAULT_PATH")
         if env_path:
             return Path(env_path)
+
+        config_vault = config.get("vault_dir")
+        if config_vault:
+            return Path(config_vault).expanduser().resolve()
 
         return Path("/workspace/output/obsidian")
 
@@ -81,8 +98,30 @@ class ObsidianWriter:
 
             return yaml.safe_load(raw) or {}, body
         except ImportError:
-            logger.debug("PyYAML not installed, cannot parse existing frontmatter")
-            return {}, content
+            logger.debug("PyYAML not installed, parsing frontmatter manually")
+            return self._parse_simple_frontmatter(raw), body
+
+    @staticmethod
+    def _parse_simple_frontmatter(raw: str) -> dict:
+        """无 PyYAML 时解析简单 frontmatter（顶层标量/列表）。"""
+        result: dict = {}
+        current_key: str | None = None
+        for line in raw.splitlines():
+            stripped = line.strip()
+            if not stripped:
+                continue
+            if stripped.startswith("- "):
+                if current_key is not None:
+                    item = stripped[2:].strip().strip('"').strip("'")
+                    if not isinstance(result.get(current_key), list):
+                        result[current_key] = []
+                    result[current_key].append(item)
+                continue
+            if ":" in stripped:
+                key, _, value = stripped.partition(":")
+                current_key = key.strip()
+                result[current_key] = value.strip().strip('"').strip("'")
+        return result
 
     def _build_note(self, content: str, metadata: Optional[dict]) -> str:
         """合并 metadata frontmatter 与正文。"""
@@ -116,12 +155,18 @@ class ObsidianWriter:
             import mcp  # type: ignore
 
             client = mcp.Client()
+            # 若 content 已包含 frontmatter 且未传入 metadata，直接发送原始内容，
+            # 避免重复拼接 frontmatter。
+            if metadata is None and content.lstrip().startswith("---"):
+                note_content = content
+            else:
+                note_content = self._build_note(content, metadata)
             result = client.call(
                 server=self.mcp_server_name,
                 tool="write_note",
                 arguments={
                     "path": note_path,
-                    "content": self._build_note(content, metadata),
+                    "content": note_content,
                 },
             )
             return {

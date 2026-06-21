@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import logging
 import re
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -11,39 +13,22 @@ try:
 except Exception:  # pragma: no cover - 可选依赖
     yaml = None  # type: ignore
 
+from ..utils.config import load_config
 
+
+logger = logging.getLogger(__name__)
 DEFAULT_CONFIG_PATH = Path("/workspace/config.yaml")
 DEFAULT_OUTPUT_DIR = Path("/workspace/output")
 
 
-def _load_config(path: Path = DEFAULT_CONFIG_PATH) -> dict[str, Any]:
-    """读取 ``config.yaml``，无 PyYAML 时做最简单的顶层解析。"""
-    if not path.exists():
-        return {}
-    text = path.read_text(encoding="utf-8")
-    if yaml is not None:
-        try:
-            return yaml.safe_load(text) or {}
-        except Exception:
-            return {}
-    config: dict[str, Any] = {}
-    for raw in text.splitlines():
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
-        if ":" not in line:
-            continue
-        key, value = line.split(":", 1)
-        key = key.strip()
-        value = value.strip().strip('"').strip("'")
-        if value.startswith("[") and value.endswith("]"):
-            value = [v.strip().strip('"').strip("'") for v in value[1:-1].split(",") if v.strip()]
-        config[key] = value
-    return config
+REQUIRED_FRONTMATTER = {"title", "book", "chapter", "event", "created_at", "source_agents"}
 
 
 def _simple_yaml_dump(data: dict[str, Any]) -> str:
-    """无 PyYAML 时的极简 YAML 序列化，支持标量、列表和一层嵌套字典。"""
+    """无 PyYAML 时的极简 YAML 序列化，支持标量、列表和一层嵌套字典。
+
+    返回结果保证以 ``\\n---\\n`` 结尾，可直接嵌入 Markdown frontmatter。
+    """
 
     def _dump_value(value: Any, indent: int = 0) -> str:
         prefix = "  " * indent
@@ -61,7 +46,8 @@ def _simple_yaml_dump(data: dict[str, Any]) -> str:
             text = f'"{text.replace(chr(34), chr(92) + chr(34))}"'
         return f" {text}"
 
-    return "\n".join(f"{k}:{_dump_value(v, 0)}" for k, v in data.items())
+    body = "\n".join(f"{k}:{_dump_value(v, 0)}" for k, v in data.items())
+    return body.rstrip("\n") + "\n"
 
 
 def _parse_simple_value(value: str) -> Any:
@@ -93,7 +79,7 @@ class FileManager:
         if output_dir is not None:
             self.output_dir = Path(output_dir).expanduser()
         else:
-            config = _load_config(Path(config_path))
+            config = load_config(Path(config_path))
             root = config.get("output_dir") if isinstance(config.get("output_dir"), str) else None
             self.output_dir = Path(root).expanduser().resolve() if root else DEFAULT_OUTPUT_DIR
 
@@ -143,7 +129,13 @@ class FileManager:
             写入后的绝对路径。
         """
         path = self.ensure_dir(Path(path))
-        if metadata:
+        if metadata is not None:
+            missing = REQUIRED_FRONTMATTER - set(metadata.keys())
+            if missing:
+                logger.warning("Markdown frontmatter 缺少必要字段: %s", missing)
+            now = datetime.now().isoformat(timespec="seconds")
+            metadata.setdefault("created_at", now)
+            metadata.setdefault("updated_at", now)
             fm_body = yaml.safe_dump(metadata, allow_unicode=True, sort_keys=False) if yaml else _simple_yaml_dump(metadata)
             text = f"---\n{fm_body}---\n\n{content.lstrip()}"
         else:
