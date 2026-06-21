@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>深度阅读助手</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" defer></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+</head>
+<body>
+    <header class="toolbar">
+        <div class="toolbar-brand">
+            <h1>深度阅读助手</h1>
+        </div>
+        <div class="toolbar-search">
+            <input type="text" id="searchInput" placeholder="搜索书名、章节或事件…" autocomplete="off">
+        </div>
+        <div class="toolbar-actions">
+            <button id="newNoteBtn" class="btn-primary" type="button">生成新笔记</button>
+        </div>
+    </header>
+
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>笔记目录</h2>
+            </div>
+            <nav id="treeNav" class="tree-nav">
+                <div class="empty-state">正在加载目录…</div>
+            </nav>
+        </aside>
+
+        <main class="reader" id="reader">
+            <div class="reader-placeholder">
+                <p>请在左侧选择一篇笔记开始阅读。</p>
+            </div>
+        </main>
+    </div>
+
+    <div id="modalOverlay" class="modal-overlay" aria-hidden="true">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+            <div class="modal-header">
+                <h2 id="modalTitle">生成新笔记</h2>
+                <button id="modalClose" class="modal-close" type="button" aria-label="关闭">&times;</button>
+            </div>
+            <form id="generateForm" class="modal-body">
+                <div class="form-group">
+                    <label for="bookInput">书名</label>
+                    <input type="text" id="bookInput" name="book" placeholder="例如：《三体》" required>
+                </div>
+                <div class="form-group">
+                    <label for="chapterInput">章节</label>
+                    <input type="text" id="chapterInput" name="chapter" placeholder="例如：第一部 地球往事" required>
+                </div>
+                <div class="form-group">
+                    <label for="eventInput">事件</label>
+                    <input type="text" id="eventInput" name="event" placeholder="例如：叶文洁收到外星信号" required>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" id="cancelBtn" class="btn-secondary">取消</button>
+                    <button type="submit" id="submitBtn" class="btn-primary">开始生成</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

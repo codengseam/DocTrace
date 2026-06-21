@@ -1,0 +1,29 @@
+# 个人 AI 深度阅读助手配置
+
+output:
+  base_dir: output
+  filename_pattern: "{chapter}_{event}.md"
+
+logs:
+  base_dir: logs
+
+llm:
+  # 默认温度，叙事类 Agent 可稍高，分析类可稍低
+  default_temperature: 0.7
+
+# 可信搜索域白名单（后续 Web 搜索工具使用）
+trusted_domains:
+  - zgbk.com
+  - guoxue123.com
+  - ctext.org
+  - zh.wikipedia.org
+
+# Agent 输出结构检查开关
+quality_check:
+  enabled: true
+  required_sections:
+    - 讲事情
+    - 讲人物
+    - 讲背景
+    - 讲道理
+    - 问道悟道
