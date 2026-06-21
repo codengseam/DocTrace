@@ -1,0 +1,26 @@
+llm:
+  model: ${LLM_MODEL}
+  base_url: ${LLM_BASE_URL}
+  api_key: ${LLM_API_KEY}
+  temperature: 0.7
+
+paths:
+  output: output
+  logs: logs
+  prompts: src/cli/prompts
+  templates: templates
+
+rules:
+  sections:
+    - 讲事情
+    - 讲人物
+    - 讲背景
+    - 讲道理
+    - 问道悟道
+  required_frontmatter:
+    - title
+    - book
+    - chapter
+    - event
+    - created_at
+    - source_agents
