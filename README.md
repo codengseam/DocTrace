@@ -79,7 +79,7 @@ Specialist Agents 并行工作：
 ## 七、文件结构
 
 ```
-doc/
+.
 ├── README.md              # 项目规划与背景
 ├── RULES.md               # 内容生成规则
 ├── output/                # 生成的讲书笔记，按书分类、章节排序
@@ -99,11 +99,15 @@ doc/
 │   │   ├── philosopher.py     # 悟道专家
 │   │   └── editor.py          # 编辑专家
 │   ├── core/              # 工作流编排
-│   ├── web/               # HTML 管理界面
-│   └── skills/            # 项目级 Skill 定义（可选）
+│   ├── storage/           # 文件与元数据存储
+│   ├── tools/             # MCP / PDF / Obsidian / Web 搜索工具
+│   ├── utils/             # 公共工具
+│   └── web/               # HTML 管理界面
 ├── prompts/               # Agent 提示词文件
 ├── templates/             # Markdown 输出模板
-└── tests/                 # 测试用例
+├── tests/                 # 测试用例
+├── config.yaml            # 项目配置
+└── requirements.txt       # Python 依赖
 ```
 
 ## 八、命名规范

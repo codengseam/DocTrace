@@ -16,13 +16,12 @@ langgraph>=0.2.0
 Flask>=3.0.0
 flask-cors>=4.0.0
 
-# 可选：搜索能力
-# duckduckgo-search>=7.0
-# tavily-python>=0.5
+# 搜索能力（web_search.py 的 fallback 后端）
+duckduckgo-search>=7.0
 
-# 可选：PDF 本地解析（MCP 不可用时 fallback）
-# PyPDF2>=3.0
-# pdfplumber>=0.11
+# PDF 本地解析（MCP 不可用时的 fallback）
+pypdf>=3.0
+pdfplumber>=0.11
 
 # 开发 / 测试
 pytest>=8.0

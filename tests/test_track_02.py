@@ -200,9 +200,14 @@ class TestObsidianWriter(unittest.TestCase):
         result = writer.merge_frontmatter(
             existing, {"title": "商鞅变法", "created_at": "2026-06-21"}
         )
+        import re
         self.assertIn("title: 商鞅变法", result)
         self.assertIn("book: 旧书名", result)
-        self.assertIn("created_at: 2026-06-21", result)
+        # PyYAML 可能给日期字符串加引号，两种格式都接受
+        self.assertTrue(
+            re.search(r"created_at: ['\"]?2026-06-21['\"]?", result),
+            f"created_at not found as expected in: {result}",
+        )
         self.assertIn("正文内容。", result)
         # 确保只有一份 frontmatter
         self.assertEqual(result.count("---"), 2)

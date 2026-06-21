@@ -18,7 +18,7 @@ def _generate_stub(book: str, chapter: str, event: str, output_dir: str) -> Path
         print(f"File already exists: {output_path}")
         return output_path
 
-    created_at = datetime.now(timezone.utc).isoformat()
+    created_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     sections = ["讲事情", "讲人物", "讲背景", "讲道理", "问道悟道", "结语"]
     lines = [
         f'---',

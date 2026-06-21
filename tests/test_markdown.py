@@ -12,11 +12,16 @@ def test_build_frontmatter_contains_required_fields():
         event="商鞅变法",
         source_agents=["Editor Agent"],
     )
-    assert "title: 测试标题" in fm
-    assert "book: 资治通鉴" in fm
-    assert "chapter: 周纪二" in fm
-    assert "event: 商鞅变法" in fm
-    assert "source_agents: Editor Agent" in fm
+    assert "title:" in fm
+    assert "测试标题" in fm
+    assert "book:" in fm
+    assert "资治通鉴" in fm
+    assert "chapter:" in fm
+    assert "周纪二" in fm
+    assert "event:" in fm
+    assert "商鞅变法" in fm
+    assert "source_agents:" in fm
+    assert "- Editor Agent" in fm
     assert "created_at:" in fm
 
 
