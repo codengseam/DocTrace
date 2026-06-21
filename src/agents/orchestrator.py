@@ -12,6 +12,7 @@ from src.utils.markdown import build_output_path
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _DEFAULT_OUTPUT_DIR = _PROJECT_ROOT / "output"
 
+
 _READING_PREFIXES = [
     "我刚读完",
     "我刚看完",
@@ -29,9 +30,15 @@ _READING_PREFIXES = [
 
 
 class OrchestratorAgent:
-    def __init__(self, llm: LLMClient, logger: logging.Logger) -> None:
+    def __init__(
+        self,
+        llm: LLMClient,
+        logger: logging.Logger,
+        output_dir: Path | str | None = None,
+    ) -> None:
         self.llm = llm
         self.logger = logger
+        self.output_dir = Path(output_dir) if output_dir else _DEFAULT_OUTPUT_DIR
 
     @staticmethod
     def confirm_missing(book: str | None, chapter: str | None, event: str | None) -> list[str]:
@@ -56,7 +63,7 @@ class OrchestratorAgent:
         event = (event or "").strip()
 
         output_path = build_output_path(
-            _DEFAULT_OUTPUT_DIR,
+            self.output_dir,
             book,
             chapter,
             event,

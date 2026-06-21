@@ -5,6 +5,7 @@ import argparse
 import logging
 import os
 import sys
+from typing import Any
 
 # Allow running `python src/main.py` directly without PYTHONPATH setup.
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -47,6 +48,10 @@ def build_user_input(args: argparse.Namespace) -> str:
     return " ".join(parts)
 
 
+def _has_api_key(llm_config: dict[str, Any]) -> bool:
+    return bool(llm_config.get("api_key") or os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY"))
+
+
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     setup_logging()
@@ -55,6 +60,15 @@ def main(argv: list[str] | None = None) -> int:
     llm_config = dict(config.llm)
     if args.mock:
         llm_config["mock"] = True
+
+    if not args.mock and not _has_api_key(llm_config):
+        print(
+            "错误：未检测到 LLM API Key。请执行以下任一操作：\n"
+            "  1. 复制 .env.example 为 .env 并填写 LLM_API_KEY\n"
+            "  2. 设置环境变量 LLM_API_KEY 或 OPENAI_API_KEY\n"
+            "  3. 使用 --mock 参数进行离线演示"
+        )
+        return 1
 
     workflow = DeepReadingWorkflow(config=config, llm=build_llm(llm_config))
     user_input = build_user_input(args)

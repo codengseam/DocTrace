@@ -4,6 +4,15 @@ from datetime import datetime
 from pathlib import Path
 
 
+def _has_parent_handler(logger: logging.Logger) -> bool:
+    parent = logger.parent
+    while parent:
+        if parent.handlers:
+            return True
+        parent = parent.parent
+    return False
+
+
 def get_logger(name: str, log_path: Path | None = None) -> logging.Logger:
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
@@ -13,10 +22,13 @@ def get_logger(name: str, log_path: Path | None = None) -> logging.Logger:
     fmt = "%(asctime)s | %(name)s | %(levelname)s | %(message)s"
     formatter = logging.Formatter(fmt)
 
-    console = logging.StreamHandler(sys.stdout)
-    console.setLevel(logging.INFO)
-    console.setFormatter(formatter)
-    logger.addHandler(console)
+    # Only add a console handler if no ancestor already has one;
+    # this avoids duplicate output when a root logger is configured.
+    if not _has_parent_handler(logger):
+        console = logging.StreamHandler(sys.stdout)
+        console.setLevel(logging.INFO)
+        console.setFormatter(formatter)
+        logger.addHandler(console)
 
     if log_path:
         log_path.parent.mkdir(parents=True, exist_ok=True)

@@ -41,7 +41,9 @@ class DeepReadingWorkflow:
         self.output_dir = self.config.path("output")
         self.logs_dir = self.config.path("logs")
 
-        self.orchestrator = OrchestratorAgent(self.llm, self._logger("orchestrator"))
+        self.orchestrator = OrchestratorAgent(
+            self.llm, self._logger("orchestrator"), self.output_dir
+        )
         self.specialists = [
             HistorianAgent(self.llm, self._logger("historian"), self.prompts_dir),
             BiographerAgent(self.llm, self._logger("biographer"), self.prompts_dir),

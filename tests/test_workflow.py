@@ -14,7 +14,7 @@ REQUIRED_FRONTMATTER = ["title", "book", "chapter", "event", "created_at", "sour
 
 
 @pytest.fixture
-def workflow(tmp_path, monkeypatch):
+def workflow(tmp_path):
     output_dir = tmp_path / "output"
     logs_dir = tmp_path / "logs"
 
@@ -35,13 +35,6 @@ def workflow(tmp_path, monkeypatch):
     config_path.write_text(yaml.safe_dump(config_data), encoding="utf-8")
 
     cfg = Config(config_path)
-
-    # OrchestratorAgent uses its own module-level default for the output path,
-    # so redirect it to tmp_path to keep the workflow output isolated.
-    monkeypatch.setattr(
-        "src.agents.orchestrator._DEFAULT_OUTPUT_DIR", output_dir
-    )
-
     return DeepReadingWorkflow(config=cfg, llm=MockLLMClient())
 
 
