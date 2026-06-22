@@ -73,17 +73,18 @@ jobs:
           echo "✅ MODELSCOPE_STUDIO_REPO = $MS_REPO"
 
           # ---- 同步到魔搭创空间（保留远端历史，用本地构建产物覆盖）----
-          # 策略：fetch 远端 → 基于远端 HEAD → 用本地构建产物覆盖工作区 → commit → push
+          # 策略：在临时目录 clone 远端 → 覆盖构建产物 → commit → push
           # 这样既保留远端 commit 历史（含 README.md 卡片等），又确保构建产物最新
 
-          # 把构建产物暂存到临时目录（在 git 操作之前，避免被覆盖）
+          # 把构建产物暂存到临时目录（在 git 操作之前）
           STAGING_DIR=$(mktemp -d)
           cp -r site/. "$STAGING_DIR/"
           echo "✅ 构建产物已暂存到 $STAGING_DIR"
 
-          # 在 site 目录初始化 git 并拉取远端
-          cd site
-          rm -rf .git
+          # 在全新的临时目录操作 git，避免工作区文件冲突
+          WORK_DIR=$(mktemp -d)
+          cd "$WORK_DIR"
+
           git init -b master
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -94,7 +95,7 @@ jobs:
 
           if git fetch modelscope master 2>&1; then
             echo "✅ 已拉取远端 master 分支，基于远端历史部署"
-            # 创建工作分支跟踪远端（工作区会被远端内容覆盖）
+            # 工作区是空的，checkout 不会冲突
             git checkout -b deploy modelscope/master
             # 远端独有文件（如 README.md 卡片）现在在工作区
           else
@@ -103,7 +104,6 @@ jobs:
           fi
 
           # 用暂存的构建产物覆盖工作区（保留远端独有文件，覆盖同名文件）
-          # 使用 rsync 风格的覆盖：把暂存目录的所有内容复制过来
           cp -rf "$STAGING_DIR"/. .
           rm -rf "$STAGING_DIR"
 
@@ -118,6 +118,10 @@ jobs:
             echo "::error::推送到魔搭仓库失败，请检查 Token 权限和仓库地址。"
             exit 1
           fi
+
+          # 清理工作目录
+          cd "$GITHUB_WORKSPACE"
+          rm -rf "$WORK_DIR"
 
           echo "✅ Deployed to ModelScope Studio"
 
