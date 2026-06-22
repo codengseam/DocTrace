@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>豪书斋 · 品牌头图演示</title>
+  <style>
+    :root {
+      --bg: #fff;
+      --paper: #faf8f5;
+      --ink: #2c2c2c;
+      --accent: #8b5a2b;
+      --muted: #7a7a7a;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    body {
+      font-family: "Noto Serif SC", "Source Han Serif SC", "STSong", "SimSun", serif;
+      background-color: var(--paper);
+      color: var(--ink);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .brand-header {
+      text-align: center;
+      padding: 4rem 2rem;
+      background-color: var(--bg);
+      border-top: 1px solid rgba(139, 90, 43, 0.12);
+      border-bottom: 1px solid rgba(139, 90, 43, 0.12);
+      width: 100%;
+      max-width: 720px;
+    }
+
+    .brand-name {
+      font-size: clamp(2.5rem, 7vw, 4rem);
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      color: var(--ink);
+      line-height: 1.2;
+      position: relative;
+      display: inline-block;
+      padding-bottom: 0.6em;
+    }
+
+    .brand-name::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: 0;
+      transform: translateX(-50%);
+      width: 2.6em;
+      height: 2px;
+      background-color: var(--accent);
+      opacity: 0.85;
+    }
+
+    .brand-motto {
+      margin-top: 1.2rem;
+      font-size: clamp(0.95rem, 2.2vw, 1.15rem);
+      font-weight: 400;
+      letter-spacing: 0.14em;
+      color: var(--muted);
+    }
+
+    .page-note {
+      margin-top: 2rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+      opacity: 0.7;
+      letter-spacing: 0.05em;
+    }
+  </style>
+</head>
+<body>
+  <header class="brand-header">
+    <h1 class="brand-name">豪书斋</h1>
+    <p class="brand-motto">读古人书，悟今世事</p>
+  </header>
+  <p class="page-note">豪书斋 · 经典极简品牌头图演示</p>
+</body>
+</html>

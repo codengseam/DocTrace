@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>豪书斋 · 读古人书，悟今世事</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #fff;
+      --paper: #faf8f5;
+      --ink: #2c2c2c;
+      --accent: #8b5a2b;
+      --seal: #a83f39;
+      --seal-dark: #8a2e29;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      font-family: "Noto Serif SC", "Songti SC", "SimSun", serif;
+      background-color: var(--paper);
+      color: var(--ink);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .page-frame {
+      width: 100%;
+      max-width: 900px;
+      background-color: var(--bg);
+      border: 1px solid rgba(139, 90, 43, 0.18);
+      box-shadow:
+        0 1px 0 rgba(139, 90, 43, 0.05),
+        0 12px 40px rgba(44, 44, 44, 0.06);
+      padding: 64px 48px;
+      position: relative;
+    }
+
+    .page-frame::before {
+      content: "";
+      position: absolute;
+      inset: 14px;
+      border: 1px solid rgba(139, 90, 43, 0.12);
+      pointer-events: none;
+    }
+
+    header.brand-header {
+      display: flex;
+      align-items: center;
+      gap: 36px;
+      position: relative;
+    }
+
+    .seal {
+      flex-shrink: 0;
+      width: 88px;
+      height: 88px;
+      background: var(--seal);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      box-shadow:
+        inset 0 0 0 3px rgba(255, 255, 255, 0.22),
+        inset 0 0 18px rgba(0, 0, 0, 0.12),
+        0 6px 18px rgba(168, 63, 57, 0.22);
+      position: relative;
+      transform: rotate(-2deg);
+    }
+
+    .seal::after {
+      content: "";
+      position: absolute;
+      inset: 5px;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      border-radius: 5px;
+    }
+
+    .seal-char {
+      font-family: "Ma Shan Zheng", "KaiTi", "STKaiti", cursive;
+      font-size: 52px;
+      line-height: 1;
+      font-weight: 400;
+      letter-spacing: -2px;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+    }
+
+    .brand-body {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .brand-name {
+      font-family: "Ma Shan Zheng", "KaiTi", "STKaiti", cursive;
+      font-size: 56px;
+      line-height: 1.1;
+      color: var(--ink);
+      letter-spacing: 8px;
+      font-weight: 400;
+    }
+
+    .brand-name .char {
+      display: inline-block;
+    }
+
+    .brand-motto {
+      font-family: "Noto Serif SC", "Songti SC", "SimSun", serif;
+      font-size: 18px;
+      color: var(--accent);
+      letter-spacing: 4px;
+      font-weight: 600;
+      padding-left: 4px;
+      position: relative;
+    }
+
+    .brand-motto::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 28px;
+      height: 1px;
+      background: rgba(139, 90, 43, 0.35);
+    }
+
+    .ink-rule {
+      margin-top: 32px;
+      height: 3px;
+      width: 100%;
+      background: linear-gradient(
+        90deg,
+        rgba(44, 44, 44, 0.85) 0%,
+        rgba(44, 44, 44, 0.25) 72%,
+        rgba(44, 44, 44, 0) 100%
+      );
+      border-radius: 2px;
+      position: relative;
+    }
+
+    .ink-rule::after {
+      content: "";
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 8px;
+      height: 8px;
+      background: var(--seal);
+      border-radius: 50%;
+      opacity: 0.8;
+    }
+
+    .corner-mark {
+      position: absolute;
+      top: 22px;
+      right: 28px;
+      font-family: "Noto Serif SC", serif;
+      font-size: 12px;
+      color: rgba(139, 90, 43, 0.5);
+      letter-spacing: 2px;
+      writing-mode: vertical-rl;
+      text-orientation: upright;
+    }
+
+    @media (max-width: 640px) {
+      .page-frame {
+        padding: 48px 28px;
+      }
+
+      header.brand-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 24px;
+      }
+
+      .seal {
+        width: 72px;
+        height: 72px;
+      }
+
+      .seal-char {
+        font-size: 42px;
+      }
+
+      .brand-name {
+        font-size: 42px;
+        letter-spacing: 6px;
+      }
+
+      .brand-motto {
+        font-size: 16px;
+        letter-spacing: 2px;
+      }
+
+      .corner-mark {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-frame">
+    <span class="corner-mark">甲辰年</span>
+
+    <header class="brand-header">
+      <div class="seal" aria-label="豪书斋印">
+        <span class="seal-char">豪</span>
+      </div>
+
+      <div class="brand-body">
+        <h1 class="brand-name">
+          <span class="char">豪</span><span class="char">书</span><span class="char">斋</span>
+        </h1>
+        <p class="brand-motto">读古人书，悟今世事</p>
+      </div>
+    </header>
+
+    <div class="ink-rule" aria-hidden="true"></div>
+  </div>
+</body>
+</html>

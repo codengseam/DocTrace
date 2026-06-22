@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>豪书斋 · 读古人书，悟今世事</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #fff;
+      --paper: #faf8f5;
+      --ink: #2c2c2c;
+      --accent: #8b5a2b;
+      --ink-faint: rgba(44, 44, 44, 0.06);
+      --accent-faint: rgba(139, 90, 43, 0.12);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: "Noto Serif SC", "Source Han Serif SC", "SimSun", "STSong", serif;
+      background-color: var(--paper);
+      background-image:
+        radial-gradient(ellipse at 20% 30%, var(--ink-faint) 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 70%, var(--accent-faint) 0%, transparent 50%),
+        radial-gradient(circle at 50% 50%, rgba(255,255,255,0.6) 0%, transparent 70%);
+      color: var(--ink);
+      overflow-x: hidden;
+    }
+
+    .header {
+      position: relative;
+      width: min(88vw, 980px);
+      padding: 6rem 4rem;
+      text-align: center;
+      background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(250,248,245,0.85) 100%);
+      border-radius: 4px;
+      box-shadow:
+        0 1px 1px rgba(44,44,44,0.04),
+        0 8px 30px rgba(44,44,44,0.06);
+    }
+
+    .header::before,
+    .header::after {
+      content: "";
+      position: absolute;
+      pointer-events: none;
+    }
+
+    .header::before {
+      top: -60px;
+      right: -40px;
+      width: 220px;
+      height: 220px;
+      background: radial-gradient(circle, rgba(44,44,44,0.05) 0%, transparent 70%);
+      border-radius: 50%;
+      filter: blur(20px);
+    }
+
+    .header::after {
+      bottom: -80px;
+      left: -60px;
+      width: 280px;
+      height: 280px;
+      background: radial-gradient(circle, rgba(139,90,43,0.08) 0%, transparent 65%);
+      border-radius: 50%;
+      filter: blur(28px);
+    }
+
+    .brand {
+      position: relative;
+      display: inline-block;
+      font-size: clamp(3rem, 8vw, 5.5rem);
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      color: var(--ink);
+      line-height: 1.2;
+      padding-bottom: 0.6em;
+    }
+
+    .brand .char {
+      display: inline-block;
+      opacity: 0;
+      transform: translateY(12px);
+      animation: riseIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    .brand .char:nth-child(1) { animation-delay: 0.1s; }
+    .brand .char:nth-child(2) { animation-delay: 0.22s; }
+    .brand .char:nth-child(3) { animation-delay: 0.34s; }
+
+    .brush-line {
+      position: absolute;
+      left: 50%;
+      bottom: 0;
+      width: 140%;
+      height: 24px;
+      transform: translateX(-50%);
+      opacity: 0;
+      animation: drawIn 1.2s ease-out 0.55s forwards;
+    }
+
+    .brush-line svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .brush-line path {
+      fill: none;
+      stroke: var(--ink);
+      stroke-width: 2.2;
+      stroke-linecap: round;
+      opacity: 0.85;
+      filter: url(#ink-rough);
+    }
+
+    .motto {
+      margin-top: 1.6rem;
+      font-size: clamp(1rem, 2.4vw, 1.35rem);
+      font-weight: 300;
+      letter-spacing: 0.28em;
+      color: var(--ink);
+      opacity: 0.72;
+      line-height: 1.8;
+    }
+
+    .motto .dot {
+      display: inline-block;
+      width: 4px;
+      height: 4px;
+      background: var(--accent);
+      border-radius: 50%;
+      margin: 0 0.9em;
+      vertical-align: middle;
+      opacity: 0.7;
+    }
+
+    .seal {
+      position: absolute;
+      top: 2.2rem;
+      right: 2.2rem;
+      width: 52px;
+      height: 52px;
+      border: 2px solid var(--accent);
+      color: var(--accent);
+      font-size: 1.35rem;
+      font-weight: 600;
+      line-height: 48px;
+      text-align: center;
+      border-radius: 4px;
+      opacity: 0;
+      transform: rotate(-6deg) scale(0.9);
+      animation: stampIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.9s forwards;
+      box-shadow: inset 0 0 0 1px rgba(139,90,43,0.15);
+    }
+
+    @keyframes riseIn {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes drawIn {
+      from {
+        opacity: 0;
+        clip-path: inset(0 100% 0 0);
+      }
+      to {
+        opacity: 1;
+        clip-path: inset(0 0 0 0);
+      }
+    }
+
+    @keyframes stampIn {
+      to {
+        opacity: 0.85;
+        transform: rotate(-6deg) scale(1);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .header {
+        padding: 4rem 2rem;
+      }
+      .seal {
+        top: 1.2rem;
+        right: 1.2rem;
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+        line-height: 36px;
+      }
+      .motto .dot {
+        margin: 0 0.5em;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="seal" aria-hidden="true">读</div>
+
+    <h1 class="brand">
+      <span class="char">豪</span><span class="char">书</span><span class="char">斋</span>
+      <span class="brush-line">
+        <svg viewBox="0 0 400 24" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <filter id="ink-rough">
+              <feTurbulence type="fractalNoise" baseFrequency="0.04 0.15" numOctaves="2" result="noise" />
+              <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.8" xChannelSelector="R" yChannelSelector="G" />
+            </filter>
+          </defs>
+          <path d="M8,14 C60,10 110,18 160,13 C210,8 260,16 310,12 C350,9 380,11 392,13" />
+        </svg>
+      </span>
+    </h1>
+
+    <p class="motto">
+      读古人书<span class="dot"></span>悟今世事
+    </p>
+  </header>
+</body>
+</html>
