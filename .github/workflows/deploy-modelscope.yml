@@ -4,10 +4,6 @@ on:
   push:
     branches:
       - master
-    paths:
-      - 'output/**'
-      - 'scripts/build_site.py'
-      - '.github/workflows/deploy-modelscope.yml'
   workflow_dispatch:
 
 concurrency:
