@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>深度阅读助手 · 飞书云文档风批注</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/comments.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js" defer></script>
+    <script src="js/app.js" defer></script>
+    <script src="js/comments.js" defer></script>
+</head>
+<body>
+    <header class="toolbar">
+        <div class="toolbar-brand">
+            <h1>深度阅读助手</h1>
+        </div>
+        <div class="toolbar-search">
+            <input type="text" id="searchInput" placeholder="搜索书名、章节或事件…（回车搜索正文）" autocomplete="off">
+        </div>
+        <div class="toolbar-actions">
+            <button id="refreshBtn" class="btn-secondary" type="button">刷新目录</button>
+            <button id="cmtExportBtn" class="cmt-toolbar-btn cmt-toolbar-btn-ghost" type="button" title="导出当前笔记批注">
+                <span class="cmt-toolbar-btn-icon">⬇</span><span>导出评论</span>
+            </button>
+            <button id="cmtExpertBtn" class="cmt-toolbar-btn" type="button" title="启用专家团评判">
+                <span class="cmt-toolbar-btn-icon">★</span><span>启用专家团</span>
+            </button>
+            <button id="cmtImportBtn" class="cmt-toolbar-btn cmt-toolbar-btn-ghost" type="button" title="导入批注 JSON">
+                <span class="cmt-toolbar-btn-icon">⬆</span><span>导入</span>
+            </button>
+            <button id="newNoteBtn" class="btn-primary" type="button">生成新笔记</button>
+        </div>
+    </header>
+
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>笔记目录</h2>
+            </div>
+            <nav id="treeNav" class="tree-nav">
+                <div class="empty-state">正在加载目录…</div>
+            </nav>
+        </aside>
+
+        <main class="reader" id="reader">
+            <div class="reader-placeholder">
+                <p>请在左侧选择一篇笔记开始阅读。</p>
+            </div>
+        </main>
+
+        <!-- 评论面板容器：飞书风右侧悬浮面板，由 comments.js 动态填充 -->
+        <!-- 实际面板元素由 comments.js 的 getOrCreatePanel() 创建并挂到 .layout 末尾 -->
+    </div>
+
+    <div id="modalOverlay" class="modal-overlay" aria-hidden="true">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+            <div class="modal-header">
+                <h2 id="modalTitle">提示</h2>
+                <button id="modalClose" class="modal-close" type="button" aria-label="关闭">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>静态站点不支持在线生成。请在本地运行以下命令生成笔记后，重新构建站点：</p>
+                <pre><code>python src/main.py --book 书名 --chapter 章节 --event 事件</code></pre>
+                <p>生成完成后，重新运行构建脚本：</p>
+                <pre><code>python scripts/build_site.py</code></pre>
+                <div class="modal-actions">
+                    <button type="button" id="cancelBtn" class="btn-primary">知道了</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
