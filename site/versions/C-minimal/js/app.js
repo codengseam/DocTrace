@@ -1,6 +1,15 @@
 (function () {
     'use strict';
 
+    // 站点根路径：版本目录在 site/versions/<ver>/ 下，而 data/notes 在 site/ 根目录，
+    // 需计算根路径前缀，避免相对路径 fetch 404。
+    const SITE_BASE = (() => {
+        const p = window.location.pathname.replace(/\/[^/]*$/, '/');
+        const idx = p.indexOf('/versions/');
+        if (idx >= 0) return p.slice(0, idx) + '/';
+        return '';
+    })();
+
     const state = {
         treeData: [],
         notesIndex: {},
@@ -136,7 +145,7 @@
 
     async function loadTree() {
         try {
-            const response = await fetch('data/index.json');
+            const response = await fetch(SITE_BASE + 'data/index.json');
             if (!response.ok) {
                 throw new Error(`请求失败 (${response.status}): ${response.statusText}`);
             }
@@ -194,7 +203,7 @@
 
         elements.reader.innerHTML = '<div class="reader-placeholder">正在加载笔记…</div>';
         try {
-            const content = await fetch('notes/' + encodeURI(path)).then((r) => {
+            const content = await fetch(SITE_BASE + 'notes/' + encodeURI(path)).then((r) => {
                 if (!r.ok) {
                     throw new Error(`请求失败 (${r.status}): ${r.statusText}`);
                 }

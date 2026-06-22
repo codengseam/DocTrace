@@ -1,6 +1,17 @@
 (function () {
     'use strict';
 
+    // —— 站点根路径计算 ——
+    // 版本目录在 site/versions/<ver>/ 下，但 data/index.json 与 notes/*.md
+    // 在 site/ 根目录。从版本目录访问时，相对路径会 404，因此需要回溯到
+    // versions/ 的父级（即 site/）作为基准。
+    const SITE_BASE = (() => {
+        const p = window.location.pathname.replace(/\/[^/]*$/, '/');
+        const idx = p.indexOf('/versions/');
+        if (idx >= 0) return p.slice(0, idx) + '/';
+        return '';
+    })();
+
     const state = {
         treeData: [],
         notesIndex: {},
@@ -136,7 +147,7 @@
 
     async function loadTree() {
         try {
-            const response = await fetch('data/index.json');
+            const response = await fetch(SITE_BASE + 'data/index.json');
             if (!response.ok) {
                 throw new Error(`请求失败 (${response.status}): ${response.statusText}`);
             }
@@ -194,7 +205,7 @@
 
         elements.reader.innerHTML = '<div class="reader-placeholder">正在加载笔记…</div>';
         try {
-            const content = await fetch('notes/' + encodeURI(path)).then((r) => {
+            const content = await fetch(SITE_BASE + 'notes/' + encodeURI(path)).then((r) => {
                 if (!r.ok) {
                     throw new Error(`请求失败 (${r.status}): ${r.statusText}`);
                 }

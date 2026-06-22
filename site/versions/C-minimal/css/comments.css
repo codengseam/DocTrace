@@ -832,7 +832,7 @@
     line-height: 1.4;
     color: var(--cmtC-ink);
     background: transparent;
-    border: 1px solid var(--cmtC-line);
+    border: 1px solid var(--border);
     border-radius: 3px;
     cursor: pointer;
     transition: background 0.15s ease, border-color 0.15s ease;

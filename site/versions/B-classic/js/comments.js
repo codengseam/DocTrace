@@ -544,39 +544,28 @@
             }
         }
 
-        // 计算标题路径
+        // 计算标题路径：从顶层标题到当前段最近的标题
         var headingPath = [];
         var allHeadings = container.querySelectorAll('h1, h2, h3, h4, h5, h6');
-        var currentHeading = null;
+        var startRect = range.getBoundingClientRect();
+        var precedingHeadings = [];
         for (var h = 0; h < allHeadings.length; h++) {
             var heading = allHeadings[h];
             var headingRect = heading.getBoundingClientRect();
-            var startRect = range.getBoundingClientRect();
             if (headingRect.top <= startRect.top + 1) {
-                currentHeading = heading;
+                precedingHeadings.push(heading);
             } else {
                 break;
             }
         }
-        // 向上追溯标题层级
-        var h = currentHeading;
-        while (h) {
-            headingPath.unshift(h.textContent.trim());
-            // 找前一个同级或更高级的标题
-            var prev = h;
-            while (prev) {
-                prev = prev.previousElementSibling;
-                if (!prev) {
-                    prev = h.parentElement ? h.parentElement.previousElementSibling : null;
-                    break;
-                }
-                if (prev.tagName && prev.tagName.match(/^H[1-6]$/)) break;
+        // 从最近标题向上追溯，只保留层级严格递增的标题（h1 > h2 > ...）
+        var minLevel = 7;
+        for (var i = precedingHeadings.length - 1; i >= 0; i--) {
+            var level = parseInt(precedingHeadings[i].tagName.charAt(1), 10);
+            if (level < minLevel) {
+                headingPath.unshift(precedingHeadings[i].textContent.trim());
+                minLevel = level;
             }
-            // 简化：只取最近的标题
-            break;
-        }
-        if (currentHeading) {
-            headingPath = [currentHeading.textContent.trim()];
         }
 
         return { paragraphIndex: paragraphIndex, headingPath: headingPath };
@@ -634,6 +623,8 @@
             suffix: normTextSuffix,
             rangeStart: rangeStart,
             rangeEnd: rangeEnd,
+            charOffsetStart: rangeStart,
+            charOffsetEnd: rangeEnd,
             paragraphIndex: paraInfo.paragraphIndex,
             headingPath: paraInfo.headingPath,
             version: version,
@@ -2229,6 +2220,7 @@
 
         // 绑定选区监听
         container.addEventListener('mouseup', handleSelectionEnd);
+        container.addEventListener('touchend', handleSelectionEnd);
         container.addEventListener('click', handleHighlightClick);
         container.addEventListener('mouseover', handleHighlightHover);
         container.addEventListener('mouseout', function () { hideTooltip(); });
@@ -2245,6 +2237,7 @@
     function detach() {
         if (currentContainer) {
             currentContainer.removeEventListener('mouseup', handleSelectionEnd);
+            currentContainer.removeEventListener('touchend', handleSelectionEnd);
             currentContainer.removeEventListener('click', handleHighlightClick);
             currentContainer.removeEventListener('mouseover', handleHighlightHover);
             currentContainer.removeEventListener('keydown', handleHighlightKey);
@@ -2294,7 +2287,10 @@
             return (b.anchor.rangeStart || 0) - (a.anchor.rangeStart || 0);
         });
 
+        var orphanChanged = false;
         comments.forEach(function (comment) {
+            var wasOrphan = comment.anchor && comment.anchor._orphan;
+            if (comment.anchor) delete comment.anchor._orphan;
             var range = resolveAnchor(comment.anchor, currentContainer, builtCache);
             if (range) {
                 var replyCount = (comment.replies || []).length;
@@ -2304,13 +2300,14 @@
                 }
             } else {
                 // 孤儿批注
-                comment.anchor._orphan = true;
+                if (comment.anchor) comment.anchor._orphan = true;
             }
+            var isOrphan = comment.anchor && comment.anchor._orphan;
+            if (wasOrphan !== isOrphan) orphanChanged = true;
         });
 
-        // 保存孤儿标记
-        var hasOrphan = comments.some(function (c) { return c.anchor && c.anchor._orphan; });
-        if (hasOrphan) {
+        // 孤儿状态变化时持久化（含从孤儿恢复为正常的情况）
+        if (orphanChanged) {
             Storage.saveComments(currentNotePath, comments);
         }
     }

@@ -34,6 +34,15 @@
 (function () {
     'use strict';
 
+    // 站点根路径：版本目录在 site/versions/<ver>/ 下，而 notes 在 site/ 根目录，
+    // 需计算根路径前缀，避免相对路径 fetch 404。与 app.js 保持独立计算，模块解耦。
+    var SITE_BASE = (function () {
+        var p = window.location.pathname.replace(/\/[^/]*$/, '/');
+        var idx = p.indexOf('/versions/');
+        if (idx >= 0) return p.slice(0, idx) + '/';
+        return '';
+    })();
+
     /* ========================================================
      * 一、常量与类型定义
      * ======================================================== */
@@ -1004,7 +1013,7 @@
             '<div class="cmt-popover-quote"></div>' +
             '<textarea class="cmt-popover-input" placeholder="写下你的批注…" rows="3"></textarea>' +
             '<div class="cmt-popover-actions">' +
-                '<select class="cmt-popover-type" aria-label="批注类型">' +
+                '<select class="cmt-popover-type cmt-popover-select" aria-label="批注类型">' +
                     '<option value="error">❗ 错误</option>' +
                     '<option value="praise">👍 夸奖</option>' +
                     '<option value="discussion">💬 讨论</option>' +
@@ -1934,7 +1943,7 @@
      * 与 app.js 的 fetch 路径保持一致：notes/<path>
      */
     function fetchNoteContent(notePath) {
-        return fetch('notes/' + encodeURI(notePath))
+        return fetch(SITE_BASE + 'notes/' + encodeURI(notePath))
             .then(function (r) {
                 if (!r.ok) throw new Error('请求失败 (' + r.status + ')');
                 return r.text();

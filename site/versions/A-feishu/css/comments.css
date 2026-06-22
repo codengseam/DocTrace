@@ -767,6 +767,20 @@
     border-radius: var(--cmtA-radius-pill);
 }
 
+/* 版本不一致提示（checklist 2.4）：原文已更新，高亮可能偏移 */
+.cmt-thread-version-flag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 6px;
+    padding: 2px 8px;
+    font-family: var(--cmtA-font-ui);
+    font-size: 11px;
+    color: #b26a00;
+    background-color: rgba(255, 125, 0, 0.12);
+    border-radius: var(--cmtA-radius-pill);
+}
+
 .cmt-thread-header {
     display: flex;
     align-items: center;
@@ -1015,6 +1029,20 @@
     margin-top: 6px;
 }
 
+.cmt-edit-wrap {
+    margin-top: 8px;
+    padding: 8px;
+    background-color: #fafafa;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.cmt-edit-type-group {
+    margin: 0;
+}
+
 /* 卡片操作按钮行 */
 .cmt-thread-actions {
     display: flex;
@@ -1102,6 +1130,13 @@
 
 .cmt-expert-detail.cmt-open {
     display: block;
+}
+
+.cmt-expert-apply {
+    margin-top: 6px;
+    height: 24px;
+    padding: 0 10px;
+    font-size: 11px;
 }
 
 /* ============================================================

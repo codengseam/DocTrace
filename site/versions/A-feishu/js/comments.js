@@ -63,6 +63,7 @@
         container: null,        // 当前 .markdown-body 元素
         notePath: null,         // 当前笔记路径
         noteMeta: null,         // 当前笔记 frontmatter
+        noteVersion: null,      // 当前笔记版本（用于比对 anchor.version，checklist 2.4）
         comments: [],           // 当前笔记评论数组
         normTextCache: null,    // 规范化纯文本缓存 { normText, charMap, nodeIndex }
         pendingRange: null,     // 当前选区 Range（用于提交时 wrap）
@@ -73,7 +74,7 @@
         filterType: 'all',      // 类型筛选
         filterStatus: 'all',    // 状态筛选
         filterKeyword: '',      // 关键词筛选
-        showResolved: true,     // 是否显示已解决
+        showResolved: false,    // 已解决评论默认折叠（spec.md F4 / checklist 1.4）
         storageAvailable: true, // localStorage 是否可用
         selectionTimer: null,   // selectionchange 防抖计时器
         boundHandlers: {}       // 已绑定的事件处理器引用（用于 detach）
@@ -804,7 +805,11 @@
     }
 
     /**
-     * 在当前容器内解析锚点，返回 Range（architecture.md 2.6 三级容错）。
+     * 在当前容器内解析锚点，返回 Range（spec.md 4.3 四级容错）。
+     * 级别 1：精确偏移 + quote 校验
+     * 级别 2：quote 全文查找；唯一命中直接用，多次命中用 prefix/suffix 消歧
+     * 级别 3：零命中 → headingPath + paragraphIndex 定位段落，段内精确/模糊匹配
+     * 级别 4：全局前缀 + 后缀指纹模糊定位
      * @param {Anchor} anchor
      * @param {Element} container
      * @param {{normText:string,charMap:Array,nodeIndex:WeakMap}} [built] 可选的预构建缓存
@@ -825,37 +830,146 @@
             nodeIndex = built.nodeIndex;
         }
 
+        var quote = anchor.quote || anchor.exact || '';
+        if (!quote) return null;
+
         // —— 级别 1：精确偏移 + quote 校验 ——
-        if (anchor.rangeEnd <= normText.length) {
+        if (typeof anchor.rangeStart === 'number' && typeof anchor.rangeEnd === 'number' &&
+            anchor.rangeEnd <= normText.length) {
             var slice = normText.slice(anchor.rangeStart, anchor.rangeEnd);
-            if (slice === anchor.quote) {
+            if (slice === quote) {
                 var r1 = normRangeToDomRange(anchor.rangeStart, anchor.rangeEnd, charMap, nodeIndex);
                 if (r1) return r1;
             }
         }
 
-        // —— 级别 2：quote 全文查找（首次出现位置）——
-        var quote = anchor.quote || anchor.exact;
-        if (quote) {
-            var idx = normText.indexOf(quote);
-            if (idx !== -1) {
-                var r2 = normRangeToDomRange(idx, idx + quote.length, charMap, nodeIndex);
-                if (r2) return r2;
+        // —— 级别 2：quote 全文查找；多次命中用 prefix/suffix 消歧 ——
+        var hits = [];
+        var from = 0, idx;
+        while ((idx = normText.indexOf(quote, from)) !== -1) {
+            hits.push(idx);
+            from = idx + 1;
+        }
+        if (hits.length === 1) {
+            var r2 = normRangeToDomRange(hits[0], hits[0] + quote.length, charMap, nodeIndex);
+            if (r2) return r2;
+        } else if (hits.length > 1) {
+            var best = pickBestHitByContext(hits, quote, normText, anchor);
+            if (best >= 0) {
+                var r2b = normRangeToDomRange(hits[best], hits[best] + quote.length, charMap, nodeIndex);
+                if (r2b) return r2b;
             }
         }
 
-        // —— 级别 3：前缀 + 后缀指纹模糊定位 ——
+        // —— 级别 3：零命中 → headingPath + paragraphIndex 定位段落，段内匹配 ——
+        var paraRange = locateParagraphRange(anchor, container, built);
+        if (paraRange) {
+            var paraHit = paraRange.normText.indexOf(quote);
+            if (paraHit !== -1) {
+                var r3 = normRangeToDomRange(paraRange.normStart + paraHit,
+                    paraRange.normStart + paraHit + quote.length, charMap, nodeIndex);
+                if (r3) return r3;
+            }
+            // 段内指纹模糊
+            var paraFuzzy = fuzzyLocateByFingerprints(
+                paraRange.normText,
+                anchor.normTextPrefix || anchor.prefix,
+                anchor.normTextSuffix || anchor.suffix,
+                quote.length
+            );
+            if (paraFuzzy) {
+                var r3b = normRangeToDomRange(paraRange.normStart + paraFuzzy.start,
+                    paraRange.normStart + paraFuzzy.end, charMap, nodeIndex);
+                if (r3b) return r3b;
+            }
+        }
+
+        // —— 级别 4：全局前缀 + 后缀指纹模糊定位 ——
         var fuzzy = fuzzyLocateByFingerprints(
             normText,
             anchor.normTextPrefix || anchor.prefix,
             anchor.normTextSuffix || anchor.suffix,
-            quote ? quote.length : 0
+            quote.length
         );
         if (fuzzy) {
             return normRangeToDomRange(fuzzy.start, fuzzy.end, charMap, nodeIndex);
         }
 
         return null;
+    }
+
+    /**
+     * 多命中时用 prefix/suffix 指纹挑选最匹配的命中位置。
+     * @param {number[]} hits normText 中的命中起点数组
+     * @param {string} quote 锚定原文
+     * @param {string} normText 规范化全文
+     * @param {Anchor} anchor
+     * @returns {number} hits 数组的索引；-1 表示无候选
+     */
+    function pickBestHitByContext(hits, quote, normText, anchor) {
+        var prefix = anchor.normTextPrefix || anchor.prefix || '';
+        var suffix = anchor.normTextSuffix || anchor.suffix || '';
+        var bestIdx = -1, bestScore = Infinity;
+        for (var i = 0; i < hits.length; i++) {
+            var h = hits[i];
+            var actualPrefix = normText.slice(Math.max(0, h - prefix.length), h);
+            var actualSuffix = normText.slice(h + quote.length, h + quote.length + suffix.length);
+            var score = editDistance(actualPrefix, prefix) + editDistance(actualSuffix, suffix);
+            if (score < bestScore) {
+                bestScore = score;
+                bestIdx = i;
+            }
+        }
+        return bestIdx;
+    }
+
+    /**
+     * 用 headingPath + paragraphIndex 定位段落，返回该段在 normText 中的范围。
+     * @param {Anchor} anchor
+     * @param {Element} container
+     * @param {{normText:string,charMap:Array,nodeIndex:WeakMap}} built
+     * @returns {{normStart:number, normEnd:number, normText:string}|null}
+     */
+    function locateParagraphRange(anchor, container, built) {
+        if (typeof anchor.paragraphIndex !== 'number' || anchor.paragraphIndex < 0) return null;
+        var blockTags = ['P', 'BLOCKQUOTE', 'LI', 'TD', 'TH', 'DD', 'DT', 'FIGCAPTION'];
+        var blocks = container.querySelectorAll(blockTags.join(','));
+        if (anchor.paragraphIndex >= blocks.length) return null;
+        var block = blocks[anchor.paragraphIndex];
+        var range = getBlockNormRange(block, built);
+        if (!range) return null;
+        return {
+            normStart: range.start,
+            normEnd: range.end,
+            normText: built.normText.slice(range.start, range.end)
+        };
+    }
+
+    /**
+     * 计算一个块级元素在 normText 中的字符范围。
+     * @param {Element} blockEl
+     * @param {{normText:string,charMap:Array,nodeIndex:WeakMap}} built
+     * @returns {{start:number, end:number}|null}
+     */
+    function getBlockNormRange(blockEl, built) {
+        var nodeIndex = built.nodeIndex;
+        var firstNorm = null, lastNorm = null;
+        var walker = document.createTreeWalker(blockEl, NodeFilter.SHOW_TEXT, {
+            acceptNode: function (node) {
+                return isAnnotatableText(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+            }
+        });
+        var n;
+        while ((n = walker.nextNode())) {
+            var info = nodeIndex.get(n);
+            if (!info || info.segments.length === 0) continue;
+            var segStart = info.segments[0].normOffset;
+            var segEnd = info.segments[info.segments.length - 1].normOffset + 1;
+            if (firstNorm === null || segStart < firstNorm) firstNorm = segStart;
+            if (lastNorm === null || segEnd > lastNorm) lastNorm = segEnd;
+        }
+        if (firstNorm === null) return null;
+        return { start: firstNorm, end: lastNorm };
     }
 
     /* ========================================================
@@ -943,6 +1057,8 @@
             mark.dataset.cmtType = type;
             mark.setAttribute('role', 'mark');
             mark.setAttribute('tabindex', '0');
+            var typeInfo = COMMENT_TYPES[type] || COMMENT_TYPES.discussion;
+            mark.setAttribute('aria-label', '批注：' + typeInfo.label + '，点击查看详情');
             target.parentNode.insertBefore(mark, target);
             mark.appendChild(target);
         });
@@ -1026,7 +1142,13 @@
             try {
                 wrapRangeWithHighlight(item.range, item.comment.id, item.comment.type);
                 var marks = state.container.querySelectorAll('mark.cmt-highlight[data-cmt-id="' + CSS.escape(item.comment.id) + '"]');
-                marks.forEach(function (m) { m.dataset.cmtStatus = item.comment.status; });
+                var typeInfo = COMMENT_TYPES[item.comment.type] || COMMENT_TYPES.discussion;
+                var replyCount = (item.comment.replies || []).length;
+                var ariaLabel = '批注：' + typeInfo.label + '，' + replyCount + ' 条回复';
+                marks.forEach(function (m) {
+                    m.dataset.cmtStatus = item.comment.status;
+                    m.setAttribute('aria-label', ariaLabel);
+                });
             } catch (e) {
                 console.warn('[comments] wrap failed for', item.comment.id, e);
             }
@@ -1223,9 +1345,20 @@
         popover.className = 'cmt-popover';
         popover.id = 'cmtPopover';
         popover.setAttribute('role', 'dialog');
-        popover.setAttribute('aria-modal', 'false');
+        popover.setAttribute('aria-modal', 'true');
         popover.setAttribute('aria-labelledby', 'cmtPopoverTitle');
         popover.hidden = true;
+
+        // 不可见标题，供 aria-labelledby 引用
+        var popoverTitle = document.createElement('span');
+        popoverTitle.id = 'cmtPopoverTitle';
+        popoverTitle.textContent = '批注输入';
+        popoverTitle.style.position = 'absolute';
+        popoverTitle.style.width = '1px';
+        popoverTitle.style.height = '1px';
+        popoverTitle.style.overflow = 'hidden';
+        popoverTitle.style.clip = 'rect(0 0 0 0)';
+        popover.appendChild(popoverTitle);
 
         var arrow = document.createElement('div');
         arrow.className = 'cmt-popover-arrow';
@@ -1602,10 +1735,18 @@
         expertBtn.textContent = '启用专家团';
         expertBtn.addEventListener('click', function () { openExpertWizard(); });
 
+        var importExpertBtn = document.createElement('button');
+        importExpertBtn.type = 'button';
+        importExpertBtn.className = 'cmt-btn';
+        importExpertBtn.textContent = '导入评判';
+        importExpertBtn.title = '导入 expert_review_result.json';
+        importExpertBtn.addEventListener('click', function () { doImportExpertReview(); });
+
         toolbar.appendChild(exportNoteBtn);
         toolbar.appendChild(exportAllBtn);
         toolbar.appendChild(importBtn);
         toolbar.appendChild(expertBtn);
+        toolbar.appendChild(importExpertBtn);
 
         // 筛选行
         var filter = document.createElement('div');
@@ -1671,9 +1812,10 @@
         var body = document.createElement('div');
         body.className = 'cmt-panel-body';
 
-        var list = document.createElement('ul');
+        var list = document.createElement('div');
         list.className = 'cmt-thread-list';
         list.id = 'cmtThreadList';
+        list.setAttribute('role', 'list');
         body.appendChild(list);
 
         panel.appendChild(toggle);
@@ -1719,6 +1861,17 @@
         var list = document.getElementById('cmtThreadList');
         if (!list) return;
         list.innerHTML = '';
+
+        // 笔记未加载时提示（checklist 4.3）
+        if (!state.notePath) {
+            var noNote = document.createElement('div');
+            noNote.className = 'cmt-panel-empty';
+            noNote.innerHTML = '<div class="cmt-panel-empty-icon">📖</div>' +
+                '<div>请先选择一篇笔记</div>' +
+                '<div class="cmt-panel-empty-hint">在左侧目录中选择笔记后即可批注</div>';
+            list.appendChild(noNote);
+            return;
+        }
 
         var threads = state.comments.filter(function (c) {
             return !c.parentId && !c.deleted;
@@ -1768,10 +1921,17 @@
      * 渲染单条线程卡片。
      */
     function renderThread(comment) {
-        var li = document.createElement('li');
+        var li = document.createElement('article');
         li.className = 'cmt-thread';
         li.dataset.cmtId = comment.id;
         li.dataset.cmtStatus = comment.status;
+        li.setAttribute('role', 'listitem');
+        var typeInfoForLabel = COMMENT_TYPES[comment.type] || COMMENT_TYPES.discussion;
+        var ariaLabel = typeInfoForLabel.label + '：' + truncate(comment.content, 30);
+        if (comment.anchor && comment.anchor.quote) {
+            ariaLabel += '（原文：「' + truncate(comment.anchor.quote, 20) + '」）';
+        }
+        li.setAttribute('aria-label', ariaLabel);
         if (state.activeThreadId === comment.id) li.classList.add('cmt-active');
 
         // 检查是否能定位（孤儿标记）
@@ -1790,6 +1950,17 @@
             orphanFlag.className = 'cmt-thread-orphan-flag';
             orphanFlag.textContent = '⚠ 原文已变更，未能定位';
             li.appendChild(orphanFlag);
+        }
+
+        // 版本不一致提示（checklist 2.4：版本不一致时仍尝试定位，不直接判为孤儿）
+        // 仅当 anchor.version 存在且与当前笔记版本不同时提示，孤儿已单独标记则不重复
+        if (!isOrphaned && comment.anchor && comment.anchor.version &&
+            state.noteVersion && comment.anchor.version !== state.noteVersion) {
+            var verFlag = document.createElement('div');
+            verFlag.className = 'cmt-thread-version-flag';
+            verFlag.setAttribute('role', 'status');
+            verFlag.textContent = '⤴ 原文已更新，高亮可能偏移';
+            li.appendChild(verFlag);
         }
 
         // 头部
@@ -1904,6 +2075,23 @@
                     detailText += '评审：' + rv.reviewedBy.join(', ');
                 }
                 detail.textContent = detailText;
+
+                // 「应用建议」按钮：复制 suggestedEdit.text 到剪贴板，不自动改原文（spec.md 6.3）
+                if (rv.suggestedEdit && rv.suggestedEdit.text) {
+                    var applyBtn = document.createElement('button');
+                    applyBtn.type = 'button';
+                    applyBtn.className = 'cmt-btn cmt-btn-ghost cmt-expert-apply';
+                    applyBtn.textContent = '⧉ 应用建议';
+                    applyBtn.title = '复制建议文本到剪贴板，手动修订原文';
+                    applyBtn.addEventListener('click', function () {
+                        copyToClipboard(rv.suggestedEdit.text).then(function (ok) {
+                            if (ok) toast('建议文本已复制到剪贴板，请手动修订原文', 'success');
+                            else toast('复制失败，请手动复制', 'error');
+                        });
+                    });
+                    detail.appendChild(applyBtn);
+                }
+
                 reviewsWrap.appendChild(detail);
             });
             li.appendChild(reviewsWrap);
@@ -2056,15 +2244,81 @@
     }
 
     /**
-     * 编辑评论。
+     * 编辑评论：内联展开 textarea + 类型 pills，支持改 content 与 type。
      */
     function startEdit(threadEl, comment) {
-        // 简化：用 prompt 编辑
-        var newContent = window.prompt('编辑批注内容：', comment.content);
-        if (newContent === null) return;
-        newContent = newContent.trim();
-        if (!newContent || newContent === comment.content) return;
-        editComment(comment.id, newContent, comment.type);
+        // 已存在编辑框则关闭
+        var existing = threadEl.querySelector('.cmt-edit-wrap');
+        if (existing) { existing.remove(); return; }
+
+        var wrap = document.createElement('div');
+        wrap.className = 'cmt-edit-wrap';
+
+        var textarea = document.createElement('textarea');
+        textarea.className = 'cmt-reply-textarea cmt-edit-textarea';
+        textarea.value = comment.content;
+        textarea.setAttribute('aria-label', '编辑批注内容');
+
+        // 类型 pills
+        var typeGroup = document.createElement('div');
+        typeGroup.className = 'cmt-type-group cmt-edit-type-group';
+        typeGroup.setAttribute('role', 'radiogroup');
+        typeGroup.setAttribute('aria-label', '批注类型');
+        var selectedType = comment.type;
+        Object.keys(COMMENT_TYPES).forEach(function (t) {
+            var pill = document.createElement('button');
+            pill.type = 'button';
+            pill.className = 'cmt-type-pill';
+            pill.dataset.type = t;
+            pill.setAttribute('role', 'radio');
+            pill.setAttribute('aria-checked', t === selectedType ? 'true' : 'false');
+            pill.innerHTML = '<span class="cmt-type-icon">' + COMMENT_TYPES[t].icon + '</span><span>' + COMMENT_TYPES[t].label + '</span>';
+            pill.addEventListener('click', function () {
+                selectedType = t;
+                typeGroup.querySelectorAll('.cmt-type-pill').forEach(function (p) {
+                    p.setAttribute('aria-checked', p.dataset.type === selectedType ? 'true' : 'false');
+                });
+            });
+            typeGroup.appendChild(pill);
+        });
+
+        var actions = document.createElement('div');
+        actions.className = 'cmt-reply-actions';
+        var cancel = document.createElement('button');
+        cancel.type = 'button';
+        cancel.className = 'cmt-btn cmt-btn-ghost';
+        cancel.textContent = '取消';
+        cancel.addEventListener('click', function () { wrap.remove(); });
+
+        var submit = document.createElement('button');
+        submit.type = 'button';
+        submit.className = 'cmt-btn cmt-btn-primary';
+        submit.textContent = '保存';
+        submit.addEventListener('click', function () {
+            var text = textarea.value.trim();
+            if (!text) { toast('请输入批注内容', 'warn'); textarea.focus(); return; }
+            editComment(comment.id, text, selectedType);
+        });
+
+        textarea.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                var text = textarea.value.trim();
+                if (text) editComment(comment.id, text, selectedType);
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                wrap.remove();
+            }
+        });
+
+        actions.appendChild(cancel);
+        actions.appendChild(submit);
+        wrap.appendChild(textarea);
+        wrap.appendChild(typeGroup);
+        wrap.appendChild(actions);
+
+        threadEl.appendChild(wrap);
+        setTimeout(function () { textarea.focus(); }, 50);
     }
 
     /* ========================================================
@@ -2269,7 +2523,18 @@
             var reader = new FileReader();
             reader.onload = function () {
                 try {
-                    var imported = importJSON(String(reader.result), 'merge');
+                    var jsonStr = String(reader.result);
+                    // 预检测冲突，弹窗询问覆盖/跳过（spec.md F8 / checklist 1.8）
+                    var preview = countImportConflicts(jsonStr);
+                    var strategy = 'overwrite';
+                    if (preview.conflicts > 0) {
+                        var ok = window.confirm(
+                            '检测到 ' + preview.conflicts + ' 条冲突批注（id 已存在）。\n' +
+                            '点击「确定」覆盖冲突项，点击「取消」跳过冲突项。'
+                        );
+                        strategy = ok ? 'overwrite' : 'skip';
+                    }
+                    var imported = importJSON(jsonStr, 'merge', strategy);
                     toast('已导入 ' + imported.added + ' 条，跳过 ' + imported.skipped + ' 条冲突', 'success');
                 } catch (e) {
                     toast('导入失败：' + (e.message || '文件格式错误'), 'error');
@@ -2282,15 +2547,67 @@
     }
 
     /**
+     * 预检测导入文件中的冲突数量（id 已存在的条数）。
+     * @param {string} jsonStr
+     * @returns {{conflicts:number, total:number}}
+     */
+    function countImportConflicts(jsonStr) {
+        var data;
+        try { data = JSON.parse(jsonStr); } catch (e) { return { conflicts: 0, total: 0 }; }
+        var incoming = data.comments || data.threads || [];
+        if (!Array.isArray(incoming)) return { conflicts: 0, total: 0 };
+        var conflicts = 0;
+        incoming.forEach(function (c) {
+            if (!isValidComment(c)) return;
+            var np = c.notePath || data.notePath;
+            if (!np) return;
+            var existing = Storage.loadComments(np);
+            for (var i = 0; i < existing.length; i++) {
+                if (existing[i].id === c.id) { conflicts++; break; }
+            }
+        });
+        return { conflicts: conflicts, total: incoming.length };
+    }
+
+    /**
+     * 导入专家评判结果（spec.md 7.3 / 6.3）。
+     * 读取 expert_review_result.json，回填到对应 comment.expertReviews[]。
+     */
+    function doImportExpertReview() {
+        var input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json,application/json';
+        input.addEventListener('change', function () {
+            var file = input.files[0];
+            if (!file) return;
+            var reader = new FileReader();
+            reader.onload = function () {
+                try {
+                    var count = importExpertReview(String(reader.result));
+                    toast('已回填 ' + count + ' 条评判', 'success');
+                } catch (e) {
+                    toast('导入评判失败：' + (e.message || '文件格式错误'), 'error');
+                }
+            };
+            reader.onerror = function () { toast('文件读取失败', 'error'); };
+            reader.readAsText(file);
+        });
+        input.click();
+    }
+
+    /**
      * 导入 JSON（architecture.md 3.5）。
      * @param {string} jsonStr
      * @param {string} mode merge | replace
-     * @returns {{added:number, skipped:number}}
+     * @param {string} [conflictStrategy=overwrite] overwrite | skip 冲突处理策略
+     * @returns {{added:number, skipped:number, conflicts:number}}
      */
-    function importJSON(jsonStr, mode) {
+    function importJSON(jsonStr, mode, conflictStrategy) {
         var data = JSON.parse(jsonStr);
         var incomingComments = data.comments || data.threads || [];
         if (!Array.isArray(incomingComments)) throw new Error('comments 字段不是数组');
+
+        conflictStrategy = conflictStrategy || 'overwrite';
 
         // 按笔记分组
         var byNote = {};
@@ -2302,7 +2619,7 @@
             byNote[np].push(c);
         });
 
-        var added = 0, skipped = 0;
+        var added = 0, skipped = 0, conflicts = 0;
         Object.keys(byNote).forEach(function (np) {
             var existing = Storage.loadComments(np);
             if (mode === 'replace') {
@@ -2313,9 +2630,15 @@
 
             byNote[np].forEach(function (c) {
                 if (idMap[c.id]) {
-                    // 冲突：合并覆盖
-                    Object.assign(idMap[c.id], c, { updatedAt: nowIso() });
-                    skipped++;
+                    conflicts++;
+                    if (conflictStrategy === 'skip') {
+                        // 跳过冲突项
+                        skipped++;
+                    } else {
+                        // 覆盖冲突项
+                        Object.assign(idMap[c.id], c, { updatedAt: nowIso() });
+                        skipped++;
+                    }
                 } else {
                     existing.push(c);
                     idMap[c.id] = c;
@@ -2332,7 +2655,7 @@
             refreshHighlights();
             renderPanel();
         }
-        return { added: added, skipped: skipped };
+        return { added: added, skipped: skipped, conflicts: conflicts };
     }
 
     /* ========================================================
@@ -2698,6 +3021,7 @@
         state.container = container;
         state.notePath = notePath;
         state.noteMeta = meta || null;
+        state.noteVersion = computeNoteVersion();
         state.comments = Storage.loadComments(notePath);
         state.normTextCache = null;
         state.activeThreadId = null;
@@ -2740,6 +3064,8 @@
         state.boundHandlers = {};
         state.container = null;
         state.notePath = null;
+        state.noteMeta = null;
+        state.noteVersion = null;
         state.normTextCache = null;
         hideBubble();
         hidePopover();
@@ -2848,6 +3174,8 @@
         if (layout) {
             var panel = getOrCreatePanel();
             layout.appendChild(panel);
+            // 初次渲染：未加载笔记时显示「请先选择一篇笔记」
+            renderPanel();
         }
 
         // 工具栏按钮（若 index.html 中已存在则绑定，否则跳过）
