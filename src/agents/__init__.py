@@ -5,6 +5,7 @@ from . import editor
 from . import historian
 from . import orchestrator
 from . import philosopher
+from . import plan_reviewer
 
 __all__ = [
     "biographer",
@@ -14,4 +15,5 @@ __all__ = [
     "historian",
     "orchestrator",
     "philosopher",
+    "plan_reviewer",
 ]
