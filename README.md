@@ -58,14 +58,16 @@ Specialist Agents 并行工作：
 
 1. 用户输入书名、章节、事件（可选个人感悟）。
 2. Orchestrator 确认事件范围，规划各 Specialist Agent 任务。
-3. Specialist Agents 并行工作，各自按 RULES.md 中对应模块要求产出内容。
+3. Specialist Agents 并行工作，各自按 `.trae/rules/rules.md` 中对应模块要求产出内容。
 4. 编辑专家汇总五段内容，统一语气，补齐引用，生成结语。
 5. 保存到 `output/{书名}/{章节}_{事件}.md`。
 6. HTML 管理界面读取目录结构，按书分类、章节排序展示。
 
 ## 六、输出规范
 
-详见 [RULES.md](./RULES.md)。
+详见 [`.trae/rules/rules.md`](./.trae/rules/rules.md)。根目录 [`RULES.md`](./RULES.md) 是从库副本，用于兼容其他 IDE/工具。
+
+> 修改规则时只编辑 `.trae/rules/rules.md`，然后运行 `python scripts/sync_rules.py` 同步到根目录 `RULES.md`。
 
 固定结构：
 
@@ -81,7 +83,10 @@ Specialist Agents 并行工作：
 ```
 .
 ├── README.md              # 项目规划与背景
-├── RULES.md               # 内容生成规则
+├── .trae/
+│   ├── skills/deep-reading/  # Trae Skill 交互入口
+│   └── rules/
+│       └── rules.md       # 内容生成规则
 ├── .env.example           # 环境变量示例（API Key 等）
 ├── output/                # 生成的讲书笔记，按书分类、章节排序
 │   ├── 资治通鉴/
@@ -132,7 +137,7 @@ Specialist Agents 并行工作：
 ### 可借鉴的 AI 阅读/研究项目
 
 | 项目 | 核心借鉴点 |
-|---|---|
+|---|---|---|
 | **识典古籍 / 中华古籍智慧化服务平台** | 把专业古籍整理工具与大众阅读场景打通，垂直领域模型降低古文门槛。 |
 | **AI 太炎** | 古汉语领域专用小模型在字词释义、句读、用典分析上远超通用模型。 |
 | **Aeneas（DeepMind）** | 对残本/缺字古籍，可采用多模态 + 相似文本检索的修复与考证工作流。 |
@@ -183,7 +188,7 @@ Specialist Agents 并行工作：
 ┌─────────────────────────────────────────┐
 │  Trae Skill（深度阅读助手）              │
 │  - 识别用户意图                          │
-│  - 加载 RULES.md 规范                    │
+│  - 加载 `.trae/rules/rules.md` 规范      │
 │  - 触发 Python 编排引擎或 SOLO Agent     │
 └──────────────┬──────────────────────────┘
                │
@@ -228,7 +233,7 @@ Specialist Agents 并行工作：
 
 1. **Agent 工作流工程化**
    - 实现 Orchestrator + Specialist Agents 的调用逻辑；
-   - 每个 Agent 对应 RULES.md 中的一个模块；
+   - 每个 Agent 对应 `.trae/rules/rules.md` 中的一个模块；
    - 支持用户输入 → 自动生成 → 保存 Markdown 的完整流程。
 2. **HTML 管理界面**
    - 按书籍/卷/章分类浏览笔记；
@@ -288,12 +293,11 @@ python -m http.server 8080 -d site
 2. push 代码到 master 分支
 3. Actions 自动运行：安装依赖 → 构建站点 → 部署到 GitHub Pages
 
-注意：`output/` 目录被 `.gitignore` 忽略，CI 中会从仓库代码构建。如需在 CI 中生成笔记，请通过 `workflow_dispatch` 手动触发并配置 Secrets。
+注意：`output/` 目录默认会提交到仓库以保存生成的笔记。CI 构建静态站点时会直接读取仓库中的 `output/`。如需在 CI 中重新生成笔记，请通过 `workflow_dispatch` 手动触发并配置 Secrets。
 
 ## 十五、核心原则
 
 - **简洁**：不堆技术，能用提示词和简单流程解决就不用复杂架构。
 - **可信**：每个观点要有来源，每个名家点评要有出处。
 - **深刻**：不止于故事，要挖掘本质。
-- **人本**：AI 是阅读伴侣，最终判断权在用户。
-
+- **人本**：AI 是阅读伴侣，

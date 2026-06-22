@@ -1,5 +1,3 @@
-> **注意**：本文件是 `.trae/rules/rules.md` 的从库副本。Trae 优先读取 `.trae/rules/rules.md`，其他 IDE/工具可读取本文件。修改规则时请编辑 `.trae/rules/rules.md`，然后运行 `python scripts/sync_rules.py` 同步到本文件。
-
 # 项目写作规则
 
 本规则用于指导 Agent 生成 Markdown 讲书笔记。详细项目背景见 [README.md](./README.md)。

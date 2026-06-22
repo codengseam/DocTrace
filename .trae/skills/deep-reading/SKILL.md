@@ -48,9 +48,9 @@ version: 1.0.0
 
 如果用户已给出全部信息，或给出足够明确的信息，则跳过确认。
 
-## 第三步：加载 RULES.md
+## 第三步：加载 .trae/rules/rules.md
 
-核心引擎的 Editor Agent 会自动读取 RULES.md，你在解释输出时应遵守其中规则。
+核心引擎的 Editor Agent 会自动读取 `.trae/rules/rules.md`，你在解释输出时应遵守其中规则。
 
 ## 第四步：调用本地 Python 引擎
 
@@ -72,7 +72,7 @@ python src/main.py --input "{用户原始输入}"
 python src/main.py --book "{book}" --chapter "{chapter}" --event "{event}"
 ```
 
-命令执行目录为项目根目录（即包含 `src/main.py` 和 `RULES.md` 的目录）。
+命令执行目录为项目根目录（即包含 `src/main.py` 和 `.trae/rules/rules.md` 的目录）。
 
 **占位模式（--stub）说明**：`--stub` 标志支持从 `--input` 解析书名/章节/事件，也可以显式传 `--book`/`--chapter`/`--event`。当只提供 `--input` 时，占位生成器会按空白符切分输入，自动提取三个槽位用于构造文件路径和占位内容。
 

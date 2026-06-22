@@ -6,7 +6,7 @@
 
 详见：
 - [总计划](./2026-06-21-deep-reading-master-plan.md)
-- [RULES.md](../../../../RULES.md)
+- [`.trae/rules/rules.md`](../../../../.trae/rules/rules.md)
 - [README.md](../../../../README.md)
 
 ## 目标
@@ -84,6 +84,7 @@
 - Orchestrator 使用 LLM 做意图识别 + 槽位填充，fallback 到交互式询问。
 - Editor 不负责查资料，只负责润色、拼接、检查、生成结语。
 - 质量检查不通过时，触发修订 Agent 针对性修改，而不是从头生成。
+- 规则文件采用主从模式：优先读取 `.trae/rules/rules.md`，不存在则回退到根目录 `RULES.md`。
 
 ## 验收标准
 

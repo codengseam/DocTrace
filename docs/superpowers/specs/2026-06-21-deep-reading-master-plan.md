@@ -52,10 +52,12 @@ Vault       界面          （可选输入）
 | 输出文件路径 | `output/{书名}/{章节}_{事件}.md` |
 | 文件名规范 | 纯中文，`{章节}_{事件}.md` |
 | Markdown frontmatter | 必须包含 `title`、`book`、`chapter`、`event`、`created_at`、`source_agents` |
-| 正文结构 | 严格按照 RULES.md：讲事情 → 讲人物 → 讲背景 → 讲道理 → 问道悟道 → 结语 |
+| 正文结构 | 严格按照 `.trae/rules/rules.md`：讲事情 → 讲人物 → 讲背景 → 讲道理 → 问道悟道 → 结语 |
 | Specialist 输出格式 | 每个 Agent 输出带 `section` 标记的文本块，Editor 按标记拼装 |
 | 配置文件 | `.env` 存 API Key；`config.yaml` 存模型、输出路径、可信域白名单 |
 | 日志规范 | 每个 Agent 输出思考过程到 `logs/YYYY-MM-DD_HH-MM-SS_{event}.log` |
+| 规则文件 | 主库 `.trae/rules/rules.md`，从库根目录 `RULES.md`；Python 引擎优先读主库，主库不存在则读从库 |
+| 规则同步 | 修改主库后运行 `python scripts/sync_rules.py` 同步到从库 |
 | 用户输入兼容性 | Orchestrator 必须支持：一句话、只有书名、书名+章节、书名+章节+事件等多种形式 |
 
 ## 5. 实施原则
@@ -67,7 +69,7 @@ Vault       界面          （可选输入）
 
 ## 6. 验收标准（总）
 
-- [x] 输入 `python src/main.py --book 资治通鉴 --chapter 周纪二 --event 商鞅变法` 能生成符合 RULES.md 的 Markdown。
+- [x] 输入 `python src/main.py --book 资治通鉴 --chapter 周纪二 --event 商鞅变法` 能生成符合 `.trae/rules/rules.md` 的 Markdown。
 - [x] 用户输入自然语言（如"我刚读完资治通鉴周纪二商鞅变法"）也能被正确解析并生成。
 - [x] 文件保存路径正确，frontmatter 完整。
 - [x] 各 Specialist Agent 输出可被 Editor 正确汇总。
