@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>深度阅读助手 · 古籍批注风</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/comments.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js" defer></script>
+    <script src="js/app.js" defer></script>
+    <script src="js/comments.js" defer></script>
+</head>
+<body>
+    <header class="toolbar">
+        <div class="toolbar-brand">
+            <h1>深度阅读助手</h1>
+        </div>
+        <div class="toolbar-search">
+            <input type="text" id="searchInput" placeholder="搜索书名、章节或事件…（回车搜索正文）" autocomplete="off">
+        </div>
+        <div class="toolbar-actions">
+            <button id="refreshBtn" class="btn-secondary" type="button">刷新目录</button>
+            <button id="newNoteBtn" class="btn-primary" type="button">生成新笔记</button>
+            <button id="cmtExportBtn" class="cmt-toolbar-btn" type="button" title="导出当前笔记批注为 JSON">导出评论</button>
+            <button id="cmtExpertBtn" class="cmt-toolbar-btn" type="button" title="生成专家团评判请求包">启用专家团</button>
+        </div>
+    </header>
+
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>笔记目录</h2>
+            </div>
+            <nav id="treeNav" class="tree-nav">
+                <div class="empty-state">正在加载目录…</div>
+            </nav>
+        </aside>
+
+        <main class="reader" id="reader">
+            <div class="reader-placeholder">
+                <p>请在左侧选择一篇笔记开始阅读。</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- 评论系统：批注栏（由 comments.js 动态填充内容） -->
+    <aside class="cmt-panel" id="cmtPanel" aria-label="批注栏" hidden>
+        <header class="cmt-panel-header">
+            <h3>批注 <span class="cmt-panel-count" id="cmtPanelCount">0</span></h3>
+            <div class="cmt-panel-actions">
+                <button type="button" id="cmtExportNote" title="导出本篇批注">导出本篇</button>
+                <button type="button" id="cmtExportAll" title="导出全站批注">导出全部</button>
+                <button type="button" id="cmtExportAgents" title="导出给专家团">导出给专家</button>
+                <button type="button" id="cmtCopyPrompt" title="复制为 Prompt 上下文">复制Prompt</button>
+                <button type="button" id="cmtImport" title="导入批注 JSON">导入</button>
+                <button type="button" id="cmtImportReview" title="导入专家评判结果">导入评判</button>
+            </div>
+        </header>
+        <div class="cmt-panel-sort">
+            <label><input type="radio" name="cmtSort" value="position" checked> 按位置</label>
+            <label><input type="radio" name="cmtSort" value="time"> 按时间</label>
+            <label><input type="radio" name="cmtSort" value="status"> 按状态</label>
+            <label class="cmt-show-resolved"><input type="checkbox" id="cmtShowResolved"> 显示已解决</label>
+        </div>
+        <ul class="cmt-thread-list" id="cmtThreadList" aria-label="批注列表" aria-busy="false"></ul>
+    </aside>
+
+    <!-- 评论系统：隐藏的文件导入 input -->
+    <input type="file" id="cmtFileInput" accept=".json,application/json" hidden>
+
+    <div id="modalOverlay" class="modal-overlay" aria-hidden="true">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+            <div class="modal-header">
+                <h2 id="modalTitle">提示</h2>
+                <button id="modalClose" class="modal-close" type="button" aria-label="关闭">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>静态站点不支持在线生成。请在本地运行以下命令生成笔记后，重新构建站点：</p>
+                <pre><code>python src/main.py --book 书名 --chapter 章节 --event 事件</code></pre>
+                <p>生成完成后，重新运行构建脚本：</p>
+                <pre><code>python scripts/build_site.py</code></pre>
+                <div class="modal-actions">
+                    <button type="button" id="cancelBtn" class="btn-primary">知道了</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
