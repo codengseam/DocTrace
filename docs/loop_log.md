@@ -157,3 +157,34 @@
 
 **无需更新规则/checklist**：本次为前端布局修复，未涉及讲书笔记写作规则。魔搭部署配置（iframe 高度）属 site/ 代码之外，若仍有问题需检查魔搭侧 iframe 高度设置。
 
+
+### 2026-06-23：全站章内事件时间排序修正 + 校验机制固化
+
+**触发问题**：用户发现周纪五"窃符救赵"应在"纸上谈兵"后（当前在前），判断同章节内小标题排序还有类似问题，要求逐本逐章检查并固化检查机制到文档。
+
+**多 Agent 考证结果**（历史专家 Agent）：
+- 周纪三：苏秦合纵(1)→张仪连横(2)（原张仪在前，错）
+- 周纪五：纸上谈兵(1)→窃符救赵(2)（原窃符在前，错，用户指出）
+- 秦纪二：沙丘之谋(1)→大泽乡起义(2)（原大泽乡在前，错）
+- 汉纪一：鸿门宴(1)→韩信拜将(2)（原韩信在前，错）
+- 周纪二、秦纪一：原顺序已对，补 sort 字段保持一致
+
+**修复**：12 篇笔记 frontmatter 加 sort 字段（4 章修正 + 2 章补全 + 周纪四已修）。
+
+**校验机制固化**（文档专家 Agent 分析落点，构建与校验分离原则）：
+- 新建 `scripts/check_chapter_order.py`：跨文件校验同章 sort 单调递增、无重复、多事件章节不缺 sort
+- `.trae/rules/rules.md` 新增"§五 frontmatter 与排序"小节（写作要求层），sync_rules 同步到 RULES.md
+- `prompts/editor.md` frontmatter 模板加 `sort: {sort}` 字段（生成层）
+- `.trae/checklists/dev-checklist.md` 加"涉及 output/ 改动须跑 check_chapter_order.py"检查项
+- `.trae/skills/dev-selfcheck/SKILL.md` 加"笔记排序检查"小节（自检触发入口）
+- `README.md` 本地预览流程登记校验步骤
+- 新增 `tests/test_check_chapter_order.py` 15 项测试
+
+**架构教训（已沉淀）**：
+- **构建与校验分离**：校验脚本（check_chapter_order.py）独立于构建脚本（build_site.py），校验失败不阻断站点构建，CI 部署不被阻断。
+- **单篇校验 vs 跨文件校验**：quality.py 保持单篇 content 输入定位，不塞跨文件校验（章内排序需遍历同 chapter 多文件）；跨文件校验用独立脚本。
+- **sort 字段是人工事后补的**：`src/utils/markdown.py` 的 build_frontmatter 不生成 sort，`prompts/editor.md` 模板原本无 sort。本次把 sort 加入 editor 模板，未来生成的笔记会带 sort，但 LLM 填的 sort 值仍需校验脚本兜底。
+- **历史时间排序以原书叙事为准**：苏秦张仪年代有学术争议（马王堆帛书），但章内排序以《资治通鉴》叙事顺序为准，不擅自用现代考证推翻（rules.md §五已写明）。
+
+**测试覆盖**：全量 pytest 108 项通过（含新增 15 项 check_chapter_order 测试）；check_chapter_order.py 校验全站通过；7 个多事件章节排序全部正确。
+

@@ -278,10 +278,13 @@ python src/web/app.py
 # 1. 生成笔记（需要配置 API Key 或使用 --stub）
 python src/main.py --book 资治通鉴 --chapter 周纪二 --event 商鞅变法
 
-# 2. 构建静态站点
+# 2. 校验章内事件时间排序（多事件章节须有 sort 字段）
+python scripts/check_chapter_order.py
+
+# 3. 构建静态站点
 python scripts/build_site.py
 
-# 3. 本地预览
+# 4. 本地预览
 python -m http.server 8080 -d site
 ```
 
