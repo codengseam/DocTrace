@@ -157,7 +157,7 @@
         return '📁';
     }
 
-    function renderTree(nodes, depth = 0) {
+    function renderTree(nodes, depth = 0, flatten = false) {
         if (!nodes || nodes.length === 0) {
             const empty = document.createElement('div');
             empty.className = 'empty-state';
@@ -168,6 +168,17 @@
         ul.className = 'tree-list';
 
         nodes.forEach((node) => {
+            // flatten 模式：折叠纯数字 chapter 层，直接渲染其 children（event）。
+            // 用于论语/三国等 `序号_主题.md` 命名的书，避免目录显示无意义的"01"层级。
+            // flatten 只作用于 book 的直接 children（chapter 层），event 层不传 flatten。
+            if (flatten && node.type === 'chapter') {
+                const childUl = renderTree(node.children || [], depth, false);
+                while (childUl.firstChild) {
+                    ul.appendChild(childUl.firstChild);
+                }
+                return;
+            }
+
             const hasChildren = Array.isArray(node.children) && node.children.length > 0;
             const li = document.createElement('li');
             li.className = 'tree-node' + (hasChildren ? ' expanded' : '');
@@ -188,7 +199,7 @@
 
                 const childrenContainer = document.createElement('ul');
                 childrenContainer.className = 'tree-children';
-                childrenContainer.appendChild(renderTree(node.children, depth + 1));
+                childrenContainer.appendChild(renderTree(node.children, depth + 1, node.flat === true));
                 li.appendChild(childrenContainer);
             } else {
                 const leaf = document.createElement('button');
@@ -406,6 +417,11 @@
         state.activePath = null;
         state.searchQuery = '';
         if (elements.searchInput) elements.searchInput.value = '';
+        // 清除可能残留的覆盖层（移动端目录抽屉、设置面板、弹窗），
+        // 避免返回书架后蒙层残留、需再点一下才能交互的问题
+        closeSidebar();
+        closeSettings();
+        closeModal();
         switchView('home');
         renderBookshelf();
     }

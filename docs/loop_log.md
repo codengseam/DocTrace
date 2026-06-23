@@ -106,3 +106,26 @@
 6. **prompts/context_analyst.md**：横向并置（同时期对照事件）；地理纵深；过渡句去模板化。
 7. **quality.py**：AI_PATTERNS 拆分显性/软性；新增 MODERN_JARGON 检测；新增 check_sublimation_quota 升华配额检测。
 
+
+## 三、开发协作沉淀
+
+### 2026-06-23：四问题修复（排序/蒙层/数字目录/相邻章重复）
+
+**触发问题**：用户反馈站点四个体验问题——章内事件排序错乱、返回书架蒙层残留、论语纯数字目录层级冗余、相邻章节内容大篇幅重复。
+
+**根因与修复**：
+1. **章内事件排序**（资治通鉴·周纪四）：原排序按 path 字符串，未考虑历史时间序。修复：frontmatter 新增 `sort` 字段，`sort_notes_tree` event 排序键改为 `(is_none, sort_value, path)` 三元组，None 回退到 path（向后兼容）。
+2. **返回书架蒙层**：`backToHome()` 未清理移动端抽屉/设置面板/弹窗的覆盖层。修复：切换视图前依次调用 `closeSidebar()/closeSettings()/closeModal()`。
+3. **论语纯数字目录**：`序号_主题.md` 命名导致 chapter 层显示无意义的"01"。修复：数据层新增 `is_flat_book()`（仅当所有 chapter 标题都是纯数字才返回 True），前端 `renderTree` 在 flatten 模式下折叠 chapter 层直接渲染 event。史记等混合结构不折叠。
+4. **相邻章重复**（完璧归赵/渑池之会/负荆请罪）：独立生成导致讲人物/讲道理模块大篇幅重复。修复：保留各章独有内容（廉颇送境立太子、赵奢阏与之战、门客请辞、廉颇晚年、荀子评将相和），重复部分改为简略提及 +「（详见《完璧归赵》）」交叉引用。
+
+**架构教训（已沉淀）**：
+- `sort_notes_tree` 有两个消费者（`build_site.py` 静态站点 + `src/web/app.py` Flask API），改排序逻辑必须同步两端，否则静态站点与在线 API 行为不一致。
+- sort key 混合 None 与 int 会抛 TypeError，必须用 `(is_none, value, fallback)` 三元组规避。
+- 前端折叠必须放在数据排序之后（数据层结构稳定，仅渲染层折叠），否则数字 chapter 会被字符串序重排破坏 01→24 顺序。
+- 内容去重不得删除章节（rules.md 五段结构不可缺），只能精简并加交叉引用；跨事件名家点评须保留事件专属引用（rules.md §五）。
+
+**测试覆盖**：新增 `tests/test_sorting.py`（27 项，覆盖 parse_chinese_number/chapter_sort_key/is_flat_book/sort_notes_tree 全部分支含 None 回归）；`tests/test_build_site.py` 增 8 项（sort 注入/flat 标记/混合结构）。全量 pytest 93 项通过，四篇笔记 quality.py 全 PASS。
+
+**无需更新规则/checklist**：本次为功能修复，未暴露新的共性写作问题；rules.md 已有「相邻章重复」的隐含约束（§二.2 跨事件引用），无需新增条款。
+

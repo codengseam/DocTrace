@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import sys
 from datetime import datetime
@@ -14,7 +15,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
-from src.utils.sorting import sort_notes_tree  # noqa: E402
+from src.utils.sorting import is_flat_book, sort_notes_tree  # noqa: E402
 
 try:
     import yaml  # type: ignore
@@ -144,6 +145,27 @@ def _read_note_content(rel_path: str) -> str:
         return ""
 
 
+def _parse_sort_from_content(content: str) -> int | None:
+    """从 Markdown frontmatter 提取 sort 字段（章内事件排序）。
+
+    与 build_site.py 的 frontmatter 解析保持一致，供 Flask API 排序使用。
+    """
+    if not content:
+        return None
+    match = re.match(r"^---\s*\n(.*?)\n---", content, re.DOTALL)
+    if not match:
+        return None
+    for line in match.group(1).splitlines():
+        stripped = line.strip()
+        if stripped.startswith("sort:"):
+            value = stripped.split(":", 1)[1].strip()
+            try:
+                return int(value)
+            except ValueError:
+                return None
+    return None
+
+
 def _build_index() -> dict[str, Any]:
     """扫描 output/ 目录，构建与静态站点 index.json 兼容的数据。"""
     notes: dict[str, dict[str, Any]] = {}
@@ -173,6 +195,7 @@ def _build_index() -> dict[str, Any]:
                     "title": event or chapter,
                     "type": "event",
                     "path": rel_str,
+                    "sort": _parse_sort_from_content(content),
                 }
             )
 
@@ -201,6 +224,7 @@ def _build_index() -> dict[str, Any]:
                 "title": book_name,
                 "type": "book",
                 "children": book_trees[book_name],
+                "flat": is_flat_book(book_trees[book_name]),
             }
         )
 
@@ -223,6 +247,7 @@ def _build_index() -> dict[str, Any]:
                 "chapter_count": len(chapters),
                 "note_count": note_count,
                 "tree": chapters,
+                "flat": is_flat_book(chapters),
             }
         )
 
@@ -262,11 +287,13 @@ def list_notes():
     """Return a tree of notes: book -> chapter -> event."""
     books = {}
     for rel_path, book, chapter, event in _iter_notes():
+        content = _read_note_content(rel_path)
         books.setdefault(book, {}).setdefault(chapter, []).append(
             {
                 "title": event or chapter,
                 "type": "event",
                 "path": rel_path,
+                "sort": _parse_sort_from_content(content),
             }
         )
 
@@ -284,6 +311,7 @@ def list_notes():
                     "children": events,
                 }
             )
+        book_node["flat"] = is_flat_book(book_node["children"])
         tree.append(book_node)
     sort_notes_tree(tree)
     return jsonify(tree)

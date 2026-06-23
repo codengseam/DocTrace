@@ -24,7 +24,7 @@ _ROOT = Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from src.utils.sorting import sort_notes_tree  # noqa: E402
+from src.utils.sorting import is_flat_book, sort_notes_tree  # noqa: E402
 
 try:
     import yaml  # type: ignore
@@ -240,6 +240,7 @@ def build_site(output_dir: str = "output", site_dir: str = "site") -> Path:
                     "title": event or chapter,
                     "type": "event",
                     "path": rel_str,
+                    "sort": frontmatter.get("sort"),
                 }
             )
 
@@ -273,6 +274,7 @@ def build_site(output_dir: str = "output", site_dir: str = "site") -> Path:
                 "title": book_name,
                 "type": "book",
                 "children": book_trees[book_name],
+                "flat": is_flat_book(book_trees[book_name]),
             }
         )
     sort_notes_tree(tree)
@@ -296,6 +298,7 @@ def build_site(output_dir: str = "output", site_dir: str = "site") -> Path:
                 "chapter_count": chapter_count,
                 "note_count": note_count,
                 "tree": book_trees[book_name],
+                "flat": is_flat_book(book_trees[book_name]),
             }
         )
 

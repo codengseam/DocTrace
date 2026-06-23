@@ -98,6 +98,22 @@ def chapter_sort_key(book: str, chapter: str) -> tuple[int, int, str]:
     return (_FALLBACK_ORDER, 0, chapter)
 
 
+def is_flat_book(chapters: list[dict[str, Any]]) -> bool:
+    """判断一本书是否所有 chapter 标题都是纯数字（用于前端折叠数字层级）。
+
+    纯数字 chapter 通常来自 `序号_主题.md` 命名（如论语 01_孔子的一生），
+    数字本身无展示意义，前端应折叠该层直接显示事件标题。
+    混合 chapter（如史记既有"秦纪一"又有"01"）不折叠，避免结构不一致。
+    """
+    if not chapters:
+        return False
+    return all(
+        isinstance(ch.get("title", ""), str)
+        and ch.get("title", "").strip().isdigit()
+        for ch in chapters
+    )
+
+
 def sort_notes_tree(tree: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """对 tree 结构就地按规则排序并返回。
 
@@ -114,5 +130,15 @@ def sort_notes_tree(tree: list[dict[str, Any]]) -> list[dict[str, Any]]:
         )
         for chapter_node in children:
             events = chapter_node.get("children") or []
-            events.sort(key=lambda e: e.get("path", ""))
+            # 优先按 frontmatter 的 sort 字段排序（章内事件历史时间顺序）；
+            # 无 sort 字段时回退到 path 排序，保证向后兼容。
+            # sort key 用 (is_none, sort_value, path) 三元组，确保 None 不与 int
+            # 直接比较而抛 TypeError：is_none=True 的节点统一排到有 sort 值的节点之后。
+            events.sort(
+                key=lambda e: (
+                    e.get("sort") is None,
+                    e.get("sort") if e.get("sort") is not None else 0,
+                    e.get("path", ""),
+                )
+            )
     return tree

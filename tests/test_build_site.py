@@ -383,3 +383,204 @@ def test_stats_includes_categories():
         assert "categories" in data["stats"]
         assert isinstance(data["stats"]["categories"], int)
         assert data["stats"]["categories"] == 1
+
+
+# ---------- sort 字段注入（问题一） ----------
+
+
+def test_event_node_includes_sort_field():
+    """event 节点注入 frontmatter 的 sort 字段。"""
+    with tempfile.TemporaryDirectory() as tmp:
+        output_dir = Path(tmp) / "output"
+        site_dir = Path(tmp) / "site"
+        note_path = output_dir / "资治通鉴" / "周纪四_胡服骑射.md"
+        note_path.parent.mkdir(parents=True, exist_ok=True)
+        note_path.write_text(
+            """---
+title: "胡服骑射"
+book: "资治通鉴"
+chapter: "周纪四"
+event: "胡服骑射"
+sort: 1
+created_at: "2026-06-21T23:00:00+08:00"
+---
+
+## 讲事情
+
+赵武灵王胡服骑射。
+""",
+            encoding="utf-8",
+        )
+        meta_path = output_dir / "资治通鉴" / "_meta.yaml"
+        meta_path.write_text(SAMPLE_META_YAML, encoding="utf-8")
+
+        build_site(str(output_dir), str(site_dir))
+        data = json.loads(
+            (site_dir / "data" / "index.json").read_text(encoding="utf-8")
+        )
+        event_node = data["tree"][0]["children"][0]["children"][0]
+        assert event_node["sort"] == 1
+
+
+def test_event_node_sort_none_when_absent():
+    """frontmatter 无 sort 字段时，event 节点 sort 为 None。"""
+    with tempfile.TemporaryDirectory() as tmp:
+        output_dir = Path(tmp) / "output"
+        site_dir = Path(tmp) / "site"
+        _create_sample_output(output_dir)
+        build_site(str(output_dir), str(site_dir))
+        data = json.loads(
+            (site_dir / "data" / "index.json").read_text(encoding="utf-8")
+        )
+        event_node = data["tree"][0]["children"][0]["children"][0]
+        assert event_node["sort"] is None
+
+
+def test_event_sort_orders_by_sort_field():
+    """章内多个 event 按 sort 字段排序（而非 path）。"""
+    with tempfile.TemporaryDirectory() as tmp:
+        output_dir = Path(tmp) / "output"
+        site_dir = Path(tmp) / "site"
+        book_dir = output_dir / "资治通鉴"
+        book_dir.mkdir(parents=True, exist_ok=True)
+        (book_dir / "_meta.yaml").write_text(SAMPLE_META_YAML, encoding="utf-8")
+
+        # 故意让 path 顺序与 sort 顺序相反
+        notes = [
+            ("周纪四_完璧归赵.md", "完璧归赵", 2),
+            ("周纪四_胡服骑射.md", "胡服骑射", 1),
+            ("周纪四_负荆请罪.md", "负荆请罪", 4),
+            ("周纪四_渑池之会.md", "渑池之会", 3),
+        ]
+        for filename, event, sort in notes:
+            (book_dir / filename).write_text(
+                f"""---
+title: "{event}"
+book: "资治通鉴"
+chapter: "周纪四"
+event: "{event}"
+sort: {sort}
+created_at: "2026-06-21T23:00:00+08:00"
+---
+
+## 讲事情
+
+{event}内容。
+""",
+                encoding="utf-8",
+            )
+
+        build_site(str(output_dir), str(site_dir))
+        data = json.loads(
+            (site_dir / "data" / "index.json").read_text(encoding="utf-8")
+        )
+        events = data["tree"][0]["children"][0]["children"]
+        titles = [e["title"] for e in events]
+        assert titles == ["胡服骑射", "完璧归赵", "渑池之会", "负荆请罪"]
+
+
+# ---------- flat 标记（问题三） ----------
+
+
+def test_book_node_flat_flag_true_for_all_numeric_chapters():
+    """所有 chapter 标题都是纯数字时，book 节点 flat=True。"""
+    with tempfile.TemporaryDirectory() as tmp:
+        output_dir = Path(tmp) / "output"
+        site_dir = Path(tmp) / "site"
+        book_dir = output_dir / "论语"
+        book_dir.mkdir(parents=True, exist_ok=True)
+        for idx, name in [(1, "孔子的一生"), (2, "孔子的性格")]:
+            (book_dir / f"0{idx}_{name}.md").write_text(
+                f"""---
+title: "{name}"
+book: "论语"
+chapter: "0{idx}"
+event: "{name}"
+---
+
+## 讲事情
+
+内容。
+""",
+                encoding="utf-8",
+            )
+
+        build_site(str(output_dir), str(site_dir))
+        data = json.loads(
+            (site_dir / "data" / "index.json").read_text(encoding="utf-8")
+        )
+        book_node = data["tree"][0]
+        assert book_node["flat"] is True
+
+
+def test_book_node_flat_flag_false_for_named_chapters():
+    """chapter 标题非纯数字时（如周纪四），book 节点 flat=False。"""
+    with tempfile.TemporaryDirectory() as tmp:
+        output_dir = Path(tmp) / "output"
+        site_dir = Path(tmp) / "site"
+        _create_sample_output(output_dir)
+        build_site(str(output_dir), str(site_dir))
+        data = json.loads(
+            (site_dir / "data" / "index.json").read_text(encoding="utf-8")
+        )
+        book_node = data["tree"][0]
+        assert book_node["flat"] is False
+
+
+def test_book_node_flat_flag_false_for_mixed_chapters():
+    """混合 chapter（数字 + 非数字）时 flat=False（如史记既有秦纪又有01）。"""
+    with tempfile.TemporaryDirectory() as tmp:
+        output_dir = Path(tmp) / "output"
+        site_dir = Path(tmp) / "site"
+        book_dir = output_dir / "史记"
+        book_dir.mkdir(parents=True, exist_ok=True)
+        (book_dir / "秦纪一_某事.md").write_text(
+            """---
+title: "某事"
+book: "史记"
+chapter: "秦纪一"
+event: "某事"
+---
+
+## 讲事情
+
+内容。
+""",
+            encoding="utf-8",
+        )
+        (book_dir / "01_另一事.md").write_text(
+            """---
+title: "另一事"
+book: "史记"
+chapter: "01"
+event: "另一事"
+---
+
+## 讲事情
+
+内容。
+""",
+            encoding="utf-8",
+        )
+
+        build_site(str(output_dir), str(site_dir))
+        data = json.loads(
+            (site_dir / "data" / "index.json").read_text(encoding="utf-8")
+        )
+        book_node = data["tree"][0]
+        assert book_node["flat"] is False
+
+
+def test_books_array_includes_flat_flag():
+    """books 数组中每个 book 也带 flat 标记。"""
+    with tempfile.TemporaryDirectory() as tmp:
+        output_dir = Path(tmp) / "output"
+        site_dir = Path(tmp) / "site"
+        _create_sample_output(output_dir)
+        build_site(str(output_dir), str(site_dir))
+        data = json.loads(
+            (site_dir / "data" / "index.json").read_text(encoding="utf-8")
+        )
+        book = data["books"][0]
+        assert "flat" in book
+        assert book["flat"] is False
