@@ -120,8 +120,6 @@ def _normalize_created_at(value: Any) -> str:
     return str(value)
 
 
-<<<<<<< HEAD
-=======
 def _to_int(value: Any) -> int | None:
     """将 frontmatter 中的排序值转为整数；失败返回 None。"""
     if value is None:
@@ -134,7 +132,6 @@ def _to_int(value: Any) -> int | None:
         return None
 
 
->>>>>>> origin/master
 def _load_book_meta(book_dir: Path, book_name: str) -> dict[str, Any]:
     """读取 book_dir/_meta.yaml，返回规范化后的元数据字典。
 
@@ -237,11 +234,8 @@ def build_site(output_dir: str = "output", site_dir: str = "site") -> Path:
                 title = str(title)
             created_at = _normalize_created_at(frontmatter.get("created_at"))
             source_agents = _normalize_source_agents(frontmatter.get("source_agents"))
-<<<<<<< HEAD
-=======
             note_sort = _to_int(frontmatter.get("sort"))
             note_chapter_sort = _to_int(frontmatter.get("chapter_sort"))
->>>>>>> origin/master
 
             note_entry = {
                 "path": rel_str,
@@ -251,11 +245,8 @@ def build_site(output_dir: str = "output", site_dir: str = "site") -> Path:
                 "title": title,
                 "created_at": created_at,
                 "source_agents": source_agents,
-<<<<<<< HEAD
-=======
                 "sort": note_sort,
                 "chapter_sort": note_chapter_sort,
->>>>>>> origin/master
                 "content": content,
             }
             notes[rel_str] = note_entry
@@ -265,11 +256,8 @@ def build_site(output_dir: str = "output", site_dir: str = "site") -> Path:
                     "title": event or chapter,
                     "type": "event",
                     "path": rel_str,
-<<<<<<< HEAD
-=======
                     "sort": note_sort,
                     "chapter_sort": note_chapter_sort,
->>>>>>> origin/master
                 }
             )
 
@@ -283,24 +271,16 @@ def build_site(output_dir: str = "output", site_dir: str = "site") -> Path:
     for book_name in sorted(books.keys()):
         chapters: list[dict[str, Any]] = []
         for chapter_name in sorted(books[book_name].keys()):
-<<<<<<< HEAD
-            events = sorted(
-                books[book_name][chapter_name], key=lambda e: e["path"]
-=======
             events = books[book_name][chapter_name]
             chapter_sort = next(
                 (e.get("chapter_sort") for e in events if e.get("chapter_sort") is not None),
                 None,
->>>>>>> origin/master
             )
             chapters.append(
                 {
                     "title": chapter_name,
                     "type": "chapter",
-<<<<<<< HEAD
-=======
                     "chapter_sort": chapter_sort,
->>>>>>> origin/master
                     "children": events,
                 }
             )
@@ -355,23 +335,6 @@ def build_site(output_dir: str = "output", site_dir: str = "site") -> Path:
         key=_category_sort_key,
     )
 
-<<<<<<< HEAD
-    index = {
-        "version": VERSION,
-        "generated_at": datetime.now()
-        .astimezone()
-        .replace(microsecond=0)
-        .isoformat(),
-        "stats": {
-            "books": len(books),
-            "notes": len(notes),
-            "categories": len(categories),
-        },
-        "books": books_array,
-        "categories": categories,
-        "tree": tree,
-        "notes": notes,
-=======
     generated_at = (
         datetime.now()
         .astimezone()
@@ -392,7 +355,6 @@ def build_site(output_dir: str = "output", site_dir: str = "site") -> Path:
         "books": books_array,
         "categories": categories,
         "tree": tree,
->>>>>>> origin/master
     }
 
     index_path = data_dir / "index.json"
@@ -401,8 +363,6 @@ def build_site(output_dir: str = "output", site_dir: str = "site") -> Path:
         encoding="utf-8",
     )
 
-<<<<<<< HEAD
-=======
     # 搜索索引：仅含标题、路径、出处和摘要，按需加载
     search_notes = []
     for rel_str, note in notes.items():
@@ -435,7 +395,6 @@ def build_site(output_dir: str = "output", site_dir: str = "site") -> Path:
     # 写入 .nojekyll 标记，让 GitHub Pages 跳过 Jekyll 构建，直接部署静态文件
     (site_path / ".nojekyll").write_text("", encoding="utf-8")
 
->>>>>>> origin/master
     return site_path
 
 

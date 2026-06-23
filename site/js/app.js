@@ -488,15 +488,22 @@
         document.body.dataset.view = view;
         if (view === 'home') {
             pauseAutoScroll();
+            // 返回首页时退出沉浸模式，避免 immersive-mode 影响 home 视图布局
+            if (document.body.classList.contains('immersive-mode')) {
+                exitImmersiveMode();
+            }
             elements.homeView.hidden = false;
             elements.readerView.hidden = true;
             document.body.style.overflow = '';
             if (elements.autoScrollBtn) elements.autoScrollBtn.hidden = true;
+            if (elements.immersiveBtn) elements.immersiveBtn.hidden = true;
         } else {
             elements.homeView.hidden = true;
             elements.readerView.hidden = false;
             document.body.style.overflow = 'hidden';
             if (elements.autoScrollBtn) elements.autoScrollBtn.hidden = false;
+            // 沉浸按钮在阅读视图可见（所有环境，不限于魔搭嵌入）
+            if (elements.immersiveBtn) elements.immersiveBtn.hidden = false;
         }
     }
 
@@ -1219,6 +1226,95 @@
         }
     }
 
+    /* ============ 沉浸阅读模式 ============ */
+    // 仅用 CSS .immersive-mode 隐藏 UI + 内容占满；不锁定 screen.orientation，避免手机端被强制横屏。
+    // Fullscreen API 作为可选增强（多 vendor 兼容），失败时回退到纯 CSS 沉浸状态。
+    function getFullscreenElement() {
+        return document.fullscreenElement ||
+            document.webkitFullscreenElement ||
+            document.msFullscreenElement ||
+            null;
+    }
+
+    function requestFullscreenSafe(el) {
+        const fn = el.requestFullscreen ||
+            el.webkitRequestFullscreen ||
+            el.msRequestFullscreen;
+        if (typeof fn === 'function') {
+            try {
+                const ret = fn.call(el);
+                if (ret && typeof ret.then === 'function') {
+                    ret.catch(function () { /* 安全策略拒绝时静默回退到 CSS 沉浸 */ });
+                }
+            } catch (e) { /* 静默回退 */ }
+        }
+    }
+
+    function exitFullscreenSafe() {
+        const fn = document.exitFullscreen ||
+            document.webkitExitFullscreen ||
+            document.msExitFullscreen;
+        if (typeof fn === 'function') {
+            try {
+                const ret = fn.call(document);
+                if (ret && typeof ret.then === 'function') {
+                    ret.catch(function () { /* 静默 */ });
+                }
+            } catch (e) { /* 静默 */ }
+        }
+    }
+
+    function enterImmersiveMode() {
+        document.body.classList.add('immersive-mode');
+        // 进入沉浸时隐藏 UI 工具栏，让正文占满
+        document.body.classList.add('ui-hidden');
+        updateImmersiveBtn(true);
+        // 尝试请求系统全屏作为增强（iframe 内可能被拒，不影响 CSS 沉浸）
+        requestFullscreenSafe(document.documentElement);
+    }
+
+    function exitImmersiveMode() {
+        document.body.classList.remove('immersive-mode');
+        document.body.classList.remove('ui-hidden');
+        updateImmersiveBtn(false);
+        if (getFullscreenElement()) {
+            exitFullscreenSafe();
+        }
+    }
+
+    function toggleImmersiveMode() {
+        if (document.body.classList.contains('immersive-mode')) {
+            exitImmersiveMode();
+        } else {
+            enterImmersiveMode();
+        }
+    }
+
+    function updateImmersiveBtn(isActive) {
+        if (!elements.immersiveBtn) return;
+        elements.immersiveBtn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        elements.immersiveBtn.textContent = isActive ? '✕ 退出' : '⛶ 沉浸';
+    }
+
+    function initImmersive() {
+        if (elements.immersiveBtn) {
+            // 初始化 aria-pressed（HTML 未声明时 getAttribute 返回 null）
+            elements.immersiveBtn.setAttribute('aria-pressed', 'false');
+            elements.immersiveBtn.addEventListener('click', toggleImmersiveMode);
+        }
+        // ESC 退出系统全屏时，浏览器会触发 fullscreenchange；同步 CSS 沉浸状态，避免界面不一致
+        function syncFullscreenState() {
+            if (!getFullscreenElement() && document.body.classList.contains('immersive-mode')) {
+                document.body.classList.remove('immersive-mode');
+                document.body.classList.remove('ui-hidden');
+                updateImmersiveBtn(false);
+            }
+        }
+        document.addEventListener('fullscreenchange', syncFullscreenState);
+        document.addEventListener('webkitfullscreenchange', syncFullscreenState);
+        document.addEventListener('msfullscreenchange', syncFullscreenState);
+    }
+
     /* ============ 弹窗（静态站点提示） ============ */
     function openModal() {
         elements.modalOverlay.classList.add('open');
@@ -1394,9 +1490,7 @@
 
         if (inIframe && isModelScope) {
             document.body.classList.add('modelscope-embedded');
-            if (elements.immersiveBtn) {
-                elements.immersiveBtn.hidden = false;
-            }
+            // 沉浸按钮显隐统一由 switchView 管理（阅读视图显示，首页隐藏）
             requestModelScopeMinimalChrome();
         }
     }
@@ -1431,6 +1525,7 @@
         initSidebarDrawer();
         initReaderTap();
         initAutoScroll();
+        initImmersive();
 
         if (elements.bookshelfSearchInput) {
             elements.bookshelfSearchInput.addEventListener('input', handleBookshelfSearch);

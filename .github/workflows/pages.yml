@@ -39,12 +39,9 @@ jobs:
       - name: Install dependencies
         run: pip install pyyaml
 
-<<<<<<< HEAD
-=======
       - name: Check duplicate notes
         run: python scripts/check_duplicates.py
 
->>>>>>> origin/master
       - name: Build site
         run: python scripts/build_site.py --output output --site site
 

@@ -25,10 +25,7 @@
 - [ ] 未破坏 `prompts/` 下 7 份讲书提示词
 - [ ] 未破坏 `src/utils/quality.py` 的检测逻辑
 - [ ] 若修改了 `.trae/rules/rules.md`，已运行 `python scripts/sync_rules.py` 同步到 `RULES.md`
-<<<<<<< HEAD
-=======
 - [ ] 提交前已运行 `python scripts/check_duplicates.py`，`output/` 目录无重复 Markdown 文件
->>>>>>> origin/master
 
 ## 三、测试
 

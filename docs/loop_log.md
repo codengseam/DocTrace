@@ -419,3 +419,55 @@
 - `tests/test_reader_features.js` 的 rAF polyfill（`__rafQueue`/`__flushRaf`）可作为后续 jsdom 测试动画/滚动的模板。
 - `handleReaderTap` 的 touch/click 防双触发模式（`tapHandledByTouch` 标志 + 位移/时长阈值）可复用于其他移动端点击场景。
 - 壁纸用 CSS 渐变 + 内联 SVG data URI 实现的方案，无外部图片依赖，可复用于其他需要纹理背景的场景。
+
+
+### 2026-06-23：沉浸模式回归修复 + 合并冲突清理 + 历史 bug 回归测试集
+
+**触发问题**：用户反馈"之前让 AI 在云端沙箱做了自动阅读和更换背景的功能，说已经合并 master 并完成代码 push，代码真的 push 了吗？为啥没展示自动阅读这些功能，反而把沉浸阅读改坏了，现在手机端点击沉浸又变成横屏了"。
+
+**核实结果**：
+- `git log --all` 只有 1 个提交 `ef9cee7 feat: 新增饮食养生课专栏`，loop_log 提到的 `de8bb9d feat: Implement Immersive Full-Screen Reading` 和"阅读器三功能"提交在远程**完全不存在**。
+- 本地有 **14 个文件未解决合并冲突**（`<<<<<<< HEAD` 标记残留）：`scripts/build_site.py`、`.github/workflows/pages.yml`、`.trae/checklists/dev-checklist.md`、`README.md`、`output/资治通鉴/` 下 13 个 md。
+- `scripts/build_site.py` 因冲突标记 SyntaxError 无法运行，站点无法构建，所以自动阅读/换背景功能"没展示"。
+- `site/js/app.js` 壁纸/翻页/自动阅读三功能代码完整（916-1219行），但**沉浸模式 JS 逻辑完全缺失**（只有按钮注册和 CSS，无 `toggleImmersiveMode` 函数、无事件绑定），点击沉浸按钮无响应。
+
+**修复**：
+1. **合并冲突解决**（14 文件）：
+   - 代码/配置（build_site.py/pages.yml/dev-checklist/README）：保留 origin/master 侧（含 `_to_int` 排序函数、去重检查步骤、.nojekyll 生成、搜索索引拆分等功能）
+   - output/资治通鉴/ 13 个 md：保留 HEAD 侧（符合 content-quality.md 引用克制规则，去除冗余行内引用）
+2. **沉浸模式 JS 逻辑补回**（site/js/app.js）：
+   - 新增 `enterImmersiveMode`/`exitImmersiveMode`/`toggleImmersiveMode`/`updateImmersiveBtn`/`initImmersive` 函数
+   - **关键：不调用 `screen.orientation.lock`**，避免手机端被强制横屏；用 CSS `.immersive-mode` 隐藏 UI + 内容占满
+   - Fullscreen API 作为可选增强（多 vendor 兼容：`requestFullscreen`/`webkitRequestFullscreen`/`msRequestFullscreen`），失败时静默回退到纯 CSS 沉浸
+   - 监听 `fullscreenchange` 同步状态（ESC 退出系统全屏时同步移除 CSS class）
+   - 沉浸按钮显隐统一由 `switchView` 管理（阅读视图显示，首页隐藏），移除 `detectModelScopeEmbed` 里的按钮显示控制
+   - 返回首页时自动退出沉浸模式
+3. **历史遗留清理**：
+   - 运行 `scripts/remove_duplicates.py` 删除 220 个重复文件（编号文件 + 主题分组文件并存）
+   - 给 16 个资治通鉴编号文件补 `sort` frontmatter 字段（按历史时间序：商鞅变法=1/孙庞斗智=2、苏秦合纵=1/张仪连横=2 等）
+4. **回归测试集**：
+   - 新增 `tests/bug_regression_list.md`：11 个历史 bug 列表 + 根因 + 复现步骤 + 回归测试方式
+   - 新增 `tests/run_regression_suite.sh`：一键执行 8 大类 11 项检查（合并冲突标记、app.js 语法、沉浸模式防横屏、站点构建、阅读器 e2e、重复文件、章节排序、HTTP 冒烟）
+   - `tests/test_reader_features.js` 新增测试 10/11/12（沉浸模式交互、不锁定方向、返回首页退出）
+
+**架构教训（已沉淀）**：
+- **"已 push"不能只信汇报，必须 `git log --all` 核实**：本次远程只有 1 个提交，loop_log 却记录了多个"已推送"的 commit。合并冲突未解决时 git 不允许 commit/push，但执行者可能误以为成功。后续涉及"代码已合并/push"的断言，必须用 `git log --all --oneline` 和 `git status` 核实。
+- **合并冲突标记会阻断 Python 构建**：`<<<<<<< HEAD` 在 Python 里是 SyntaxError，在 Markdown 里会被当作正文渲染。合并后必须全局搜索冲突标记，不能只靠 IDE 提示。
+- **沉浸模式不能依赖 `screen.orientation.lock`**：该 API 在手机端会强制横屏，且需要 fullscreen 权限，兼容性差。正确做法是用 CSS `.immersive-mode` 隐藏 UI + 内容占满，Fullscreen API 仅作可选增强且失败静默回退。
+- **按钮显隐应统一由视图切换管理**：之前沉浸按钮只在 `detectModelScopeEmbed`（魔搭嵌入）里显示，导致非魔搭环境（普通手机浏览器）按钮永远 hidden。按钮显隐应集中在 `switchView`，按视图决定，不按环境决定。
+- **回归测试集应包含"合并冲突标记检查"**：这是本次最大的坑，后续每次合并后必须跑 `grep -rn "^<<<<<<< HEAD"` 确认无残留。
+
+**测试覆盖**：
+- `tests/test_reader_features.js`：76 项全通过（含新增沉浸模式 22 项断言）
+- `tests/run_regression_suite.sh`：11 项全通过
+- HTTP 冒烟：index.html / app.js / style.css / index.json 全 200
+- `node --check site/js/app.js`：语法 OK
+
+**配套改动**：
+- 修改：`site/js/app.js`（沉浸逻辑 + 按钮显隐）、`scripts/build_site.py`（冲突解决）、`.github/workflows/pages.yml`（冲突解决）、`.trae/checklists/dev-checklist.md`（冲突解决）、`README.md`（冲突解决）、`output/资治通鉴/*.md`（13 文件冲突解决 + 16 文件补 sort）
+- 删除：220 个重复 Markdown 文件（由 remove_duplicates.py 清理）
+- 新增：`tests/bug_regression_list.md`、`tests/run_regression_suite.sh`
+
+**无需更新讲书规则**：本次为前端修复 + 工程清理，未涉及讲书笔记写作规则。content-quality.md 的引用克制规则在冲突解决中作为判断依据（保留 HEAD 侧去除冗余引用的版本），无需修改规则本身。
+
+**待用户决策**：本地有大量改动未 commit/push。用户若要发布，需 `git add` 相关文件 + `git commit` + `git push`（push 前先 `git fetch` 确认远程无新提交）。
