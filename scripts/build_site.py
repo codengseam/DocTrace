@@ -120,6 +120,18 @@ def _normalize_created_at(value: Any) -> str:
     return str(value)
 
 
+def _to_int(value: Any) -> int | None:
+    """将 frontmatter 中的排序值转为整数；失败返回 None。"""
+    if value is None:
+        return None
+    if isinstance(value, int):
+        return value
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _load_book_meta(book_dir: Path, book_name: str) -> dict[str, Any]:
     """读取 book_dir/_meta.yaml，返回规范化后的元数据字典。
 
@@ -222,6 +234,8 @@ def build_site(output_dir: str = "output", site_dir: str = "site") -> Path:
                 title = str(title)
             created_at = _normalize_created_at(frontmatter.get("created_at"))
             source_agents = _normalize_source_agents(frontmatter.get("source_agents"))
+            note_sort = _to_int(frontmatter.get("sort"))
+            note_chapter_sort = _to_int(frontmatter.get("chapter_sort"))
 
             note_entry = {
                 "path": rel_str,
@@ -231,6 +245,8 @@ def build_site(output_dir: str = "output", site_dir: str = "site") -> Path:
                 "title": title,
                 "created_at": created_at,
                 "source_agents": source_agents,
+                "sort": note_sort,
+                "chapter_sort": note_chapter_sort,
                 "content": content,
             }
             notes[rel_str] = note_entry
@@ -240,6 +256,8 @@ def build_site(output_dir: str = "output", site_dir: str = "site") -> Path:
                     "title": event or chapter,
                     "type": "event",
                     "path": rel_str,
+                    "sort": note_sort,
+                    "chapter_sort": note_chapter_sort,
                 }
             )
 
@@ -253,13 +271,16 @@ def build_site(output_dir: str = "output", site_dir: str = "site") -> Path:
     for book_name in sorted(books.keys()):
         chapters: list[dict[str, Any]] = []
         for chapter_name in sorted(books[book_name].keys()):
-            events = sorted(
-                books[book_name][chapter_name], key=lambda e: e["path"]
+            events = books[book_name][chapter_name]
+            chapter_sort = next(
+                (e.get("chapter_sort") for e in events if e.get("chapter_sort") is not None),
+                None,
             )
             chapters.append(
                 {
                     "title": chapter_name,
                     "type": "chapter",
+                    "chapter_sort": chapter_sort,
                     "children": events,
                 }
             )

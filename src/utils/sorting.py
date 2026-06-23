@@ -41,12 +41,17 @@ BOOK_CATEGORY_ORDER: dict[str, dict[str, int]] = {
         "后周纪": 16,
     },
     "史记": {
-        "本纪": 1,
-        "表": 2,
-        "书": 3,
-        "世家": 4,
-        "列传": 5,
+        "秦纪": 1,
+        "汉纪": 2,
+        "本纪": 3,
+        "表": 4,
+        "书": 5,
+        "世家": 6,
+        "列传": 7,
     },
+    "唐纪": {"唐纪": 1},
+    "宋纪": {"宋纪": 1},
+    "明纪": {"明纪": 1},
 }
 
 # 未配置/无法匹配时的回退大数，保证排在已配置章节之后
@@ -98,21 +103,50 @@ def chapter_sort_key(book: str, chapter: str) -> tuple[int, int, str]:
     return (_FALLBACK_ORDER, 0, chapter)
 
 
+def is_flat_book(chapters: list[dict[str, Any]]) -> bool:
+    """判断章节列表是否为"扁平"结构（所有章节标题都是纯数字）。
+
+    空列表返回 False；任一章节标题不是纯数字也返回 False。
+    """
+    if not chapters:
+        return False
+    for ch in chapters:
+        title = str(ch.get("title", "")).strip()
+        if not title.isdigit():
+            return False
+    return True
+
+
 def sort_notes_tree(tree: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """对 tree 结构就地按规则排序并返回。
 
     - book 节点按书名排序
-    - 每个 book 的 children（chapter）按 chapter_sort_key 排序
-    - 每个 chapter 的 children（event）按 path 排序（保持稳定）
+    - 每个 book 的 children（chapter）优先按 frontmatter 中的 `chapter_sort` 排序，
+      缺失时回退到 chapter_sort_key
+    - 每个 chapter 的 children（event）优先按 frontmatter 中的 `sort` 排序，
+      缺失时回退到 path 排序
     """
     tree.sort(key=lambda node: node.get("title", ""))
     for book_node in tree:
         book_name = book_node.get("title", "")
         children = book_node.get("children") or []
-        children.sort(
-            key=lambda ch: chapter_sort_key(book_name, ch.get("title", ""))
-        )
+
+        def _chapter_key(ch: dict[str, Any]) -> tuple:
+            explicit = ch.get("chapter_sort")
+            if explicit is not None:
+                return (0, int(explicit), 0, "", ch.get("title", ""))
+            fallback = chapter_sort_key(book_name, ch.get("title", ""))
+            return (1, fallback[0], fallback[1], fallback[2], ch.get("title", ""))
+
+        children.sort(key=_chapter_key)
         for chapter_node in children:
             events = chapter_node.get("children") or []
-            events.sort(key=lambda e: e.get("path", ""))
+
+            def _event_key(e: dict[str, Any]) -> tuple:
+                explicit = e.get("sort")
+                if explicit is not None:
+                    return (0, int(explicit), e.get("path", ""))
+                return (1, 0, e.get("path", ""))
+
+            events.sort(key=_event_key)
     return tree

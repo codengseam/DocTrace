@@ -1680,26 +1680,53 @@ body.modelscope-embedded .reader {
     transform: translateY(1px);
 }
 
-/* 全屏状态下的额外优化：隐藏工具栏，点击中央可恢复 */
+/* 沉浸阅读模式：竖屏、无目录、内容占满 */
+body.modelscope-embedded:fullscreen,
+body.modelscope-embedded:-webkit-full-screen,
+body.immersive-mode {
+    overflow: hidden;
+}
+
+body.modelscope-embedded:fullscreen .brand-header,
+body.modelscope-embedded:-webkit-full-screen .brand-header,
+body.immersive-mode .brand-header,
 body.modelscope-embedded:fullscreen .toolbar,
-body.modelscope-embedded:-webkit-full-screen .toolbar {
+body.modelscope-embedded:-webkit-full-screen .toolbar,
+body.immersive-mode .toolbar,
+body.modelscope-embedded:fullscreen .reader-view .sidebar,
+body.modelscope-embedded:-webkit-full-screen .reader-view .sidebar,
+body.immersive-mode .reader-view .sidebar,
+body.modelscope-embedded:fullscreen .bottom-bar,
+body.modelscope-embedded:-webkit-full-screen .bottom-bar,
+body.immersive-mode .bottom-bar {
     display: none !important;
 }
 
 body.modelscope-embedded:fullscreen .page-main,
-body.modelscope-embedded:-webkit-full-screen .page-main {
+body.modelscope-embedded:-webkit-full-screen .page-main,
+body.immersive-mode .page-main {
     padding-top: 0;
     height: 100vh;
 }
 
 body.modelscope-embedded:fullscreen .reader-view,
-body.modelscope-embedded:-webkit-full-screen .reader-view {
+body.modelscope-embedded:-webkit-full-screen .reader-view,
+body.immersive-mode .reader-view {
+    flex-direction: column;
     height: 100vh;
     max-height: 100vh;
 }
 
-/* 避免在 :fullscreen 时双滚动条 */
-body.modelscope-embedded:fullscreen,
-body.modelscope-embedded:-webkit-full-screen {
-    overflow: hidden;
+body.modelscope-embedded:fullscreen .reader,
+body.modelscope-embedded:-webkit-full-screen .reader,
+body.immersive-mode .reader {
+    width: 100%;
+}
+
+/* 保留正文在宽屏下居中 */
+body.modelscope-embedded:fullscreen .markdown-body,
+body.modelscope-embedded:-webkit-full-screen .markdown-body,
+body.immersive-mode .markdown-body {
+    max-width: 720px;
+    margin: 0 auto;
 }

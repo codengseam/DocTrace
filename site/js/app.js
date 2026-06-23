@@ -979,19 +979,34 @@
 
     function toggleImmersive() {
         const doc = document;
-        const isFullscreen = doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement;
+        const root = doc.documentElement;
+        const isFullscreen = !!(doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement);
+        const hasFullscreenApi = !!(root.requestFullscreen || root.webkitRequestFullscreen || root.mozRequestFullScreen || root.msRequestFullscreen);
+
+        if (!hasFullscreenApi) {
+            document.body.classList.toggle('immersive-mode');
+            return;
+        }
+
         if (!isFullscreen) {
-            const el = doc.documentElement;
-            if (el.requestFullscreen) el.requestFullscreen();
-            else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-            else if (el.mozRequestFullScreen) el.mozRequestFullScreen();
-            else if (el.msRequestFullscreen) el.msRequestFullscreen();
+            document.body.classList.add('immersive-mode');
+            if (root.requestFullscreen) root.requestFullscreen();
+            else if (root.webkitRequestFullscreen) root.webkitRequestFullscreen();
+            else if (root.mozRequestFullScreen) root.mozRequestFullScreen();
+            else if (root.msRequestFullscreen) root.msRequestFullscreen();
         } else {
+            document.body.classList.remove('immersive-mode');
             if (doc.exitFullscreen) doc.exitFullscreen();
             else if (doc.webkitExitFullscreen) doc.webkitExitFullscreen();
             else if (doc.mozCancelFullScreen) doc.mozCancelFullScreen();
             else if (doc.msExitFullscreen) doc.msExitFullscreen();
         }
+    }
+
+    function syncImmersiveClass() {
+        const doc = document;
+        const isFullscreen = !!(doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement);
+        document.body.classList.toggle('immersive-mode', isFullscreen);
     }
 
     function init() {
@@ -1061,6 +1076,10 @@
         }
 
         document.addEventListener('keydown', handleKeyDown);
+        document.addEventListener('fullscreenchange', syncImmersiveClass);
+        document.addEventListener('webkitfullscreenchange', syncImmersiveClass);
+        document.addEventListener('mozfullscreenchange', syncImmersiveClass);
+        document.addEventListener('MSFullscreenChange', syncImmersiveClass);
 
         loadIndex();
     }
