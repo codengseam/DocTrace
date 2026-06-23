@@ -135,3 +135,54 @@
 - `.cache/ai_course_plan.md`：章节方案模板，含模块划分、字数预估、文件命名规范。
 - 专家团评审模式（3 subagent 并行评审）可复用于其他方案评估场景。
 
+---
+
+## 内容质检体系构建沉淀（2026-06-23）
+
+### 任务概述
+用户希望建立一套自动化的内容质检与修复体系，解决生成内容中的核心问题：
+1. **真实性**：AI 幻觉、编造来源、无据设定。
+2. **可读性**：AI 套路句、现代术语、单章/章节间重复。
+3. **顺序**：叙事与章节排序按故事/时间先后。
+4. **引用克制**：删除「（见讲故事）」「（详见下章）」等内联跳转，减少行内「——《XX》」引用密度。
+
+### 交付物
+| 文件 | 类型 | 作用 |
+|---|---|---|
+| `.trae/rules/content-quality.md` | 规则 | 质检四维度、评分标准、修复优先级 |
+| `.trae/checklists/content-checklist.md` | Checklist | 逐项检查 + 打分模板 |
+| `.trae/skills/content-review/SKILL.md` | Skill | Trae 入口，触发 Python 引擎 |
+| `src/utils/content_quality.py` | 工具 | 规则化四维度检测 + 自动计分 |
+| `src/agents/content_reviewer.py` | Agent | 汇总质检 Agent |
+| `src/agents/content_reviewer_sub.py` | Agent | 史实核验/可读性/引用克制三视角子 Agent |
+| `src/core/content_review_workflow.py` | 工作流 | LangGraph 三视角并行质检 |
+| `scripts/review_content.py` | 脚本 | 内容质检命令行入口 |
+| `prompts/content_reviewer.md` | 提示词 | 汇总质检 LLM 提示词 |
+| `prompts/content_reviewer_sub.md` | 提示词 | 三视角子 Agent LLM 提示词 |
+
+### 样本优化结果
+使用 Task 工具并行优化 4 篇样本，规则化质检均达到 100 分：
+- `output/史记/汉纪/07_鸿门宴.md`：删除冗余行内引用，补充时间与苏轼《范增论》点评。
+- `output/孔子传/孔子18_见南子.md`：删除「（详见下章）」，替换现代术语「话术」为「辞令」。
+- `output/孔子传/孔子19_匡地桓魋.md`：删除「——这一段，详见卷六相关章节，此处不赘」。
+- `output/论语/07_启发式教学.md`：删除「（详见前一章）」，改写 AI 套路句。
+
+### 新共性问题
+1. **规则化检测的误报**：早期 `check_cross_chapter_jump` 把古籍引用括号误判为跳转提示；`check_years_present`/`check_famous_critics` 对《论语》《孔子传》等哲学经典不适用。
+2. **AI 句式检测的边界**：「他不是不知道」「他不是不懂」等自然口语判断句被 pattern 误伤。
+3. **引用密度阈值**：史记类叙事本身引用密集，每千字 ≤3 处的阈值需结合 LLM 二次判断，避免过度删除影响可信度。
+
+### 规则/工具更新
+1. `content-quality.md` 明确：引用资料统一放文末，关键名句可保留行内引用，每千字 ≤3 处。
+2. `content_quality.py` 增加豁免逻辑：哲学/经典解读类内容不强制要求历史年份和司马光/司马迁名家。
+3. `content_quality.py` 增加 `_filter_natural_expressions` 过滤自然口语中的「他不是 X，是 Y」误报。
+4. `deep-reading SKILL.md` 更新：生成后自动触发 `scripts/review_content.py`。
+5. `README.md` 更新：登记新增 Skill、规则、Agent、脚本、工具。
+
+### checklist 更新
+新增 `.trae/checklists/content-checklist.md`，覆盖真实性/可读性/顺序/引用克制四维度，含评分表与修复记录模板。
+
+### 可复用资产
+- `content_quality.py` 可作为其他 Markdown 内容质检的底层检测库。
+- `content_review_workflow.py` 可作为「三视角并行质检」的 LangGraph 模板复用。
+

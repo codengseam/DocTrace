@@ -61,7 +61,8 @@ Specialist Agents 并行工作：
 3. Specialist Agents 并行工作，各自按 `.trae/rules/rules.md` 中对应模块要求产出内容。
 4. 编辑专家汇总五段内容，统一语气，补齐引用，生成结语。
 5. 保存到 `output/{书名}/{章节}_{事件}.md`。
-6. HTML 管理界面读取目录结构，按书分类、章节排序展示。
+6. **自动触发内容质检**：调用 `scripts/review_content.py`，按 `.trae/rules/content-quality.md` 四维度（真实性/可读性/顺序/引用克制）评分，≥85 分合格。
+7. HTML 管理界面读取目录结构，按书分类、章节排序展示。
 
 ## 六、输出规范
 
@@ -84,9 +85,14 @@ Specialist Agents 并行工作：
 .
 ├── README.md              # 项目规划与背景
 ├── .trae/
-│   ├── skills/deep-reading/  # Trae Skill 交互入口
-│   └── rules/
-│       └── rules.md       # 内容生成规则
+│   ├── skills/
+│   │   ├── deep-reading/   # Trae Skill 交互入口（生成讲书笔记）
+│   │   └── content-review/ # Trae Skill 交互入口（内容质检）
+│   ├── rules/
+│   │   ├── rules.md        # 内容生成规则
+│   │   └── content-quality.md  # 内容质检规则
+│   └── checklists/
+│       └── content-checklist.md  # 内容质检 checklist
 ├── .env.example           # 环境变量示例（API Key 等）
 ├── output/                # 生成的讲书笔记，按书分类、章节排序
 │   ├── 资治通鉴/
@@ -98,19 +104,32 @@ Specialist Agents 并行工作：
 ├── src/                   # 源代码
 │   ├── agents/            # 专家团 Agent 定义
 │   │   ├── orchestrator.py
-│   │   ├── historian.py       # 史料专家
-│   │   ├── biographer.py      # 人物专家
-│   │   ├── context_analyst.py # 背景专家
-│   │   ├── critic.py          # 名家专家
-│   │   ├── philosopher.py     # 悟道专家
-│   │   └── editor.py          # 编辑专家
+│   │   ├── historian.py           # 史料专家
+│   │   ├── biographer.py          # 人物专家
+│   │   ├── context_analyst.py     # 背景专家
+│   │   ├── critic.py              # 名家专家
+│   │   ├── philosopher.py         # 悟道专家
+│   │   ├── editor.py              # 编辑专家
+│   │   ├── content_reviewer.py    # 内容质检 Agent（汇总）
+│   │   ├── content_reviewer_sub.py # 内容质检 Agent（三视角子节点）
+│   │   └── plan_reviewer.py       # 计划评审 Agent
 │   ├── core/              # 工作流编排
 │   ├── storage/           # 文件与元数据存储
 │   ├── tools/             # MCP / PDF / Obsidian / Web 搜索工具
 │   ├── utils/             # 公共工具
+│   │   ├── quality.py         # AI 套路句/现代术语/升华配额检测
+│   │   ├── content_quality.py # 内容质检四维度检测（真实/可读/顺序/引用）
+│   │   └── ...
 │   └── web/               # Flask Web 管理界面（静态资源、模板、API）
 ├── prompts/               # Agent 提示词文件
-├── scripts/               # 辅助脚本（静态站点构建等）
+│   ├── content_reviewer.md      # 内容质检汇总提示词
+│   ├── content_reviewer_sub.md  # 内容质检三视角提示词
+│   └── ...                      # 其他讲书 Agent 提示词
+├── scripts/               # 辅助脚本
+│   ├── build_site.py
+│   ├── review_plan.py
+│   ├── review_content.py  # 内容质检并行引擎入口
+│   └── ...
 ├── site/                  # 静态站点产物（由 scripts/build_site.py 生成）
 ├── tests/                 # 测试用例
 ├── .github/               # GitHub Actions 配置（Pages 自动部署）

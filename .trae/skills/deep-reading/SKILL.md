@@ -76,13 +76,27 @@ python src/main.py --book "{book}" --chapter "{chapter}" --event "{event}"
 
 **占位模式（--stub）说明**：`--stub` 标志支持从 `--input` 解析书名/章节/事件，也可以显式传 `--book`/`--chapter`/`--event`。当只提供 `--input` 时，占位生成器会按空白符切分输入，自动提取三个槽位用于构造文件路径和占位内容。
 
-## 第五步：返回结果
+## 第五步：自动触发内容质检
+
+讲书笔记生成后，**必须自动触发内容质检**。调用 `content-review` 引擎：
+
+```bash
+python scripts/review_content.py --file output/{book}/{chapter}_{event}.md
+```
+
+将质检报告追加到生成结果中一起返回，包括：
+1. 总分与评级（满分 100，≥85 合格）。
+2. 主要问题清单（按 P0 真实性 / P1 可读性 / P2 顺序与引用克制）。
+3. 若评级不合格，提示用户需要修复后再发布。
+
+## 第六步：返回结果
 
 命令执行成功后，向用户返回：
-1. 一句话摘要："已为你生成《{book}·{chapter}·{event}》的讲书笔记。"
+1. 一句话摘要："已为你生成《{book}·{chapter}·{event}》的讲书笔记，并完成内容质检。"
 2. 文件路径：`output/{book}/{chapter}_{event}.md`
-3. 内容预览：取生成的 Markdown 正文前 1500 字。
-4. 可选：提示用户可以在 Obsidian 或 HTML 管理界面中查看。
+3. 质检结果：总分、评级、主要问题。
+4. 内容预览：取生成的 Markdown 正文前 1500 字。
+5. 可选：提示用户可以在 Obsidian 或 HTML 管理界面中查看。
 
 # 错误处理
 
