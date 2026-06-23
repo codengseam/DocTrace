@@ -60,6 +60,19 @@ def test_build_site_creates_site_directory():
         assert result.is_dir()
 
 
+def test_build_site_creates_nojekyll():
+    """site/ 根目录生成 .nojekyll，使 GitHub Pages 跳过 Jekyll 构建。"""
+    with tempfile.TemporaryDirectory() as tmp:
+        output_dir = Path(tmp) / "output"
+        site_dir = Path(tmp) / "site"
+        _create_sample_output(output_dir)
+        build_site(str(output_dir), str(site_dir))
+        nojekyll_path = site_dir / ".nojekyll"
+        assert nojekyll_path.exists()
+        assert nojekyll_path.is_file()
+        assert nojekyll_path.read_text(encoding="utf-8") == ""
+
+
 def test_build_site_generates_index_json():
     """site/data/index.json 存在且可解析。"""
     with tempfile.TemporaryDirectory() as tmp:

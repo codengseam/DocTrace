@@ -240,3 +240,32 @@
 
 **无需更新规则/checklist**：本次为内容去重，去重策略属写作执行层（主场/客场分配、交叉引用格式），rules.md §二.2 已有"跨事件引用"隐含约束，无需新增条款。quality.py 检测单篇内容质量，跨文件重复属人工/Agent 编辑层处理，不纳入自动检测（跨文件重复需语义判断，非正则可判）。
 
+
+### 2026-06-23：GitHub Pages 部署失败修复（.nojekyll 跳过 Jekyll）
+
+**触发问题**：用户发现最近多次 push 后 GitHub Pages 部署均失败（错误日志显示 Jekyll 在渲染 `output/` 下的 Markdown 文件时异常），而魔搭空间部署始终成功。
+
+**多 Agent 定位结果**：
+- **Workflow 差异**：GitHub Pages workflow（`.github/workflows/pages.yml`）将 `site/` 作为 artifact 上传给 GitHub Pages；魔搭 workflow（`.github/workflows/deploy-modelscope.yml`）将 `site/` 内容推送到 ModelScope Studio 作为静态服务。
+- **构建差异**：GitHub Pages 默认会对 artifact 执行 Jekyll 构建，`site/notes/` 下复制了大量 Markdown，Jekyll 3.9.x（GitHub Pages 固定版本）渲染时失败；魔搭空间不经过 Jekyll，直接 serve 静态文件，因此成功。
+- **Markdown 文件本身**：frontmatter 合法、无 Liquid 冲突字符、无非法命名，问题不在内容。
+- **本地复现**：本地 Jekyll 4.4.1 构建 `site/` 成功，无法 1:1 复现 GitHub Pages 的 Jekyll 3.9.x 环境；但确认 `.nojekyll` 文件在 artifact 根目录可让 GitHub Pages 跳过 Jekyll。
+
+**修复方案**：
+1. `scripts/build_site.py` 在生成 `site/` 后，在 `site/` 根目录写入空文件 `.nojekyll`。
+2. `tests/test_build_site.py` 新增 `test_build_site_creates_nojekyll` 测试，TDD 保证 `.nojekyll` 必然生成。
+3. 清理本地 Jekyll 测试遗留的 `site/.jekyll-cache/`。
+
+**架构教训（已沉淀）**：
+- **GitHub Pages 上传的 artifact 会被 Jekyll 二次处理**：即使站点已由 Python 脚本预构建，只要 artifact 根目录没有 `.nojekyll`，GitHub Pages 就会用 Jekyll 重新构建。预构建静态站点必须在 artifact 根目录显式声明 `.nojekyll`。
+- `.nojekyll` 的位置必须对应上传路径：workflow 上传 `path: site`，则 `.nojekyll` 必须生成在 `site/.nojekyll`，仓库根目录的 `.nojekyll` 对 GitHub Pages 无效。
+- **Jekyll 本身不会把 `.nojekyll` 复制到 `_site/`**：`.nojekyll` 不是 Jekyll 配置，而是 GitHub Pages 部署层的跳过标记；本地 Jekyll 构建时会忽略它，但不影响 GitHub Pages 识别。
+- **测试驱动修复**：新增测试先失败、再改实现、再全量回归，能避免"修完忘记验证"的问题；构建脚本的产物约束（如 `.nojekyll`、index.json、notes 目录）适合用单元测试兜底。
+- **魔搭空间不受影响**：魔搭部署同样调用 `build_site.py`，`site/.nojekyll` 是空文件，不破坏魔搭侧的文件校验（index.html/css/style.css/js/app.js/data/index.json 均仍在）。
+
+**测试覆盖**：`tests/test_build_site.py` 新增 1 项，全量 23 项通过；本地 `python scripts/build_site.py --output output --site site` 验证 `site/.nojekyll` 生成且 `site/data/index.json` 有效；Jekyll 本地构建 `site/` 成功。
+
+**配套改动**：`.gitignore` 新增 `site/.nojekyll`，避免本地构建生成的该文件被误提交；实际部署时由 CI 中的 `build_site.py` 动态生成。
+
+**无需更新写作规则/checklist**：本次为部署配置修复，未涉及讲书笔记写作规则；`.trae/checklists/dev-checklist.md` 未要求部署相关检查，但未来若新增部署自检项可引用此经验。
+

@@ -348,6 +348,9 @@ def build_site(output_dir: str = "output", site_dir: str = "site") -> Path:
         encoding="utf-8",
     )
 
+    # 写入 .nojekyll 标记，让 GitHub Pages 跳过 Jekyll 构建，直接部署静态文件
+    (site_path / ".nojekyll").write_text("", encoding="utf-8")
+
     return site_path
 
 
