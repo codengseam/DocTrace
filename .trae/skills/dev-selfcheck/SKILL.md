@@ -58,11 +58,6 @@ version: 1.0.0
 - 运行 `pytest`（若项目有测试）
 - 若新增了功能但没写测试，标注 ❌ 并建议补测试
 
-### 笔记排序检查（涉及 output/ 改动时）
-- 运行 `python scripts/check_chapter_order.py` 校验章内事件时间排序
-- 若校验失败，按报告修正 frontmatter 的 `sort` 字段（见 `.trae/rules/rules.md` §五）
-- 涉及 output/ 下笔记新增/修改时必跑，未涉及可跳过
-
 ### 依赖与配置检查
 - 对比 `requirements.txt` 与新代码的 import，确认无未声明依赖
 - 若引入新 MCP 服务器，确认 `config.yaml` 已更新

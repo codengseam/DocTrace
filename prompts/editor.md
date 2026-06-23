@@ -68,7 +68,6 @@ title: "{book}·{chapter}·{event}"
 book: "{book}"
 chapter: "{chapter}"
 event: "{event}"
-sort: {sort}
 created_at: "2026-06-21T23:00:00+08:00"
 source_agents:
   - historian
@@ -78,8 +77,6 @@ source_agents:
   - philosopher
 ---
 ```
-
-`sort` 字段说明：同一章节（chapter）下有多个事件时，按历史时间先后排序，序号越小时间越早（`sort: 1` 为该章最早事件）。单事件章节可省略。排序依据以本书叙事时间线为准。
 
 正文标题：
 

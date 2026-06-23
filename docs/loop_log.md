@@ -106,137 +106,32 @@
 6. **prompts/context_analyst.md**：横向并置（同时期对照事件）；地理纵深；过渡句去模板化。
 7. **quality.py**：AI_PATTERNS 拆分显性/软性；新增 MODERN_JARGON 检测；新增 check_sublimation_quota 升华配额检测。
 
+---
 
-## 三、开发协作沉淀
+## AI 大模型学习专栏生成沉淀（2026-06-23）
 
-### 2026-06-23：四问题修复（排序/蒙层/数字目录/相邻章重复）
+### 任务概述
+基于 xmind 知识图谱（环境不可访问，改用网络研究）+ 菜鸟教程 + 吴恩达课程，生成面向普通人与程序员的 AI 学习专栏。最终产出 36 章正文 + 1 附录，总计约 25 万字符。
 
-**触发问题**：用户反馈站点四个体验问题——章内事件排序错乱、返回书架蒙层残留、论语纯数字目录层级冗余、相邻章节内容大篇幅重复。
+### 执行流程
+1. **专家团评审**：启动 3 个并行 subagent（架构师/测试/规则）评审章节方案，汇总意见后调整（补多模态章、模块5扩到4章、加端到端实战、合并模型选型、速查降附录、理论类加自测三问、字数分档）。
+2. **并行生成**：4 轮 × 5 个 subagent，每 subagent 写 2 章，共 19 个 subagent 调用完成 36 章 + 附录。
+3. **自检**：37 个文件全部含 YAML front matter，36 个含前置知识声明，总字符数 249,046。
 
-**根因与修复**：
-1. **章内事件排序**（资治通鉴·周纪四）：原排序按 path 字符串，未考虑历史时间序。修复：frontmatter 新增 `sort` 字段，`sort_notes_tree` event 排序键改为 `(is_none, sort_value, path)` 三元组，None 回退到 path（向后兼容）。
-2. **返回书架蒙层**：`backToHome()` 未清理移动端抽屉/设置面板/弹窗的覆盖层。修复：切换视图前依次调用 `closeSidebar()/closeSettings()/closeModal()`。
-3. **论语纯数字目录**：`序号_主题.md` 命名导致 chapter 层显示无意义的"01"。修复：数据层新增 `is_flat_book()`（仅当所有 chapter 标题都是纯数字才返回 True），前端 `renderTree` 在 flatten 模式下折叠 chapter 层直接渲染 event。史记等混合结构不折叠。
-4. **相邻章重复**（完璧归赵/渑池之会/负荆请罪）：独立生成导致讲人物/讲道理模块大篇幅重复。修复：保留各章独有内容（廉颇送境立太子、赵奢阏与之战、门客请辞、廉颇晚年、荀子评将相和），重复部分改为简略提及 +「（详见《完璧归赵》）」交叉引用。
+### 新共性问题
+1. **大规模内容并行生成的风格一致性问题**：19 个 subagent 各自生成，虽共享同一份写作规范文件（.cache/ai_course_style.md），但各章在细节风格上仍有细微差异（如标题格式、引用位置）。
+2. **rules.md 适用范围错位**：项目现有 rules.md 是为"古籍讲书笔记"设计的，AI 专栏采用了自定义结构（理论类/应用类），存在规则真空。
+3. **xmind 文件环境隔离**：用户本地路径的 xmind 文件在沙箱环境不可访问，需降级为网络研究 + 知识库。
 
-**架构教训（已沉淀）**：
-- `sort_notes_tree` 有两个消费者（`build_site.py` 静态站点 + `src/web/app.py` Flask API），改排序逻辑必须同步两端，否则静态站点与在线 API 行为不一致。
-- sort key 混合 None 与 int 会抛 TypeError，必须用 `(is_none, value, fallback)` 三元组规避。
-- 前端折叠必须放在数据排序之后（数据层结构稳定，仅渲染层折叠），否则数字 chapter 会被字符串序重排破坏 01→24 顺序。
-- 内容去重不得删除章节（rules.md 五段结构不可缺），只能精简并加交叉引用；跨事件名家点评须保留事件专属引用（rules.md §五）。
+### 规则更新建议
+- 建议新增 `.trae/rules/ai-course.md`，将本次的写作规范（.cache/ai_course_style.md）固化为正式规则文件，覆盖：语言风格、理论类/应用类章节结构、字数分档、引用规范、质量保障条款。
+- 在 rules.md 中明确声明其适用范围仅限"古籍讲书笔记"，AI 等其他类型内容采用各自专用规则。
 
-**测试覆盖**：新增 `tests/test_sorting.py`（27 项，覆盖 parse_chinese_number/chapter_sort_key/is_flat_book/sort_notes_tree 全部分支含 None 回归）；`tests/test_build_site.py` 增 8 项（sort 注入/flat 标记/混合结构）。全量 pytest 93 项通过，四篇笔记 quality.py 全 PASS。
+### checklist 更新
+- 无需更新 dev-checklist.md（本次为内容生成，非代码开发）。
 
-**无需更新规则/checklist**：本次为功能修复，未暴露新的共性写作问题；rules.md 已有「相邻章重复」的隐含约束（§二.2 跨事件引用），无需新增条款。
-
-
-### 2026-06-23：手机端吸底栏专项优化（魔搭空间版本）
-
-**触发问题**：用户反馈"上一章 目录 设置 下一章"吸底栏在手机端仍有问题。魔搭空间版本 = site/ 主版本（经 `.github/workflows/deploy-modelscope.yml` 部署到 ModelScope Studio，用 iframe/WebView 嵌入）。
-
-**多 Agent 分析根因**（前端专家视角）：
-1. **魔搭 iframe 内 body height:100% 塌缩**（最严重）：原吸底靠 `body{height:100%;display:flex;flex-direction:column}` + `.bottom-bar{flex-shrink:0}`，iframe 高度异常时整条 flex 链塌缩，底栏失效。本地无法复现。
-2. **iPhone safe-area 双重缺失**：viewport 无 `viewport-fit=cover` + `.bottom-bar` 无 `padding-bottom:env(safe-area-inset-bottom)`，home indicator 遮挡按钮且点击被系统拦截。
-3. **Chrome 安卓动态地址栏抖动**：body 100% 随地址栏伸缩变化，底栏位置抖动。
-4. **display 硬切**：`body.ui-hidden .bottom-bar{display:none}` 瞬变无过渡，且 flex 链重算导致阅读区跳变。
-5. **transition:transform 死代码**：声明了过渡但 JS 从未修改 transform。
-
-**修复方案**：放弃 flex 吸底，改 `position:fixed` + safe-area（移动端吸底导航工业标准，不依赖 body 高度链路）。
-- `index.html` viewport 加 `viewport-fit=cover`
-- `.bottom-bar` 改 `position:fixed; bottom:0; padding-bottom:env(safe-area-inset-bottom)`
-- 移动端 `.reader` 加 `padding-bottom:calc(50px + env(safe-area-inset-bottom))` 防遮挡
-- `body.ui-hidden .bottom-bar` 改 `transform:translateY(100%)`（滑出动画，复活死代码 transition）
-- 首页仍 `display:none`（不占位）
-
-**架构教训（已沉淀）**：
-- 移动端吸底栏**不能依赖 body flex 高度链路**——iframe 嵌入环境（魔搭/飞书/企微）和动态地址栏都会让 `height:100%` 塌缩/抖动。`position:fixed` 脱离文档流，不受 body 高度影响，是唯一可靠方案。
-- `100dvh` 在 iframe 内参考的仍是 iframe 高度而非可视高度，救不了 flex 方案。
-- iPhone 全面屏必须 `viewport-fit=cover` + `env(safe-area-inset-bottom)` 双管齐下，缺一个则 safe-area 返回 0。
-- fixed 元素脱离 flex 链后，滚动区（`.reader`）必须补 `padding-bottom` 让出底栏高度，否则内容被遮挡。
-- 显隐切换用 `transform` 而非 `display:none`，可配合 `transition` 实现平滑动画，且不触发 flex 链重算。
-
-**无需更新规则/checklist**：本次为前端布局修复，未涉及讲书笔记写作规则。魔搭部署配置（iframe 高度）属 site/ 代码之外，若仍有问题需检查魔搭侧 iframe 高度设置。
-
-
-### 2026-06-23：全站章内事件时间排序修正 + 校验机制固化
-
-**触发问题**：用户发现周纪五"窃符救赵"应在"纸上谈兵"后（当前在前），判断同章节内小标题排序还有类似问题，要求逐本逐章检查并固化检查机制到文档。
-
-**多 Agent 考证结果**（历史专家 Agent）：
-- 周纪三：苏秦合纵(1)→张仪连横(2)（原张仪在前，错）
-- 周纪五：纸上谈兵(1)→窃符救赵(2)（原窃符在前，错，用户指出）
-- 秦纪二：沙丘之谋(1)→大泽乡起义(2)（原大泽乡在前，错）
-- 汉纪一：鸿门宴(1)→韩信拜将(2)（原韩信在前，错）
-- 周纪二、秦纪一：原顺序已对，补 sort 字段保持一致
-
-**修复**：12 篇笔记 frontmatter 加 sort 字段（4 章修正 + 2 章补全 + 周纪四已修）。
-
-**校验机制固化**（文档专家 Agent 分析落点，构建与校验分离原则）：
-- 新建 `scripts/check_chapter_order.py`：跨文件校验同章 sort 单调递增、无重复、多事件章节不缺 sort
-- `.trae/rules/rules.md` 新增"§五 frontmatter 与排序"小节（写作要求层），sync_rules 同步到 RULES.md
-- `prompts/editor.md` frontmatter 模板加 `sort: {sort}` 字段（生成层）
-- `.trae/checklists/dev-checklist.md` 加"涉及 output/ 改动须跑 check_chapter_order.py"检查项
-- `.trae/skills/dev-selfcheck/SKILL.md` 加"笔记排序检查"小节（自检触发入口）
-- `README.md` 本地预览流程登记校验步骤
-- 新增 `tests/test_check_chapter_order.py` 15 项测试
-
-**架构教训（已沉淀）**：
-- **构建与校验分离**：校验脚本（check_chapter_order.py）独立于构建脚本（build_site.py），校验失败不阻断站点构建，CI 部署不被阻断。
-- **单篇校验 vs 跨文件校验**：quality.py 保持单篇 content 输入定位，不塞跨文件校验（章内排序需遍历同 chapter 多文件）；跨文件校验用独立脚本。
-- **sort 字段是人工事后补的**：`src/utils/markdown.py` 的 build_frontmatter 不生成 sort，`prompts/editor.md` 模板原本无 sort。本次把 sort 加入 editor 模板，未来生成的笔记会带 sort，但 LLM 填的 sort 值仍需校验脚本兜底。
-- **历史时间排序以原书叙事为准**：苏秦张仪年代有学术争议（马王堆帛书），但章内排序以《资治通鉴》叙事顺序为准，不擅自用现代考证推翻（rules.md §五已写明）。
-
-**测试覆盖**：全量 pytest 108 项通过（含新增 15 项 check_chapter_order 测试）；check_chapter_order.py 校验全站通过；7 个多事件章节排序全部正确。
-
-
-### 2026-06-23：非资治通鉴书籍阶段化重构 + 全站排序修复
-
-**触发问题**：用户发现明纪排序"全乱"，且除资治通鉴外其他书目录拆分过细（一章一事件），要求按历史阶段合并大章节，阶段内按时间排小标题。
-
-**多 Agent 分析结果**（历史专家 Agent 设计阶段映射）：
-- 根因1：唐纪/宋纪/明纪/史记未配置 `BOOK_CATEGORY_ORDER`，章节按字符串序排（明纪一<明纪七<明纪三<明纪三十）
-- 根因2：非资治通鉴 7 本书（三国/史记/唐纪/宋纪/明纪/孔子传/论语）原为"一章一事件"结构，目录层级冗余
-- 方案：7 本书按历史阶段重构为多事件大章节（三国6阶段/史记7阶段/唐纪6阶段/宋纪6阶段/明纪8阶段/孔子传6阶段/论语7阶段），阶段内事件按时间序排
-
-**修复**：
-1. `src/utils/sorting.py`：BOOK_CATEGORY_ORDER 补唐纪/宋纪/明纪配置；`sort_notes_tree` chapter 排序改为优先用 `chapter_sort` 字段（阶段历史顺序），无则回退 `chapter_sort_key`（朝代纪号）
-2. `scripts/migrate_stages.py`（新增）：一次性迁移脚本，STAGE_MAP 定义 7 本书阶段映射，重命名文件 + 更新 frontmatter（chapter/sort/chapter_sort 三字段）
-3. `scripts/build_site.py` + `src/web/app.py`：event 节点注入 chapter_sort，chapter 节点取首个事件的 chapter_sort，两端同步
-4. `tests/test_sorting.py`：更新史记配置测试，新增唐纪/宋纪/明纪测试
-
-**架构教训（已沉淀）**：
-- **双排序字段设计**：`chapter_sort`（阶段在书内的历史顺序，跨章）+ `sort`（事件在阶段内的时间顺序，章内）。两者职责分离，避免单字段既表达跨章又表达章内导致冲突。
-- **迁移脚本必须幂等**：migrate_stages.py 以 event 名为 key 查 STAGE_MAP，重命名文件 + 覆写 frontmatter，可重复运行。前几次运行因 tuple 解包顺序 bug 产生错误 sort 值，第 5 次修复后正确——幂等性让重跑成本极低。
-- **tuple 解包顺序 bug 是高频低级错误**：`build_event_to_stage` 返回 `(stage_name, chapter_sort, event_sort)`，但调用方写成 `new_chapter, sort_val, chapter_sort = ...` 解包，2/3 位互换导致全章事件 sort 值都等于 chapter_sort。教训：多字段 tuple 返回时优先用 dataclass/namedtuple 或 dict，避免位置解包。
-- **sort_notes_tree 两个消费者必须同步**：`build_site.py`（静态站点）和 `src/web/app.py`（Flask API）都调用 sort_notes_tree，但 chapter_sort 字段的注入逻辑需各自实现（build_site 从 frontmatter 解析，app.py 从 content 正则解析），两端解析逻辑必须一致。
-- **阶段划分以原书叙事时间线为准**：明纪 8 阶段（元末群雄→洪武之治→永乐盛世→土木之变→成弘正之治→嘉靖隆庆→万历怠政→明亡清军入关）严格按明代历史时间序，不按重要性排序。
-
-**测试覆盖**：全量 pytest 109 项通过；check_chapter_order.py 校验全站通过；7 本书 234 个文件迁移成功，阶段排序与事件排序全部正确。
-
-**无需更新规则/checklist**：本次为目录结构重构，未涉及讲书笔记写作规则。rules.md §五 frontmatter 与排序已覆盖 sort 字段说明，chapter_sort 属于迁移脚本内部字段无需写入写作规则。
-
-
-### 2026-06-23：全站内容去重（单章内 + 跨章节）
-
-**触发问题**：用户读到窃符救赵，发现单篇文章内大量重复（讲事情已叙述的情节，讲人物/讲背景/讲道理/问道悟道又重述一遍）；前后连续章节也存在大篇幅重复（如长平之战在纸上谈兵与窃符救赵两章都详述）。重复影响阅读体验，要求可简略提起或注明在哪些章节出现过，启用多 Agent 专家团优化。
-
-**多 Agent 执行**（2 调查 Agent + 6 编辑 Agent 并行）：
-- 调查 Agent 1：扫描资治通鉴 20 篇，定位单章内重复（讲事情情节在后续模块重述）+ 跨章节重复簇（完璧归赵/渑池之会/负荆请罪三连章、纸上谈兵/窃符救赵长平之战簇、张仪连横/苏秦合纵马王堆帛书簇、沙丘之谋/大泽乡起义二世昏庸簇、大泽乡起义/破釜沉舟项羽起兵簇、韩信拜将/垓下之围/鸟尽弓藏韩信三章簇）
-- 调查 Agent 2：扫描明纪/三国/唐纪，定位张居正改革 vs 死后清算、万历怠政/三大征/萨尔浒之战财政判语簇、东林党争/魏忠贤专权杨涟左光斗簇、诸葛亮治蜀/北伐中原马谡蜀汉国力簇、贞观开局/纳谏与用人魏征隋亡教训簇
-- 编辑 Agent 1-6：按"主场章节详述、客场章节简略提及+交叉引用"策略并行改写
-
-**去重策略（已沉淀为可复用模式）**：
-1. **单章内去重**：讲事情已叙述的情节，讲人物/讲背景/讲道理/问道悟道不再重述，改用"（情节详见讲事情）"交叉引用；同一名家引言单篇只全文出现一次，他处用"曾说过的那句话"或概述。
-2. **跨章节去重**：相邻章节共享背景只在"主场章节"详述，客场章节用"（详见《某某》）"简略带过。主场判定原则——该背景/人物/典故在哪章是核心就归哪章主场（如长平之战归纸上谈兵、信陵君归窃符救赵、魏征登场归贞观开局）。
-3. **五段结构不可破坏**：去重只精简重复内容并加交叉引用，不删除模块、不破坏 rules.md 五段结构。
-
-**架构教训（已沉淀）**：
-- **主场/客场分配是去重的关键**：跨章节重复不能两边都删（会丢失信息），也不能两边都留（重复依旧）。必须先判定主场（核心章节详述），客场（关联章节简略+交叉引用），才能既去重又保完整。
-- **单章内交叉引用用"（详见讲事情）"，跨章用"（详见《某某》）"**：两种引用格式区分单章内与跨章，读者一眼能分辨是同篇内还是跨篇引用。
-- **名家引言单篇只全文一次**：同一引言（如赵奢"兵，死地也，而括易言之"）在单篇内多处引用时，只在首次全文引用，他处用概述或"曾说过的话"，避免同一句古文反复出现。
-- **去重不得删除章节独有内容**：每章必须保留独有史料（如窃符救赵保留侯嬴下交毛公薛公、纸上谈兵保留赵奢阏与之战），只去重复部分，否则会损失信息密度。
-
-**测试覆盖**：check_chapter_order.py 校验通过；全量 pytest 109 项通过；quality.py 资治通鉴 20/20 + 明纪三国唐纪 100/100 全 PASS；build_site.py 静态站点生成成功。
-
-**无需更新规则/checklist**：本次为内容去重，去重策略属写作执行层（主场/客场分配、交叉引用格式），rules.md §二.2 已有"跨事件引用"隐含约束，无需新增条款。quality.py 检测单篇内容质量，跨文件重复属人工/Agent 编辑层处理，不纳入自动检测（跨文件重复需语义判断，非正则可判）。
+### 可复用资产
+- `.cache/ai_course_style.md`：AI 专栏写作规范，可作为后续同类任务的模板。
+- `.cache/ai_course_plan.md`：章节方案模板，含模块划分、字数预估、文件命名规范。
+- 专家团评审模式（3 subagent 并行评审）可复用于其他方案评估场景。
 

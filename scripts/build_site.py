@@ -24,7 +24,7 @@ _ROOT = Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from src.utils.sorting import is_flat_book, sort_notes_tree  # noqa: E402
+from src.utils.sorting import sort_notes_tree  # noqa: E402
 
 try:
     import yaml  # type: ignore
@@ -240,8 +240,6 @@ def build_site(output_dir: str = "output", site_dir: str = "site") -> Path:
                     "title": event or chapter,
                     "type": "event",
                     "path": rel_str,
-                    "sort": frontmatter.get("sort"),
-                    "chapter_sort": frontmatter.get("chapter_sort"),
                 }
             )
 
@@ -258,18 +256,11 @@ def build_site(output_dir: str = "output", site_dir: str = "site") -> Path:
             events = sorted(
                 books[book_name][chapter_name], key=lambda e: e["path"]
             )
-            # chapter_sort 取第一个有值的事件（同章所有事件应相同）
-            chapter_sort = None
-            for ev in events:
-                if ev.get("chapter_sort") is not None:
-                    chapter_sort = ev["chapter_sort"]
-                    break
             chapters.append(
                 {
                     "title": chapter_name,
                     "type": "chapter",
                     "children": events,
-                    "chapter_sort": chapter_sort,
                 }
             )
         book_trees[book_name] = chapters
@@ -282,7 +273,6 @@ def build_site(output_dir: str = "output", site_dir: str = "site") -> Path:
                 "title": book_name,
                 "type": "book",
                 "children": book_trees[book_name],
-                "flat": is_flat_book(book_trees[book_name]),
             }
         )
     sort_notes_tree(tree)
@@ -306,7 +296,6 @@ def build_site(output_dir: str = "output", site_dir: str = "site") -> Path:
                 "chapter_count": chapter_count,
                 "note_count": note_count,
                 "tree": book_trees[book_name],
-                "flat": is_flat_book(book_trees[book_name]),
             }
         )
 

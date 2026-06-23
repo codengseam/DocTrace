@@ -2,42 +2,144 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>深度阅读助手</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>豪书斋 · 读古人书，悟今世事</title>
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js" defer></script>
     <script src="js/app.js" defer></script>
 </head>
-<body>
-    <header class="toolbar">
+<body data-theme="day" data-font="serif" data-view="home">
+    <header class="brand-header">
+        <div class="brand-lockup">
+            <div class="brand-badge" aria-label="豪">豪</div>
+            <div class="brand-text">
+                <span class="brand-name">豪书斋</span>
+                <span class="brand-motto">读古人书，悟今世事</span>
+            </div>
+        </div>
+        <nav class="brand-actions" aria-label="主导航">
+            <a class="nav-link" href="#bookshelf">书架</a>
+            <a class="nav-link" href="#" id="newNoteLink">生成新笔记</a>
+            <button class="btn-primary" id="newNoteBtn" type="button">开始阅读</button>
+        </nav>
+    </header>
+
+    <header class="toolbar" id="toolbar">
+        <button id="menuBtn" class="icon-btn menu-btn" type="button" aria-label="目录">☰</button>
         <div class="toolbar-brand">
-            <h1>深度阅读助手</h1>
+            <h1>豪书斋</h1>
+            <span class="toolbar-chapter" id="toolbarChapter"></span>
         </div>
         <div class="toolbar-search">
-            <input type="text" id="searchInput" placeholder="搜索书名、章节或事件…（回车搜索正文）" autocomplete="off">
+            <input type="text" id="searchInput" placeholder="搜索书名、章节或事件…" autocomplete="off">
         </div>
         <div class="toolbar-actions">
             <button id="refreshBtn" class="btn-secondary" type="button">刷新目录</button>
-            <button id="newNoteBtn" class="btn-primary" type="button">生成新笔记</button>
+            <button id="settingsBtn" class="icon-btn" type="button" aria-label="阅读设置">⚙</button>
+            <button id="newNoteBtnToolbar" class="btn-primary" type="button">生成新笔记</button>
         </div>
     </header>
 
-    <div class="layout">
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <h2>笔记目录</h2>
-            </div>
-            <nav id="treeNav" class="tree-nav">
-                <div class="empty-state">正在加载目录…</div>
-            </nav>
-        </aside>
+    <main class="page-main">
+        <!-- 首页 / 书架视图 -->
+        <section class="home-view" id="homeView">
+            <section class="hero">
+                <div class="hero-inner">
+                    <h1 class="hero-title">深读一部经典，看见千年人心</h1>
+                    <p class="hero-subtitle">从《资治通鉴》到历代典籍，用现代视角重讲古人故事。</p>
+                    <div class="hero-stats" id="heroStats">
+                        <span>正在统计书目…</span>
+                    </div>
+                </div>
+            </section>
 
-        <main class="reader" id="reader">
-            <div class="reader-placeholder">
-                <p>请在左侧选择一篇笔记开始阅读。</p>
+            <section class="bookshelf-section" id="bookshelf">
+                <div class="bookshelf-header">
+                    <h2 class="bookshelf-title">书架</h2>
+                    <div class="bookshelf-controls">
+                        <div class="category-tabs" id="categoryTabs" role="tablist" aria-label="分类筛选">
+                            <button class="category-tab active" data-category="all" role="tab" aria-selected="true" type="button">全部</button>
+                        </div>
+                        <div class="bookshelf-search">
+                            <input type="text" id="bookshelfSearchInput" placeholder="搜索书名、作者、分类…" autocomplete="off">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bookshelf-grid" id="bookshelfGrid">
+                    <div class="empty-state">正在加载书架…</div>
+                </div>
+            </section>
+        </section>
+
+        <!-- 阅读视图 -->
+        <section class="reader-view" id="readerView" hidden>
+            <aside class="sidebar">
+                <div class="sidebar-header">
+                    <button id="backBtn" class="back-btn" type="button">
+                        <span class="back-arrow" aria-hidden="true">←</span>
+                        <span>返回书架</span>
+                    </button>
+                    <h2 id="currentBookTitle" class="sidebar-book-title">笔记目录</h2>
+                </div>
+                <nav id="treeNav" class="tree-nav">
+                    <div class="empty-state">正在加载目录…</div>
+                </nav>
+            </aside>
+            <div class="reader" id="reader">
+                <div class="reader-placeholder">
+                    <p>请在左侧选择一篇笔记开始阅读。</p>
+                </div>
             </div>
-        </main>
+        </section>
+    </main>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <div class="bottom-bar" id="bottomBar">
+        <button type="button" id="prevBtnBottom" disabled>上一章</button>
+        <button type="button" id="tocBtnBottom">目录</button>
+        <button type="button" id="settingsBtnBottom">设置</button>
+        <button type="button" id="nextBtnBottom" disabled>下一章</button>
     </div>
+
+    <div class="settings-overlay" id="settingsOverlay"></div>
+    <aside class="settings-panel" id="settingsPanel" aria-hidden="true">
+        <div class="settings-header">
+            <h2>阅读设置</h2>
+            <button id="settingsClose" class="modal-close" type="button" aria-label="关闭">&times;</button>
+        </div>
+        <div class="settings-body">
+            <div class="settings-group">
+                <label class="settings-label">字体</label>
+                <div class="settings-btns" id="fontBtns">
+                    <button type="button" data-font="serif">宋体</button>
+                    <button type="button" data-font="sans">黑体</button>
+                    <button type="button" data-font="kai">楷体</button>
+                </div>
+            </div>
+            <div class="settings-group">
+                <label class="settings-label">字号 <span id="fontSizeVal">18px</span></label>
+                <input type="range" id="fontSizeRange" min="14" max="28" step="1" value="18">
+            </div>
+            <div class="settings-group">
+                <label class="settings-label">行高 <span id="lineHeightVal">1.9</span></label>
+                <input type="range" id="lineHeightRange" min="1.4" max="2.5" step="0.1" value="1.9">
+            </div>
+            <div class="settings-group">
+                <label class="settings-label">行距 <span id="paragraphSpacingVal">1.0em</span></label>
+                <input type="range" id="paragraphSpacingRange" min="0.5" max="2.5" step="0.1" value="1.0">
+            </div>
+            <div class="settings-group">
+                <label class="settings-label">主题</label>
+                <div class="settings-btns" id="themeBtns">
+                    <button type="button" data-theme="day">白天</button>
+                    <button type="button" data-theme="sepia">护眼</button>
+                    <button type="button" data-theme="night">夜间</button>
+                </div>
+            </div>
+            <button type="button" id="resetSettingsBtn" class="btn-secondary settings-reset">恢复默认</button>
+        </div>
+    </aside>
 
     <div id="modalOverlay" class="modal-overlay" aria-hidden="true">
         <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">

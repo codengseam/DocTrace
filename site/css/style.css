@@ -1205,14 +1205,8 @@ body[data-view="reader"] .brand-header {
 /* ============ 底部工具栏（移动端） ============ */
 .bottom-bar {
     display: none;
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
     flex-shrink: 0;
     height: 50px;
-    /* 为 iPhone home indicator 预留安全区；viewport-fit=cover 时生效 */
-    padding-bottom: env(safe-area-inset-bottom);
     background-color: var(--bg-toolbar);
     border-top: 1px solid var(--border);
     justify-content: space-around;
@@ -1248,10 +1242,8 @@ body.ui-hidden .toolbar {
     display: none;
 }
 
-/* 底栏用 transform 滑出视口，配合 transition 实现平滑动画；
-   不用 display:none 避免脱离 fixed 定位后重新渲染的闪烁 */
 body.ui-hidden .bottom-bar {
-    transform: translateY(100%);
+    display: none;
 }
 
 /* 首页视图隐藏底部工具栏（移动端） */
@@ -1598,9 +1590,7 @@ body[data-view="home"] .bottom-bar {
 
     .reader {
         max-height: none;
-        /* 底栏改为 position:fixed 后脱离 flex 链，需为滚动区底部留出
-           底栏高度 + iPhone 安全区，防止正文/章末导航被遮挡 */
-        padding-bottom: calc(50px + env(safe-area-inset-bottom));
+        padding-bottom: 1rem;
     }
 
     .markdown-body {

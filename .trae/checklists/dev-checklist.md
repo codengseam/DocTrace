@@ -24,7 +24,6 @@
 - [ ] 未破坏 `.trae/rules/rules.md`（讲书笔记写作规则）
 - [ ] 未破坏 `prompts/` 下 7 份讲书提示词
 - [ ] 未破坏 `src/utils/quality.py` 的检测逻辑
-- [ ] 若本次改动涉及 `output/` 下笔记的新增/修改，已运行 `python scripts/check_chapter_order.py` 校验章内事件时间排序
 - [ ] 若修改了 `.trae/rules/rules.md`，已运行 `python scripts/sync_rules.py` 同步到 `RULES.md`
 
 ## 三、测试
