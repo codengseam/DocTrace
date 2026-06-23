@@ -1,6 +1,14 @@
 (function () {
     'use strict';
 
+    // 站点根路径：兼容部署在子目录的情况（如 site/versions/<ver>/）
+    const SITE_BASE = (() => {
+        const p = window.location.pathname.replace(/\/[^/]*$/, '/');
+        const idx = p.indexOf('/versions/');
+        if (idx >= 0) return p.slice(0, idx) + '/';
+        return '';
+    })();
+
     const state = {
         treeData: [],
         notesIndex: {},
@@ -136,7 +144,7 @@
 
     async function loadTree() {
         try {
-            const response = await fetch('data/index.json');
+            const response = await fetch(SITE_BASE + 'data/index.json');
             if (!response.ok) {
                 throw new Error(`请求失败 (${response.status}): ${response.statusText}`);
             }
@@ -183,6 +191,11 @@
         if (!path) return;
         state.activePath = path;
 
+        // 切换笔记时先关闭评论抽屉，避免残留
+        if (window.MinimalComments && typeof window.MinimalComments.closeDrawer === 'function') {
+            window.MinimalComments.closeDrawer();
+        }
+
         const allLeaves = elements.treeNav.querySelectorAll('.tree-leaf');
         allLeaves.forEach((leaf) => leaf.classList.remove('active'));
         if (targetElement) {
@@ -194,7 +207,7 @@
 
         elements.reader.innerHTML = '<div class="reader-placeholder">正在加载笔记…</div>';
         try {
-            const content = await fetch('notes/' + encodeURI(path)).then((r) => {
+            const content = await fetch(SITE_BASE + 'notes/' + encodeURI(path)).then((r) => {
                 if (!r.ok) {
                     throw new Error(`请求失败 (${r.status}): ${r.statusText}`);
                 }
@@ -215,6 +228,15 @@
             }
 
             elements.reader.innerHTML = `<article class="markdown-body">${metaHtml}${html}</article>`;
+
+            // 通知评论系统：笔记已渲染完成
+            const notePath = path.replace(/\.(md|html|txt)$/i, '');
+            const paragraphIds = Array.from(
+                elements.reader.querySelectorAll('.markdown-body > p')
+            ).map((p, i) => `p${String(i + 1).padStart(4, '0')}`);
+            window.dispatchEvent(new CustomEvent('note:loaded', {
+                detail: { notePath, paragraphIds }
+            }));
         } catch (err) {
             elements.reader.innerHTML = '<div class="reader-placeholder">加载失败，请重试。</div>';
             showError('无法加载笔记内容。', err);
@@ -371,6 +393,11 @@
         document.addEventListener('keydown', handleKeyDown);
 
         loadTree();
+
+        // 初始化极简评论系统（监听 note:loaded 事件）
+        if (window.MinimalComments && typeof window.MinimalComments.init === 'function') {
+            MinimalComments.init();
+        }
     }
 
     if (document.readyState === 'loading') {
