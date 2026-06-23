@@ -313,3 +313,29 @@
 
 **无需更新规则/checklist**：本次为内容去重，去重策略属写作执行层（主场/客场分配、交叉引用格式），rules.md §二.2 已有"跨事件引用"隐含约束，无需新增条款。quality.py 检测单篇内容质量，跨文件重复属人工/Agent 编辑层处理，不纳入自动检测（跨文件重复需语义判断，非正则可判）。
 
+
+### 2026-06-23：沉浸模式修复、全站去重与防重复检查机制固化
+
+**触发问题**：用户反馈沉浸阅读模式点击后仍展示目录且横屏（期望竖屏无目录）；此前合并带入大量重复 Markdown（如孔子传、论语、三国、史记、唐宋明纪）；主题分组文件需要按时间线/故事线排序，子章节同样规则。
+
+**多 Agent 执行结果**：
+- **沉浸模式**：远程已推送 `de8bb9d feat: Implement Immersive Full-Screen Reading`，本地滞后导致首次 push 被拒；rebase 后合并本地去重/排序改动。
+- **重复文件清理**：`scripts/remove_duplicates.py` 基于内容哈希（忽略 frontmatter）分组，按优先级保留主题分组文件；清理三国、史记、唐纪、宋纪、明纪、孔子传、论语等 200+ 重复文件。
+- **防重复检查**：新增 `scripts/check_duplicates.py`；CI workflow（`.github/workflows/pages.yml`）构建前强制运行；`.trae/checklists/dev-checklist.md` 增加提交前检查项；README.md 登记使用方式。
+- **排序修复**：`src/utils/sorting.py` 补全 `is_flat_book` 函数并扩展 `BOOK_CATEGORY_ORDER`（史记加秦纪/汉纪、唐纪/宋纪/明纪独立配置）；`sort_notes_tree` 优先按 `chapter_sort`/`sort` frontmatter 字段排序；验证论语/资治通鉴/明纪等主题与章节均按时间线/故事线排列。
+
+**架构教训（已沉淀）**：
+- **推送前必须先 fetch 远程**：本地开发时远程可能已有新 commit，直接 push 会被拒；应养成 `git fetch` 习惯，或设置 push 前自动检查。
+- **去重优先级规则**：主题分组文件（frontmatter chapter 与文件名 chapter 一致、带 sort/chapter_sort、中文主题名长）优先保留；含阿拉伯数字的文件名倾向于低优先级。
+- **双字段排序职责不变**：`chapter_sort` 控制阶段/主题在书内顺序，`sort` 控制事件在主题内顺序；两者都是 frontmatter 标量，构建脚本需透传到 index.json。
+- **测试与实现同步**：`tests/test_sorting.py` 原本引用不存在的 `is_flat_book`，补全函数的同时也扩展了排序配置测试，避免测试滞后于实现。
+
+**测试覆盖**：全量 pytest 103 项通过；`check_duplicates.py` 全站无重复；`build_site.py` 生成 `site/data/index.json` 主题与子章节排序正确；本次改动文件 ruff 检查通过。
+
+**配套改动**：
+- 新增 `scripts/check_duplicates.py`、`scripts/remove_duplicates.py`
+- 修改 `scripts/build_site.py`、`src/utils/sorting.py`、`.github/workflows/pages.yml`、`.trae/checklists/dev-checklist.md`、`README.md`
+- 删除 output/ 下 200+ 重复 Markdown 文件及空目录
+
+**无需更新讲书规则**：本次为站点构建、数据清理与工程规范，未涉及讲书笔记写作规则。
+
