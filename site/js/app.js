@@ -65,7 +65,8 @@
         tocBtnBottom: document.getElementById('tocBtnBottom'),
         modalOverlay: document.getElementById('modalOverlay'),
         modalClose: document.getElementById('modalClose'),
-        cancelBtn: document.getElementById('cancelBtn')
+        cancelBtn: document.getElementById('cancelBtn'),
+        immersiveBtn: document.getElementById('immersiveBtn')
     };
 
     function escapeHtml(text) {
@@ -676,6 +677,9 @@
         if (elements.settingsBtnBottom) {
             elements.settingsBtnBottom.addEventListener('click', openSettings);
         }
+        if (elements.immersiveBtn) {
+            elements.immersiveBtn.addEventListener('click', toggleImmersive);
+        }
         if (elements.settingsClose) {
             elements.settingsClose.addEventListener('click', closeSettings);
         }
@@ -915,12 +919,88 @@
         }
     }
 
+    function detectModelScopeEmbed() {
+        /**
+         * 检测当前页面是否被嵌入在魔搭创空间（ModelScope Studio）的 iframe 中。
+         * 注意：魔搭平台外壳（顶部标题条、左上角×、右上角⋮、右下角平台悬浮按钮）
+         * 位于 modelscope.cn 父页面，受浏览器同源策略保护，本站无法直接隐藏。
+         * 这里只能对自身 iframe 内的 UI 做适配，减少双层导航，并提供沉浸阅读入口。
+         */
+        let inIframe = false;
+        try {
+            inIframe = window.self !== window.top;
+        } catch (e) {
+            // 跨域 iframe 访问 top 会抛错，说明确实在 iframe 中
+            inIframe = true;
+        }
+
+        const referrer = document.referrer || '';
+        const urlParams = new URLSearchParams(window.location.search);
+        const isModelScope = referrer.includes('modelscope.cn') ||
+                             referrer.includes('modelscope.aliyuncs.com') ||
+                             window.location.hostname.includes('.ms.show') ||
+                             urlParams.get('embed') === '1' ||
+                             urlParams.get('minimal') === '1';
+
+        if (inIframe && isModelScope) {
+            document.body.classList.add('modelscope-embedded');
+            console.log('[豪书斋] 检测到魔搭创空间嵌入环境，已启用嵌入优化。');
+
+            // 显示沉浸阅读按钮
+            if (elements.immersiveBtn) {
+                elements.immersiveBtn.hidden = false;
+            }
+
+            // 尝试请求父页面进入无壳模式（魔搭若支持 postMessage 协议则生效）
+            requestModelScopeMinimalChrome();
+        }
+    }
+
+    function requestModelScopeMinimalChrome() {
+        // 魔搭官方未公开去壳协议，以下消息格式为常见平台惯例，实际效果需以魔搭支持为准
+        const targets = ['https://www.modelscope.cn', 'https://modelscope.cn'];
+        const messages = [
+            { type: 'ms:studio:hideChrome', value: true },
+            { type: 'ms:studio:requestMinimal', value: true },
+            { type: 'modelscope:hideHeader', value: true },
+            { type: 'hideHeader', value: true }
+        ];
+
+        targets.forEach(target => {
+            messages.forEach(msg => {
+                try {
+                    window.parent.postMessage(msg, target);
+                } catch (e) {
+                    // 跨域或父页面未监听时静默失败
+                }
+            });
+        });
+    }
+
+    function toggleImmersive() {
+        const doc = document;
+        const isFullscreen = doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement;
+        if (!isFullscreen) {
+            const el = doc.documentElement;
+            if (el.requestFullscreen) el.requestFullscreen();
+            else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+            else if (el.mozRequestFullScreen) el.mozRequestFullScreen();
+            else if (el.msRequestFullscreen) el.msRequestFullscreen();
+        } else {
+            if (doc.exitFullscreen) doc.exitFullscreen();
+            else if (doc.webkitExitFullscreen) doc.webkitExitFullscreen();
+            else if (doc.mozCancelFullScreen) doc.mozCancelFullScreen();
+            else if (doc.msExitFullscreen) doc.msExitFullscreen();
+        }
+    }
+
     function init() {
         if (typeof marked === 'undefined') {
             elements.reader.innerHTML = '<div class="reader-placeholder">Markdown 渲染组件加载失败，请检查网络连接。</div>';
             console.error('marked.js is not loaded');
         }
 
+        detectModelScopeEmbed();
         initSettings();
         initSidebarDrawer();
         initTapToggle();
