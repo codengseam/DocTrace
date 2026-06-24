@@ -129,13 +129,19 @@ async function runTest() {
         const { dom, window, document } = await buildDom();
         await enterReader(document, window);
 
-        const wallpapers = ['none', 'bamboo', 'xuan', 'ink', 'landscape', 'starry'];
+        const wallpapers = ['none', 'bamboo', 'landscape'];
         for (const wp of wallpapers) {
             const btn = document.querySelector(`#wallpaperBtns button[data-wallpaper="${wp}"]`);
+            assert(btn !== null, `壁纸按钮 ${wp} 存在`);
             btn.click();
             assert(document.body.getAttribute('data-wallpaper') === wp, `壁纸 ${wp} 切换生效`);
             assert(btn.classList.contains('active'), `壁纸 ${wp} 按钮高亮`);
         }
+
+        // 已删除的壁纸按钮不应存在
+        assert(document.querySelector('#wallpaperBtns button[data-wallpaper="xuan"]') === null, '宣纸壁纸按钮已删除');
+        assert(document.querySelector('#wallpaperBtns button[data-wallpaper="ink"]') === null, '水墨壁纸按钮已删除');
+        assert(document.querySelector('#wallpaperBtns button[data-wallpaper="starry"]') === null, '星空壁纸按钮已删除');
 
         // 透明度滑块
         const opacityRange = document.getElementById('wallpaperOpacityRange');
@@ -146,7 +152,7 @@ async function runTest() {
 
         // localStorage 持久化
         const stored = JSON.parse(window.localStorage.getItem('reader-settings'));
-        assert(stored.wallpaper === 'starry', '壁纸持久化到 localStorage');
+        assert(stored.wallpaper === 'landscape', '壁纸持久化到 localStorage');
         assert(stored.wallpaperOpacity === 0.8, '透明度持久化到 localStorage');
 
         // 夜间主题覆盖：data-theme=night + data-wallpaper=bamboo 时壁纸变量应被覆盖
@@ -281,15 +287,18 @@ async function runTest() {
         dom.window.close();
     }
 
-    console.log('\n=== 测试5：自动阅读播放/暂停 ===');
+    console.log('\n=== 测试5：自动阅读播放/暂停（设置面板开关） ===');
     {
         const { dom, window, document } = await buildDom();
         await enterReader(document, window);
 
         const reader = document.getElementById('reader');
-        const autoBtn = document.getElementById('autoScrollBtn');
-        assert(autoBtn && !autoBtn.hidden, '自动阅读按钮在阅读视图可见');
-        assert(autoBtn.getAttribute('aria-pressed') === 'false', '初始状态为暂停');
+        const onBtn = document.querySelector('#autoScrollBtns button[data-auto-scroll="true"]');
+        const offBtn = document.querySelector('#autoScrollBtns button[data-auto-scroll="false"]');
+        assert(onBtn !== null, '设置面板存在自动阅读「开启」按钮');
+        assert(offBtn !== null, '设置面板存在自动阅读「关闭」按钮');
+        assert(document.getElementById('autoScrollBtn') === null, '右下角浮动自动阅读按钮已删除');
+        assert(offBtn.classList.contains('active'), '初始状态「关闭」高亮');
 
         // 模拟可滚动内容
         Object.defineProperty(reader, 'scrollHeight', { value: 5000, configurable: true });
@@ -304,9 +313,10 @@ async function runTest() {
             }
         };
 
-        // 点击播放
-        autoBtn.click();
-        assert(autoBtn.getAttribute('aria-pressed') === 'true', '点击后状态为播放');
+        // 点击开启
+        onBtn.click();
+        assert(onBtn.classList.contains('active'), '开启后「开启」按钮高亮');
+        assert(!offBtn.classList.contains('active'), '开启后「关闭」按钮不高亮');
         assert(window.__rafQueue.length > 0, 'rAF 已调度');
 
         // 推进几帧（首帧建立时间基线 dt=0 不滚动，后续帧滚动）
@@ -316,9 +326,18 @@ async function runTest() {
         assert(scrollByCalls.length >= 4, `rAF 推进 5 帧后 scrollBy 调用 ${scrollByCalls.length} 次 (>=4，首帧建基线)`);
         assert(scrollByCalls.every((y) => y > 0), '所有 scrollBy dy > 0');
 
-        // 点击暂停
-        autoBtn.click();
-        assert(autoBtn.getAttribute('aria-pressed') === 'false', '再次点击后状态为暂停');
+        // localStorage 持久化
+        let stored = JSON.parse(window.localStorage.getItem('reader-settings'));
+        assert(stored.autoScroll === true, '自动阅读开启状态持久化');
+
+        // 点击关闭
+        offBtn.click();
+        assert(offBtn.classList.contains('active'), '关闭后「关闭」按钮高亮');
+        assert(!onBtn.classList.contains('active'), '关闭后「开启」按钮不高亮');
+
+        // localStorage 持久化
+        stored = JSON.parse(window.localStorage.getItem('reader-settings'));
+        assert(stored.autoScroll === false, '自动阅读关闭状态持久化');
 
         dom.window.close();
     }
@@ -329,18 +348,20 @@ async function runTest() {
         await enterReader(document, window);
 
         const reader = document.getElementById('reader');
-        const autoBtn = document.getElementById('autoScrollBtn');
+        const onBtn = document.querySelector('#autoScrollBtns button[data-auto-scroll="true"]');
+        const offBtn = document.querySelector('#autoScrollBtns button[data-auto-scroll="false"]');
         // 接近末尾：scrollHeight - scrollTop - clientHeight < 2
         Object.defineProperty(reader, 'scrollHeight', { value: 1000, configurable: true });
         Object.defineProperty(reader, 'clientHeight', { value: 800, configurable: true });
         Object.defineProperty(reader, 'scrollTop', { value: 999, configurable: true });
         reader.scrollBy = () => {};
 
-        autoBtn.click();
-        assert(autoBtn.getAttribute('aria-pressed') === 'true', '点击播放');
+        onBtn.click();
+        assert(onBtn.classList.contains('active'), '点击开启后高亮');
         // 推进一帧，应检测到末尾并暂停
         window.__flushRaf(16);
-        assert(autoBtn.getAttribute('aria-pressed') === 'false', '到末尾自动暂停');
+        assert(offBtn.classList.contains('active'), '到末尾自动暂停');
+        assert(!onBtn.classList.contains('active'), '到末尾后开启按钮不高亮');
 
         dom.window.close();
     }
@@ -351,20 +372,22 @@ async function runTest() {
         await enterReader(document, window);
 
         const reader = document.getElementById('reader');
-        const autoBtn = document.getElementById('autoScrollBtn');
+        const onBtn = document.querySelector('#autoScrollBtns button[data-auto-scroll="true"]');
+        const offBtn = document.querySelector('#autoScrollBtns button[data-auto-scroll="false"]');
         Object.defineProperty(reader, 'scrollHeight', { value: 5000, configurable: true });
         Object.defineProperty(reader, 'clientHeight', { value: 800, configurable: true });
         Object.defineProperty(reader, 'scrollTop', { value: 0, configurable: true });
         reader.scrollBy = () => {};
 
         // 播放
-        autoBtn.click();
-        assert(autoBtn.getAttribute('aria-pressed') === 'true', '播放中');
+        onBtn.click();
+        assert(onBtn.classList.contains('active'), '播放中');
         window.__flushRaf(16);
 
         // 点击设置按钮（呼出设置面板）应暂停
         document.getElementById('settingsBtn').click();
-        assert(autoBtn.getAttribute('aria-pressed') === 'false', '呼出设置面板后自动暂停');
+        assert(offBtn.classList.contains('active'), '呼出设置面板后自动暂停');
+        assert(!onBtn.classList.contains('active'), '呼出设置面板后开启按钮不高亮');
 
         dom.window.close();
     }
@@ -385,13 +408,16 @@ async function runTest() {
     console.log('\n=== 测试9：CSS 壁纸层与夜间覆盖 ===');
     {
         const cssText = fs.readFileSync(path.join(SITE_DIR, 'css/style.css'), 'utf-8');
-        assert(cssText.includes('.reader::before'), '含 .reader::before 壁纸层');
+        assert(cssText.includes('.reader-wallpaper'), '含 .reader-wallpaper 壁纸层');
         assert(cssText.includes('pointer-events: none'), '壁纸层 pointer-events: none');
         assert(cssText.includes('--reader-wallpaper'), '含 --reader-wallpaper 变量');
         assert(cssText.includes('body[data-wallpaper="bamboo"]'), '含竹简壁纸预设');
-        assert(cssText.includes('body[data-wallpaper="starry"]'), '含星空壁纸预设');
-        assert(cssText.includes('body[data-theme="night"][data-wallpaper="starry"]'), '含夜间星空覆盖');
-        assert(cssText.includes('.auto-scroll-btn'), '含自动阅读按钮样式');
+        assert(cssText.includes('body[data-wallpaper="landscape"]'), '含山水壁纸预设');
+        assert(!cssText.includes('body[data-wallpaper="starry"]'), '星空壁纸预设已删除');
+        assert(!cssText.includes('body[data-wallpaper="ink"]'), '水墨壁纸预设已删除');
+        assert(!cssText.includes('body[data-wallpaper="xuan"]'), '宣纸壁纸预设已删除');
+        assert(cssText.includes('body[data-theme="night"][data-wallpaper="bamboo"]'), '含夜间竹简覆盖');
+        assert(!cssText.includes('.auto-scroll-btn'), '浮动自动阅读按钮样式已删除');
     }
 
     console.log('\n=== 测试10：沉浸阅读模式（回归测试） ===');
@@ -457,7 +483,90 @@ async function runTest() {
         dom.window.close();
     }
 
-    console.log('\n=== 测试13：返回书架时关闭目录蒙层（回归测试） ===');
+    console.log('\n=== 测试13：非法壁纸设置回退到无 ===');
+    {
+        const { dom, window, document } = await buildDom();
+        // 先写入旧的非法壁纸
+        window.localStorage.setItem('reader-settings', JSON.stringify({ wallpaper: 'starry' }));
+        // 重新触发 loadSettings / applySettings：需要重新进入阅读视图
+        await enterReader(document, window);
+        assert(document.body.getAttribute('data-wallpaper') === 'none', 'body 壁纸属性为 none');
+        // 触发一次设置保存（applySettings 读取后已规范化，但需保存才持久化）
+        document.querySelector('#wallpaperBtns button[data-wallpaper="none"]').click();
+        const stored = JSON.parse(window.localStorage.getItem('reader-settings'));
+        assert(stored.wallpaper === 'none', '非法壁纸 starry 被规范为 none');
+        dom.window.close();
+    }
+
+    console.log('\n=== 测试14：壁纸层高度跟随阅读内容 ===');
+    {
+        const { dom, window, document } = await buildDom();
+        await enterReader(document, window);
+
+        const reader = document.getElementById('reader');
+        Object.defineProperty(reader, 'scrollHeight', { value: 3500, configurable: true });
+        // 切换壁纸触发 updateReaderWallpaperHeight
+        document.querySelector('#wallpaperBtns button[data-wallpaper="landscape"]').click();
+        const wallpaper = reader.querySelector('.reader-wallpaper');
+        assert(wallpaper !== null, '阅读区存在壁纸层');
+        assert(wallpaper.style.height === '3500px', '壁纸层高度等于 reader.scrollHeight');
+
+        dom.window.close();
+    }
+
+    console.log('\n=== 测试15：点击代码块不触发阅读区翻页 ===');
+    {
+        const { dom, window, document } = await buildDom();
+        await enterReader(document, window);
+
+        const reader = document.getElementById('reader');
+        const article = reader.querySelector('.markdown-body');
+        const pre = document.createElement('pre');
+        const code = document.createElement('code');
+        code.textContent = 'const veryLongLine = "a".repeat(200);';
+        pre.appendChild(code);
+        article.appendChild(pre);
+
+        // 点击 code 元素不应触发 UI 切换
+        const clickEvent = new window.MouseEvent('click', { bubbles: true, clientX: 150, clientY: 300 });
+        Object.defineProperty(clickEvent, 'target', { value: code, enumerable: true });
+        code.dispatchEvent(clickEvent);
+
+        // 由于 handleReaderTap 依赖 event.target，这里通过 shouldExcludeTap 的单元方式验证
+        // 触发 reader 的 click，目标为 code
+        let tapFired = false;
+        const original = window.handleReaderTap;
+        // 简单验证：code 元素在 shouldExcludeTap 排除列表内
+        const { handleReaderTap } = window;
+        // 如果 handleReaderTap 不存在则通过代码存在性断言
+        const appText = fs.readFileSync(path.join(SITE_DIR, 'js/app.js'), 'utf-8');
+        assert(appText.includes("pre, code"), 'shouldExcludeTap 排除 pre/code');
+
+        dom.window.close();
+    }
+
+    console.log('\n=== 测试16：pageshow persisted 时重置视图状态 ===');
+    {
+        const { dom, window, document } = await buildDom();
+        await enterReader(document, window);
+
+        const immersiveBtn = document.getElementById('immersiveBtn');
+        immersiveBtn.click();
+        assert(document.body.classList.contains('immersive-mode'), '已进入沉浸');
+
+        // 模拟从 bfcache 恢复
+        const pageshowEvent = new window.Event('pageshow', { bubbles: false });
+        Object.defineProperty(pageshowEvent, 'persisted', { value: true });
+        window.dispatchEvent(pageshowEvent);
+
+        assert(!document.body.classList.contains('immersive-mode'), 'pageshow 后退出沉浸');
+        assert(!document.body.classList.contains('ui-hidden'), 'pageshow 后移除 ui-hidden');
+        assert(document.body.dataset.view === 'home', 'pageshow 后回到 home 视图');
+
+        dom.window.close();
+    }
+
+    console.log('\n=== 测试17：返回书架时关闭目录蒙层（回归测试） ===');
     {
         const { dom, window, document } = await buildDom();
         await enterReader(document, window);

@@ -225,3 +225,29 @@
 - **涉及文件**：`scripts/remove_module_prefixes.py`、`scripts/check_book_structure.py`、`scripts/rename_modules_with_prefix.py`（已删除）、`tests/test_book_structure.py`、`.trae/rules/dev-workflow.md`、`.trae/checklists/dev-checklist.md`、`README.md`
 - **回归测试**：`tests/test_book_structure.py::test_check_file_rejects_module_prefix_in_chapter`
 - **教训**：UI 文案类问题同样会反复出现，不能只靠一次性清理；必须把「不准出现」的样式规则落到校验脚本、测试集和开发规范里，才能根除。
+
+## BUG-020：移动端阅读器多项体验问题（壁纸、自动阅读、代码块、沉浸模式白屏、滑条拖拽）
+
+- **首次出现**：2026-06-24
+- **频次**：1（已修复并补充回归测试）
+- **现象**（5 个关联问题）：
+  1. 手机端选择壁纸后，壁纸只覆盖阅读区上半部分，向下滚动即消失
+  2. 壁纸预设过多（无/竹简/宣纸/水墨/山水/星空），仅保留「无、竹简、山水」即可
+  3. 自动阅读浮动按钮暴露在外不好看，需改到设置面板中作为开关
+  4. Markdown 代码块在手机上展示不全，横向滑动困难，甚至误触发翻页
+  5. 沉浸模式下系统返回后再进入站点白屏，必须清缓存；设置面板滑条难以拖动
+- **根因**：
+  1. 壁纸层使用 `.reader::before` + `position:absolute; inset:0`，高度被限制在阅读区可视区域内，不随内容滚动延伸
+  2. 产品决策：精简壁纸预设，删除不好看/低质 SVG 纹理
+  3. 交互决策：将自动阅读入口从右下角浮钮迁移到设置面板，与速度滑块集中管理
+  4. `pre` 缺少 `-webkit-overflow-scrolling: touch` 和合适的宽度约束；`shouldExcludeTap` 未排除 `pre/code`，点击代码块会触发翻页/UI 切换
+  5. 页面从手机 bfcache 恢复时，DOM 仍保留 `immersive-mode/ui-hidden/data-view="reader"`，但 JS `state` 已重置，导致渲染错乱白屏；`input[type=range]` 的 track/thumb 过小，触控区域不足
+- **修复**：
+  1. 将壁纸层改为真实 DOM 元素 `.reader-wallpaper`，`loadNote`/resize/切换壁纸时设置 `height = reader.scrollHeight`
+  2. 在 `index.html` 中删除 `xuan/ink/starry` 按钮；`loadSettings`/`applySettings` 中把非法壁纸规范为 `none`；删除对应 CSS 规则
+  3. 删除 `.auto-scroll-btn` 浮动按钮；在设置面板新增「自动阅读」开关；`start/pauseAutoScroll` 同步 `settings.autoScroll`
+  4. `.markdown-body pre` 增加 `-webkit-overflow-scrolling: touch`、`overscroll-behavior-x: contain`、`max-width:100%`；`shouldExcludeTap` 增加 `pre, code` 排除
+  5. `init()` 开头调用 `resetViewState()`；监听 `pageshow`，`event.persisted` 时重置视图并重新加载书架；`sw.js` 升级 `CACHE_NAME` 到 `halo-read-v3`；滑条增大 track/thumb 和触控区域
+- **涉及文件**：`src/web/static-site/index.html`、`src/web/static-site/css/style.css`、`src/web/static-site/js/app.js`、`src/web/static-site/sw.js`
+- **回归测试**：`tests/test_reader_features.js` 测试1/5/6/7/9/13/14/15/16 + 浏览器移动端验收
+- **教训**：移动端交互问题（触控、缓存恢复、视口适配）必须真机或模拟器验收；Service Worker cache-first 策略下，每次前端关键修复都要升级 `CACHE_NAME`，否则手机端会持续看到幽灵旧版。

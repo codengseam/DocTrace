@@ -52,6 +52,7 @@
         heroStats: document.getElementById('heroStats'),
         treeNav: document.getElementById('treeNav'),
         reader: document.getElementById('reader'),
+        readerWallpaper: document.querySelector('.reader-wallpaper'),
         backBtn: document.getElementById('backBtn'),
         currentBookTitle: document.getElementById('currentBookTitle'),
         newNoteBtn: document.getElementById('newNoteBtn'),
@@ -88,7 +89,7 @@
         wallpaperOpacityRange: document.getElementById('wallpaperOpacityRange'),
         wallpaperOpacityVal: document.getElementById('wallpaperOpacityVal'),
         pageModeBtns: document.getElementById('pageModeBtns'),
-        autoScrollBtn: document.getElementById('autoScrollBtn'),
+        autoScrollBtns: document.getElementById('autoScrollBtns'),
         autoScrollSpeedRange: document.getElementById('autoScrollSpeedRange'),
         autoScrollSpeedVal: document.getElementById('autoScrollSpeedVal')
     };
@@ -495,13 +496,11 @@
             elements.homeView.hidden = false;
             elements.readerView.hidden = true;
             document.body.style.overflow = '';
-            if (elements.autoScrollBtn) elements.autoScrollBtn.hidden = true;
             if (elements.immersiveBtn) elements.immersiveBtn.hidden = true;
         } else {
             elements.homeView.hidden = true;
             elements.readerView.hidden = false;
             document.body.style.overflow = 'hidden';
-            if (elements.autoScrollBtn) elements.autoScrollBtn.hidden = false;
             // 沉浸按钮在阅读视图可见（所有环境，不限于魔搭嵌入）
             if (elements.immersiveBtn) elements.immersiveBtn.hidden = false;
         }
@@ -670,8 +669,11 @@
             const next = idx >= 0 && idx < state.flatNotes.length - 1 ? state.flatNotes[idx + 1] : null;
             const navHtml = buildChapterNavHtml(prev, next);
 
-            elements.reader.innerHTML = `<article class="markdown-body">${metaHtml}${html}</article>${navHtml}`;
+            elements.reader.innerHTML = `<div class="reader-wallpaper" aria-hidden="true"></div><article class="markdown-body">${metaHtml}${html}</article>${navHtml}`;
+            // 重新获取壁纸层引用（innerHTML 会重建 DOM）
+            elements.readerWallpaper = elements.reader.querySelector('.reader-wallpaper');
             bindChapterNavButtons();
+            updateReaderWallpaperHeight();
 
             if (elements.toolbarChapter) {
                 const chapterText = meta && meta.title ? meta.title : (state.flatNotes[idx] && state.flatNotes[idx].title) || '';
@@ -764,12 +766,23 @@
     }
 
     /* ============ 阅读设置 ============ */
+    const VALID_WALLPAPERS = ['none', 'bamboo', 'landscape'];
+
+    function normalizeSettings(settings) {
+        const s = Object.assign({}, settings);
+        // 已删除的壁纸回退到无
+        if (!VALID_WALLPAPERS.includes(s.wallpaper)) {
+            s.wallpaper = 'none';
+        }
+        return s;
+    }
+
     function loadSettings() {
         try {
             const raw = localStorage.getItem(SETTINGS_KEY);
             if (!raw) return Object.assign({}, DEFAULT_SETTINGS);
             const parsed = JSON.parse(raw);
-            return Object.assign({}, DEFAULT_SETTINGS, parsed);
+            return normalizeSettings(Object.assign({}, DEFAULT_SETTINGS, parsed));
         } catch (err) {
             return Object.assign({}, DEFAULT_SETTINGS);
         }
@@ -803,46 +816,60 @@
     }
 
     function applySettings(settings) {
-        document.body.setAttribute('data-theme', settings.theme);
-        document.body.setAttribute('data-font', settings.font);
-        document.body.setAttribute('data-wallpaper', settings.wallpaper);
-        document.body.setAttribute('data-page-mode', settings.pageMode);
-        document.documentElement.style.setProperty('--reader-font-size', settings.fontSize + 'px');
-        document.documentElement.style.setProperty('--reader-line-height', String(settings.lineHeight));
-        document.documentElement.style.setProperty('--reader-paragraph-spacing', settings.paragraphSpacing + 'em');
-        document.documentElement.style.setProperty('--reader-wallpaper-opacity', String(settings.wallpaperOpacity));
+        const s = normalizeSettings(settings);
+        document.body.setAttribute('data-theme', s.theme);
+        document.body.setAttribute('data-font', s.font);
+        document.body.setAttribute('data-wallpaper', s.wallpaper);
+        document.body.setAttribute('data-page-mode', s.pageMode);
+        document.documentElement.style.setProperty('--reader-font-size', s.fontSize + 'px');
+        document.documentElement.style.setProperty('--reader-line-height', String(s.lineHeight));
+        document.documentElement.style.setProperty('--reader-paragraph-spacing', s.paragraphSpacing + 'em');
+        document.documentElement.style.setProperty('--reader-wallpaper-opacity', String(s.wallpaperOpacity));
 
-        if (elements.fontSizeRange) elements.fontSizeRange.value = settings.fontSize;
-        if (elements.lineHeightRange) elements.lineHeightRange.value = settings.lineHeight;
-        if (elements.paragraphSpacingRange) elements.paragraphSpacingRange.value = settings.paragraphSpacing;
-        if (elements.fontSizeVal) elements.fontSizeVal.textContent = settings.fontSize + 'px';
-        if (elements.lineHeightVal) elements.lineHeightVal.textContent = settings.lineHeight;
-        if (elements.paragraphSpacingVal) elements.paragraphSpacingVal.textContent = settings.paragraphSpacing.toFixed(1) + 'em';
-        if (elements.wallpaperOpacityRange) elements.wallpaperOpacityRange.value = settings.wallpaperOpacity;
-        if (elements.wallpaperOpacityVal) elements.wallpaperOpacityVal.textContent = settings.wallpaperOpacity.toFixed(1);
-        if (elements.autoScrollSpeedRange) elements.autoScrollSpeedRange.value = settings.autoScrollSpeed;
-        if (elements.autoScrollSpeedVal) elements.autoScrollSpeedVal.textContent = String(settings.autoScrollSpeed);
+        if (elements.fontSizeRange) elements.fontSizeRange.value = s.fontSize;
+        if (elements.lineHeightRange) elements.lineHeightRange.value = s.lineHeight;
+        if (elements.paragraphSpacingRange) elements.paragraphSpacingRange.value = s.paragraphSpacing;
+        if (elements.fontSizeVal) elements.fontSizeVal.textContent = s.fontSize + 'px';
+        if (elements.lineHeightVal) elements.lineHeightVal.textContent = s.lineHeight;
+        if (elements.paragraphSpacingVal) elements.paragraphSpacingVal.textContent = s.paragraphSpacing.toFixed(1) + 'em';
+        if (elements.wallpaperOpacityRange) elements.wallpaperOpacityRange.value = s.wallpaperOpacity;
+        if (elements.wallpaperOpacityVal) elements.wallpaperOpacityVal.textContent = s.wallpaperOpacity.toFixed(1);
+        if (elements.autoScrollSpeedRange) elements.autoScrollSpeedRange.value = s.autoScrollSpeed;
+        if (elements.autoScrollSpeedVal) elements.autoScrollSpeedVal.textContent = String(s.autoScrollSpeed);
 
         if (elements.fontBtns) {
             elements.fontBtns.querySelectorAll('button').forEach((btn) => {
-                btn.classList.toggle('active', btn.dataset.font === settings.font);
+                btn.classList.toggle('active', btn.dataset.font === s.font);
             });
         }
         if (elements.themeBtns) {
             elements.themeBtns.querySelectorAll('button').forEach((btn) => {
-                btn.classList.toggle('active', btn.dataset.theme === settings.theme);
+                btn.classList.toggle('active', btn.dataset.theme === s.theme);
             });
         }
         if (elements.wallpaperBtns) {
             elements.wallpaperBtns.querySelectorAll('button').forEach((btn) => {
-                btn.classList.toggle('active', btn.dataset.wallpaper === settings.wallpaper);
+                btn.classList.toggle('active', btn.dataset.wallpaper === s.wallpaper);
             });
         }
         if (elements.pageModeBtns) {
             elements.pageModeBtns.querySelectorAll('button').forEach((btn) => {
-                btn.classList.toggle('active', btn.dataset.pageMode === settings.pageMode);
+                btn.classList.toggle('active', btn.dataset.pageMode === s.pageMode);
             });
         }
+        if (elements.autoScrollBtns) {
+            elements.autoScrollBtns.querySelectorAll('button').forEach((btn) => {
+                const isActive = (btn.dataset.autoScroll === 'true') === Boolean(s.autoScroll);
+                btn.classList.toggle('active', isActive);
+            });
+        }
+        updateReaderWallpaperHeight();
+    }
+
+    function updateReaderWallpaperHeight() {
+        if (!elements.readerWallpaper || !elements.reader) return;
+        // 让壁纸层高度始终等于阅读区滚动内容高度，保证长文壁纸铺满
+        elements.readerWallpaper.style.height = elements.reader.scrollHeight + 'px';
     }
 
     function openSettings() {
@@ -964,6 +991,22 @@
             });
         }
 
+        if (elements.autoScrollBtns) {
+            elements.autoScrollBtns.addEventListener('click', (e) => {
+                const btn = e.target.closest('button[data-auto-scroll]');
+                if (!btn) return;
+                const s = loadSettings();
+                s.autoScroll = btn.dataset.autoScroll === 'true';
+                saveSettings(s);
+                applySettings(s);
+                if (s.autoScroll) {
+                    startAutoScroll();
+                } else {
+                    pauseAutoScroll();
+                }
+            });
+        }
+
         if (elements.resetSettingsBtn) {
             elements.resetSettingsBtn.addEventListener('click', () => {
                 pauseAutoScroll();
@@ -1013,8 +1056,8 @@
         if (tag === 'A' || tag === 'BUTTON' || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
             return true;
         }
-        // 排除书架卡片、目录叶子、章末导航按钮、搜索结果等可交互元素
-        if (target.closest('a, button, input, textarea, select, .book-card, .tree-leaf, .chapter-btn, .search-result-title')) {
+        // 排除书架卡片、目录叶子、章末导航按钮、搜索结果、代码块等可交互/可滚动元素
+        if (target.closest('a, button, input, textarea, select, pre, code, .book-card, .tree-leaf, .chapter-btn, .search-result-title')) {
             return true;
         }
         // 弹层打开时不翻页
@@ -1188,7 +1231,14 @@
         if (state.currentView !== 'reader') return;
         autoScrollLastTs = 0;
         autoScrollRafId = window.requestAnimationFrame(autoScrollLoop);
-        updateAutoScrollBtn(true);
+        const s = loadSettings();
+        if (!s.autoScroll) {
+            s.autoScroll = true;
+            saveSettings(s);
+            applySettings(s);
+        } else {
+            updateAutoScrollBtn(true);
+        }
     }
 
     function pauseAutoScroll() {
@@ -1197,7 +1247,14 @@
             autoScrollRafId = null;
         }
         autoScrollLastTs = 0;
-        updateAutoScrollBtn(false);
+        const s = loadSettings();
+        if (s.autoScroll) {
+            s.autoScroll = false;
+            saveSettings(s);
+            applySettings(s);
+        } else {
+            updateAutoScrollBtn(false);
+        }
     }
 
     function toggleAutoScroll() {
@@ -1209,16 +1266,14 @@
     }
 
     function updateAutoScrollBtn(isPlaying) {
-        if (!elements.autoScrollBtn) return;
-        elements.autoScrollBtn.setAttribute('aria-pressed', isPlaying ? 'true' : 'false');
-        elements.autoScrollBtn.textContent = isPlaying ? '⏸ 暂停' : '▶ 自动';
+        if (elements.autoScrollBtns) {
+            elements.autoScrollBtns.querySelectorAll('button').forEach((btn) => {
+                btn.classList.toggle('active', (btn.dataset.autoScroll === 'true') === isPlaying);
+            });
+        }
     }
 
     function initAutoScroll() {
-        // 浮动按钮
-        if (elements.autoScrollBtn) {
-            elements.autoScrollBtn.addEventListener('click', toggleAutoScroll);
-        }
         // 手动滚动（wheel/touchmove）时暂停自动阅读
         if (elements.reader) {
             elements.reader.addEventListener('wheel', () => {
@@ -1527,7 +1582,16 @@
         });
     }
 
+    function resetViewState() {
+        // 防止从 bfcache 恢复或异常退出后，DOM 仍保留沉浸/阅读状态导致白屏
+        document.body.classList.remove('immersive-mode', 'ui-hidden');
+        document.body.dataset.view = 'home';
+        document.body.style.overflow = '';
+    }
+
     function init() {
+        resetViewState();
+
         if (typeof marked === 'undefined') {
             elements.reader.innerHTML = '<div class="reader-placeholder">Markdown 渲染组件加载失败，请检查网络连接。</div>';
             console.error('marked.js is not loaded');
@@ -1596,6 +1660,20 @@
         }
 
         document.addEventListener('keydown', handleKeyDown);
+
+        // 从 bfcache 恢复时（如手机系统返回后再进），强制重置视图状态，避免白屏
+        window.addEventListener('pageshow', (event) => {
+            if (event.persisted) {
+                resetViewState();
+                // 重新加载书架数据，确保 state 与 DOM 一致
+                loadIndex();
+                if (state.currentBook) {
+                    state.currentBook = null;
+                    state.currentBookTree = [];
+                    state.activePath = null;
+                }
+            }
+        });
 
         loadIndex();
     }

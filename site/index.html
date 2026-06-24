@@ -101,6 +101,7 @@
                 </nav>
             </aside>
             <div class="reader" id="reader">
+                <div class="reader-wallpaper" aria-hidden="true"></div>
                 <div class="reader-placeholder">
                     <p>请在左侧选择一篇笔记开始阅读。</p>
                 </div>
@@ -115,7 +116,6 @@
         <button type="button" id="settingsBtnBottom">设置</button>
         <button type="button" id="nextBtnBottom" disabled>下一章</button>
     </div>
-    <button type="button" id="autoScrollBtn" class="auto-scroll-btn" aria-label="自动阅读" aria-pressed="false" hidden>▶ 自动</button>
 
     <div class="settings-overlay" id="settingsOverlay"></div>
     <aside class="settings-panel" id="settingsPanel" aria-hidden="true">
@@ -157,10 +157,7 @@
                 <div class="settings-btns settings-wallpaper-btns" id="wallpaperBtns">
                     <button type="button" data-wallpaper="none">无</button>
                     <button type="button" data-wallpaper="bamboo">竹简</button>
-                    <button type="button" data-wallpaper="xuan">宣纸</button>
-                    <button type="button" data-wallpaper="ink">水墨</button>
                     <button type="button" data-wallpaper="landscape">山水</button>
-                    <button type="button" data-wallpaper="starry">星空</button>
                 </div>
             </div>
             <div class="settings-group">
@@ -172,6 +169,13 @@
                 <div class="settings-btns" id="pageModeBtns">
                     <button type="button" data-page-mode="tap">滑动+点击</button>
                     <button type="button" data-page-mode="scroll">原生滚动</button>
+                </div>
+            </div>
+            <div class="settings-group">
+                <label class="settings-label">自动阅读</label>
+                <div class="settings-btns" id="autoScrollBtns">
+                    <button type="button" data-auto-scroll="false">关闭</button>
+                    <button type="button" data-auto-scroll="true">开启</button>
                 </div>
             </div>
             <div class="settings-group">

@@ -92,21 +92,6 @@ body[data-wallpaper="bamboo"] {
         linear-gradient(135deg, #f5e6c8 0%, #ecd9b0 100%);
 }
 
-/* 宣纸：米白底 + 细微纤维纹理 */
-body[data-wallpaper="xuan"] {
-    --reader-wallpaper:
-        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.85  0 0 0 0 0.8  0 0 0 0 0.7  0 0 0 0.08 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>"),
-        linear-gradient(180deg, #faf6ed 0%, #f3ecd9 100%);
-}
-
-/* 水墨：青灰墨韵晕染 */
-body[data-wallpaper="ink"] {
-    --reader-wallpaper:
-        radial-gradient(ellipse at 20% 30%, rgba(70, 90, 110, 0.18) 0%, transparent 50%),
-        radial-gradient(ellipse at 80% 70%, rgba(50, 70, 90, 0.15) 0%, transparent 55%),
-        linear-gradient(135deg, #eef2f5 0%, #e2e8ed 100%);
-}
-
 /* 山水：远山轮廓 + 浅青底 */
 body[data-wallpaper="landscape"] {
     --reader-wallpaper:
@@ -115,30 +100,13 @@ body[data-wallpaper="landscape"] {
     --reader-wallpaper-opacity: 0.5;
 }
 
-/* 星空：深蓝底 + 星点 */
-body[data-wallpaper="starry"] {
-    --reader-wallpaper:
-        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><circle cx='20' cy='30' r='1' fill='%23fff' opacity='0.8'/><circle cx='60' cy='80' r='0.8' fill='%23fff' opacity='0.6'/><circle cx='120' cy='40' r='1.2' fill='%23fff' opacity='0.9'/><circle cx='170' cy='110' r='0.7' fill='%23fff' opacity='0.5'/><circle cx='90' cy='150' r='1' fill='%23fff' opacity='0.7'/><circle cx='150' cy='170' r='0.9' fill='%23fff' opacity='0.6'/><circle cx='40' cy='120' r='0.6' fill='%23fff' opacity='0.4'/></svg>"),
-        radial-gradient(ellipse at 50% 100%, #2a3a5e 0%, #1a2540 60%, #0f1830 100%);
-    --reader-wallpaper-opacity: 0.45;
-}
-
 /* 夜间主题下：所有壁纸统一替换为暗色低饱和纹理，避免刺眼 */
 body[data-theme="night"][data-wallpaper="bamboo"],
-body[data-theme="night"][data-wallpaper="xuan"],
-body[data-theme="night"][data-wallpaper="ink"],
 body[data-theme="night"][data-wallpaper="landscape"] {
     --reader-wallpaper:
         repeating-linear-gradient(135deg, rgba(200, 160, 106, 0.04) 0 1px, transparent 1px 24px),
         linear-gradient(135deg, #1f1f1f 0%, #262626 100%);
     --reader-wallpaper-opacity: 0.5;
-}
-
-body[data-theme="night"][data-wallpaper="starry"] {
-    --reader-wallpaper:
-        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><circle cx='20' cy='30' r='1' fill='%23ccc' opacity='0.5'/><circle cx='60' cy='80' r='0.8' fill='%23ccc' opacity='0.4'/><circle cx='120' cy='40' r='1.2' fill='%23ccc' opacity='0.6'/><circle cx='170' cy='110' r='0.7' fill='%23ccc' opacity='0.3'/><circle cx='90' cy='150' r='1' fill='%23ccc' opacity='0.5'/></svg>"),
-        radial-gradient(ellipse at 50% 100%, #161c2e 0%, #0f1422 60%, #0a0e18 100%);
-    --reader-wallpaper-opacity: 0.6;
 }
 
 /* 字体（设置面板可切换） */
@@ -898,22 +866,25 @@ body[data-view="reader"] .brand-header {
     -webkit-overflow-scrolling: touch;
 }
 
-/* 阅读壁纸层：固定在阅读区视口（不随内容滚动），不拦截点击 */
-.reader::before {
-    content: "";
+/* 阅读壁纸层：铺满整个阅读内容高度，不拦截点击，随正文一起滚动 */
+.reader-wallpaper {
     position: absolute;
-    inset: 0;
+    top: 0;
+    left: 0;
+    width: 100%;
+    min-height: 100%;
     z-index: 0;
     pointer-events: none;
     background: var(--reader-wallpaper);
     background-size: cover;
     background-position: center;
+    background-attachment: scroll;
     opacity: var(--reader-wallpaper-opacity);
     transition: opacity 0.25s ease, background 0.25s ease;
 }
 
 /* 阅读区子元素置于壁纸之上 */
-.reader > * {
+.reader > *:not(.reader-wallpaper) {
     position: relative;
     z-index: 1;
 }
@@ -1037,15 +1008,22 @@ body[data-view="reader"] .brand-header {
 .markdown-body pre {
     padding: 1rem 1.25rem;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
     background-color: var(--bg-active);
     border-radius: var(--radius);
     border: 1px solid var(--border);
+    max-width: 100%;
+    min-width: 0;
 }
 
 .markdown-body pre code {
+    display: block;
     padding: 0;
     background: none;
     color: var(--ink-primary);
+    white-space: pre;
+    word-wrap: normal;
 }
 
 .markdown-body hr {
@@ -1259,33 +1237,52 @@ body[data-view="reader"] .brand-header {
 
 .settings-group input[type="range"] {
     width: 100%;
-    height: 4px;
+    height: 8px;
     -webkit-appearance: none;
     appearance: none;
     background-color: var(--bg-active);
-    border-radius: 2px;
+    border-radius: 4px;
     outline: none;
     cursor: pointer;
+    /* 扩大可点击/拖拽区域，同时保持视觉高度 */
+    padding: 10px 0;
+    margin: -6px 0;
+    background-clip: content-box;
 }
 
 .settings-group input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 18px;
-    height: 18px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
     background-color: var(--accent);
-    border: 2px solid var(--bg-modal);
+    border: 3px solid var(--bg-modal);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
     cursor: pointer;
+    margin-top: -7px;
+}
+
+.settings-group input[type="range"]::-webkit-slider-runnable-track {
+    height: 8px;
+    background-color: var(--bg-active);
+    border-radius: 4px;
 }
 
 .settings-group input[type="range"]::-moz-range-thumb {
-    width: 16px;
-    height: 16px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
     background-color: var(--accent);
-    border: 2px solid var(--bg-modal);
+    border: 3px solid var(--bg-modal);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
     cursor: pointer;
+}
+
+.settings-group input[type="range"]::-moz-range-track {
+    height: 8px;
+    background-color: var(--bg-active);
+    border-radius: 4px;
 }
 
 .settings-reset {
@@ -1342,64 +1339,7 @@ body[data-view="home"] .bottom-bar {
     display: none;
 }
 
-/* ============ 自动阅读浮动按钮 ============ */
-.auto-scroll-btn {
-    position: fixed;
-    right: 16px;
-    bottom: calc(16px + env(safe-area-inset-bottom));
-    z-index: 40;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 10px 16px;
-    font-family: var(--font-sans);
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--accent);
-    background-color: var(--bg-modal);
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    box-shadow: 0 4px 16px var(--shadow);
-    cursor: pointer;
-    transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease, opacity 0.2s ease;
-    opacity: 0.92;
-}
-
-.auto-scroll-btn:hover {
-    background-color: var(--bg-hover);
-    color: var(--accent-hover);
-    transform: translateY(-1px);
-    opacity: 1;
-}
-
-.auto-scroll-btn:active {
-    transform: translateY(1px);
-}
-
-.auto-scroll-btn[aria-pressed="true"] {
-    color: #fff;
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* 移动端避让底部工具栏 */
-@media (max-width: 768px) {
-    .auto-scroll-btn {
-        bottom: calc(66px + env(safe-area-inset-bottom));
-    }
-}
-
-/* UI 隐藏时浮动按钮一并隐藏（与顶栏/底栏一致） */
-body.ui-hidden .auto-scroll-btn {
-    display: none;
-}
-
-/* 首页视图不显示自动阅读按钮 */
-body[data-view="home"] .auto-scroll-btn {
-    display: none;
-}
-
-/* 壁纸按钮组允许换行（6 个选项） */
+/* 壁纸按钮组允许换行 */
 .settings-wallpaper-btns {
     flex-wrap: wrap;
 }

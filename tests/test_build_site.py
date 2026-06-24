@@ -459,7 +459,8 @@ def test_build_site_index_html_has_reader_features():
         assert 'id="wallpaperBtns"' in html
         assert 'id="autoScrollSpeedRange"' in html
         assert 'id="immersiveBtn"' in html
-        assert 'id="autoScrollBtn"' in html
+        assert 'id="autoScrollBtns"' in html
+        assert 'class="reader-wallpaper"' in html
 
 
 def test_build_site_app_js_has_reader_features():
@@ -488,6 +489,7 @@ def test_build_site_css_has_reader_features():
 
         css = (site_dir / "css" / "style.css").read_text(encoding="utf-8")
         assert 'body[data-wallpaper="bamboo"]' in css
-        assert ".auto-scroll-btn" in css
+        assert ".reader-wallpaper" in css
         assert ".immersive-mode" in css
         assert ".immersive-btn" in css
+        assert ".auto-scroll-btn" not in css
