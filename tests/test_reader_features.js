@@ -391,6 +391,67 @@ async function runTest() {
         assert(cssText.includes('.auto-scroll-btn'), '含自动阅读按钮样式');
     }
 
+    console.log('\n=== 测试10：沉浸阅读模式（回归测试） ===');
+    {
+        const { dom, window, document } = await buildDom();
+        await enterReader(document, window);
+
+        const immersiveBtn = document.getElementById('immersiveBtn');
+        assert(immersiveBtn !== null, '沉浸按钮存在于 DOM');
+        assert(immersiveBtn.hidden === false, '阅读视图下沉浸按钮可见（非 hidden）');
+        assert(immersiveBtn.getAttribute('aria-pressed') === 'false', '初始状态未激活');
+
+        // 点击进入沉浸
+        immersiveBtn.click();
+        assert(document.body.classList.contains('immersive-mode'), '点击后 body 含 immersive-mode');
+        assert(document.body.classList.contains('ui-hidden'), '沉浸时隐藏 UI 工具栏');
+        assert(immersiveBtn.getAttribute('aria-pressed') === 'true', '按钮 aria-pressed=true');
+        assert(immersiveBtn.textContent.includes('退出'), '按钮文案变为退出');
+
+        // 再次点击退出沉浸
+        immersiveBtn.click();
+        assert(!document.body.classList.contains('immersive-mode'), '再次点击移除 immersive-mode');
+        assert(immersiveBtn.getAttribute('aria-pressed') === 'false', '按钮 aria-pressed=false');
+        assert(immersiveBtn.textContent.includes('沉浸'), '按钮文案恢复为沉浸');
+
+        dom.window.close();
+    }
+
+    console.log('\n=== 测试11：沉浸模式不锁定屏幕方向（防横屏回归） ===');
+    {
+        const appText = fs.readFileSync(path.join(SITE_DIR, 'js/app.js'), 'utf-8');
+        // 关键回归断言：不得调用 screen.orientation.lock，避免手机端被强制横屏
+        assert(!/screen\.orientation\.lock/.test(appText), '不调用 screen.orientation.lock');
+        assert(!/lockOrientation/.test(appText), '不调用旧版 lockOrientation');
+        assert(appText.includes('toggleImmersiveMode'), '含 toggleImmersiveMode 函数');
+        assert(appText.includes('enterImmersiveMode'), '含 enterImmersiveMode 函数');
+        assert(appText.includes('exitImmersiveMode'), '含 exitImmersiveMode 函数');
+        assert(appText.includes('initImmersive'), 'init 中调用 initImmersive');
+
+        const cssText = fs.readFileSync(path.join(SITE_DIR, 'css/style.css'), 'utf-8');
+        assert(cssText.includes('body.immersive-mode'), 'CSS 含 body.immersive-mode 规则');
+        assert(cssText.includes('.immersive-mode .toolbar'), '沉浸模式隐藏 toolbar');
+        assert(cssText.includes('.immersive-mode .bottom-bar'), '沉浸模式隐藏 bottom-bar');
+    }
+
+    console.log('\n=== 测试12：返回首页退出沉浸模式 ===');
+    {
+        const { dom, window, document } = await buildDom();
+        await enterReader(document, window);
+
+        const immersiveBtn = document.getElementById('immersiveBtn');
+        immersiveBtn.click();
+        assert(document.body.classList.contains('immersive-mode'), '进入沉浸');
+
+        // 点击返回按钮回到首页
+        const backBtn = document.getElementById('backBtn');
+        backBtn.click();
+        assert(!document.body.classList.contains('immersive-mode'), '返回首页后退出沉浸模式');
+        assert(immersiveBtn.hidden === true, '返回首页后沉浸按钮隐藏');
+
+        dom.window.close();
+    }
+
     console.log(`\n=== 测试结果：通过 ${passCount}，失败 ${failCount} ===`);
     if (failCount > 0) {
         process.exit(1);

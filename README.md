@@ -314,15 +314,22 @@ python -m http.server 8080 -d site
 
 注意：`output/` 目录默认会提交到仓库以保存生成的笔记。CI 构建静态站点时会直接读取仓库中的 `output/`。如需在 CI 中重新生成笔记，请通过 `workflow_dispatch` 手动触发并配置 Secrets。
 
-<<<<<<< HEAD
-=======
 生成或提交笔记前，建议运行重复检查脚本，避免 `output/` 下出现重复 Markdown 文件：
 
 ```bash
 python scripts/check_duplicates.py
 ```
 
->>>>>>> origin/master
+### 回归测试集
+
+代码改动或冲突合并后，运行回归测试集防止历史 bug 复现（沉浸模式横屏、合并冲突残留、章节排序错乱、重复文件等）：
+
+```bash
+bash tests/run_regression_suite.sh
+```
+
+历史 bug 列表与复现方式见 [tests/bug_regression_list.md](tests/bug_regression_list.md)。阅读器功能 e2e 需先安装依赖：`npm install jsdom marked`。
+
 ## 十五、核心原则
 
 - **简洁**：不堆技术，能用提示词和简单流程解决就不用复杂架构。
