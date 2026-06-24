@@ -64,7 +64,7 @@
 - **并行提速**：能并行的子任务尽量并行（用 Task 工具启动多个 subagent，或调用 Python 脚本做真并行）。
 - **遵循现有目录结构与命名规范**：见 README §七、§八；新增/重命名 Markdown 章节时，禁止在 `chapter` 字段或文件名中使用「模块N」前缀（历史问题 BUG-019）。
 - **不过度工程化**：只做直接请求或必要的事，不主动加抽象、加配置、加兼容层。
-- **合并前必须清零所有校验问题**：执行 `python scripts/check_book_structure.py --output output --strict`，P0/P1/P2 全部通过后方可进入合并/推送。若发现非本次引入的问题，仍须修复；修复后判断是否为会复发的代码/数据 bug，需要补充回归测试或更新 `tests/bug_regression_list.md`。
+- **合并前必须清零所有校验问题**：执行 `python scripts/check_book_structure.py --output output --strict`，P0/P1/P2 全部通过后方可进入合并/推送。若发现非本次引入的问题，仍须修复；修复后判断是否为会复发的代码/数据 bug，需要补充回归测试并按 `.trae/rules/bug-reporting.md` 更新 `tests/bug_regression_list.md`。
 
 ### 第四步：自检
 

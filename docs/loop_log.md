@@ -102,7 +102,7 @@
 **后续行动**
 - 建议后续统一修复既有测试与实现的偏差，并在 CI 中安装完整依赖确保回归测试有效。
 
-### 2026-06-24 移动端阅读器体验修复（BUG-020）
+### 2026-06-24 移动端阅读器多项体验问题修复（BUG-020）
 
 **改动范围**
 - `src/web/static-site/index.html`：删除宣纸/水墨/星空壁纸按钮；删除右下角自动阅读浮动按钮；设置面板新增「自动阅读」开关；阅读区添加 `.reader-wallpaper` 真实壁纸层。
@@ -126,7 +126,7 @@
 - 在 CI workflow 中增加 `pip install -r requirements.txt` 与 `npm install` 步骤，确保回归测试可执行。
 - 前端关键改动后， checklist 强制提醒升级 `CACHE_NAME`。
 
-### 2026-06-24 沉浸模式横屏与代码块换行修复（BUG-021）
+### 2026-06-24 沉浸模式点击后强制横屏 + 代码块无法自动换行修复（BUG-021）
 
 **改动范围**
 - `src/web/static-site/js/app.js`：彻底移除 Fullscreen API 调用（requestFullscreen/exitFullscreen 及 vendor 前缀），沉浸模式改为纯 CSS 实现，避免小米等浏览器强制横屏。
