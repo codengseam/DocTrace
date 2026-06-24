@@ -56,6 +56,7 @@ version: 1.0.0
 
 ### 测试检查
 - 运行 `pytest`（若项目有测试）
+- 若改动涉及 `site/`（阅读器/站点构建/前端交互），运行 `bash tests/run_regression_suite.sh` 回归测试集，防止沉浸模式横屏、合并冲突残留、章节排序错乱、重复文件等历史 bug 复现（bug 列表见 `tests/bug_regression_list.md`）
 - 若新增了功能但没写测试，标注 ❌ 并建议补测试
 
 ### 依赖与配置检查

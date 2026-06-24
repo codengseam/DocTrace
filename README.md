@@ -320,6 +320,16 @@ python -m http.server 8080 -d site
 python scripts/check_duplicates.py
 ```
 
+### 回归测试集
+
+代码改动或冲突合并后，运行回归测试集防止历史 bug 复现（沉浸模式横屏、合并冲突残留、章节排序错乱、重复文件等）：
+
+```bash
+bash tests/run_regression_suite.sh
+```
+
+历史 bug 列表与复现方式见 [tests/bug_regression_list.md](tests/bug_regression_list.md)。阅读器功能 e2e 需先安装依赖：`npm install jsdom marked`。
+
 ## 十五、核心原则
 
 - **简洁**：不堆技术，能用提示词和简单流程解决就不用复杂架构。
