@@ -651,3 +651,52 @@
 ### 可复用资产
 - `tests/test_reader_features.js` 中的回归测试模式：先写失败断言 → 改实现 → 全量回归，适用于所有"曾修复后回归"的 UI bug。
 - 双源同步检查建议：未来涉及 `site/js/app.js` 或 `src/web/static/js/app.js` 的改动，diff 两者差异应成为默认检查项。
+
+## 开发沉淀：合并前必须清零所有校验问题（2026-06-24）
+
+### 触发问题
+本次合并 `master` 时，`check_book_structure.py` 报出 39 个 P2 问题（养生类书籍 `sort` 值不连续）。这些 P2 问题虽非本次代码改动直接引入，但属于 AI 生成的数据债务，按旧流程会被默认放行，导致问题持续堆积。
+
+### 根因定位
+1. **P2 默认不阻断**：`scripts/check_book_structure.py` 默认只在 P0/P1 时返回 1，P2 仅提示。
+2. **合并流程缺失零缺陷要求**：规则、Skill、checklist 没有明确要求"合并前必须解决所有问题（包括非本次引入）"。
+3. **问题未沉淀到测试集**：类似的数据生成 bug 没有回归测试和 bug 回归记录，容易反复出现。
+
+### 修复方案
+1. **`scripts/check_book_structure.py` 新增 `--strict` 参数**：P0/P1/P2 任一失败都返回 1。
+2. **CI/Hooks/回归测试集统一使用 `--strict`**：
+   - `.github/workflows/regression.yml`
+   - `.github/workflows/pages.yml`
+   - `githooks/pre-push`
+   - `tests/run_regression_suite.sh`
+3. **规则/Skill/checklist 同步更新**：
+   - `.trae/rules/dev-workflow.md`：明确合并前清零所有问题，禁止以"非本次引入"跳过。
+   - `.trae/skills/git-merge-guardian/SKILL.md`：本地验证改用 `--strict`，失败必须修复并沉淀。
+   - `.trae/skills/dev-selfcheck/SKILL.md`：自检必须跑 `--strict` 并补充回归测试。
+   - `.trae/checklists/dev-checklist.md`：新增结构校验清零与 bug 回归记录检查项。
+4. **修复 wellness books sort 不连续问题**：按章重新编号为 1,2,3...。
+5. **补充测试与回归记录**：
+   - `tests/test_book_structure.py::test_output_has_no_structure_issues`
+   - `tests/test_sorting.py::test_wellness_book_sort_values_are_continuous_per_chapter`
+   - `tests/bug_regression_list.md` BUG-017
+6. **文档更新**：`README.md` 新增「合并前强制检查」章节。
+
+### 验证结果
+- `python scripts/check_book_structure.py --output output --strict`：0 问题，退出码 0。
+- `pytest -q`：全部通过。
+- `bash tests/run_regression_suite.sh`：全部通过。
+
+### 新共性问题
+1. **AI 生成的数据问题必须在合并前清零**：不能因"不是这次引入"就放行。未来任何合并都要把 `--strict` 作为门禁。
+2. **规则/Skill/checklist/CI/Hooks 必须联动更新**：只改一处很难坚持，需要把流程固到多个层次。
+
+### 规则/checklist/Skill 更新
+- `.trae/rules/dev-workflow.md`
+- `.trae/skills/git-merge-guardian/SKILL.md`
+- `.trae/skills/dev-selfcheck/SKILL.md`
+- `.trae/checklists/dev-checklist.md`
+- `README.md`
+
+### 可复用资产
+- `--strict` 模式可复用到所有需要"默认告警、合并门禁"的校验脚本。
+- "问题修复 + 回归测试 + bug 回归记录"三段式沉淀方法，可复用于所有 AI 引入的数据/代码缺陷。

@@ -324,9 +324,26 @@ python -m http.server 8080 -d site
 python scripts/check_duplicates.py
 ```
 
+### 合并前强制检查
+
+本项目要求：合并或 push 到 `master` 前，必须清零所有校验问题（包括 P2 级别），无论问题是否由本次改动引入。
+
+```bash
+# 1. 严格模式校验 output/ 目录结构（P0/P1/P2 任一失败都会退出码 1）
+python scripts/check_book_structure.py --output output --strict
+
+# 2. 运行 pytest
+pytest -q
+
+# 3. 运行回归测试集
+bash tests/run_regression_suite.sh
+```
+
+若发现 AI 引入的数据/代码问题，修复后必须补充回归测试或更新 [tests/bug_regression_list.md](tests/bug_regression_list.md)。目标不是把每次生成的内容合入就好，而是共同维护一个稳定运行的项目。
+
 ### 回归测试集
 
-代码改动或冲突合并后，运行回归测试集防止历史 bug 复现（沉浸模式横屏、合并冲突残留、章节排序错乱、重复文件等）：
+代码改动或冲突合并后，运行回归测试集防止历史 bug 复现（沉浸模式横屏、合并冲突残留、章节排序错乱、重复文件、书籍结构问题等）：
 
 ```bash
 bash tests/run_regression_suite.sh
