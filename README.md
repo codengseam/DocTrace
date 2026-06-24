@@ -121,6 +121,7 @@ Specialist Agents 并行工作：
 │   │   ├── content_quality.py # 内容质检四维度检测（真实/可读/顺序/引用）
 │   │   └── ...
 │   └── web/               # Flask Web 管理界面（静态资源、模板、API）
+│       └── static-site/   # GitHub Pages 静态站点源码（由 build_site.py 同步到 site/）
 ├── prompts/               # Agent 提示词文件
 │   ├── content_reviewer.md      # 内容质检汇总提示词
 │   ├── content_reviewer_sub.md  # 内容质检三视角提示词
@@ -300,6 +301,9 @@ python src/main.py --book 资治通鉴 --chapter 周纪二 --event 商鞅变法
 # 2. 构建静态站点
 python scripts/build_site.py
 
+# 构建时会自动将 src/web/static-site/ 下的 index.html/css/js/sw.js
+# 同步到 site/，保证 GitHub Pages 产物与前端源码一致。
+
 # 3. 本地预览
 python -m http.server 8080 -d site
 ```
@@ -329,6 +333,8 @@ bash tests/run_regression_suite.sh
 ```
 
 历史 bug 列表与复现方式见 [tests/bug_regression_list.md](tests/bug_regression_list.md)。阅读器功能 e2e 需先安装依赖：`npm install jsdom marked`。
+
+最近一次阅读器修复已通过全量验收：沉浸按钮长标题不被挤竖排、沉浸模式可中央唤出 UI 并打开目录/退出、自动阅读与壁纸切换正常、`site/` 与 `src/web/static-site/` 产物同步。
 
 ## 十五、核心原则
 
