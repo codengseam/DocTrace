@@ -102,6 +102,30 @@
 **后续行动**
 - 建议后续统一修复既有测试与实现的偏差，并在 CI 中安装完整依赖确保回归测试有效。
 
+### 2026-06-24 移动端阅读器体验修复（BUG-020）
+
+**改动范围**
+- `src/web/static-site/index.html`：删除宣纸/水墨/星空壁纸按钮；删除右下角自动阅读浮动按钮；设置面板新增「自动阅读」开关；阅读区添加 `.reader-wallpaper` 真实壁纸层。
+- `src/web/static-site/css/style.css`：壁纸层样式改为 `.reader-wallpaper` 并铺满滚动内容；删除已删壁纸的 CSS 预设与 `.auto-scroll-btn` 样式；代码块增加横向滚动触控；设置面板 range 滑条增大触控区域。
+- `src/web/static-site/js/app.js`：`loadNote` 后重建壁纸层并同步 `scrollHeight`；`shouldExcludeTap` 排除 `pre/code`；`start/pauseAutoScroll` 与设置开关状态同步；`init()` 强制重置视图状态并监听 `pageshow` 防止 bfcache 白屏。
+- `src/web/static-site/sw.js`：`CACHE_NAME` 升级到 `halo-read-v3`。
+- `tests/test_reader_features.js`、`tests/test_build_site.py`、`tests/bug_regression_list.md`：补充回归测试与 BUG-020 记录。
+
+**验证结果**
+- `python scripts/check_book_structure.py --output output --strict`：✅ 通过
+- `pytest -q`：✅ 124 passed, 15 skipped
+- `node tests/test_reader_features.js`：✅ 99 passed, 0 failed
+- `bash tests/run_regression_suite.sh`：✅ 13/13 通过
+- `git push origin master`：✅ 已推送
+
+**暴露的共性问题**
+- 测试环境依赖不完整：初始 `pytest` 因 `langgraph` 未安装失败；已安装 `requirements.txt`，但 CI 应确保依赖完整，避免本地/云端测试结果不一致。
+- Service Worker cache-first 策略下，前端关键修复必须同步升级 `CACHE_NAME`，否则手机端会出现「幽灵旧版」。
+
+**后续行动**
+- 在 CI workflow 中增加 `pip install -r requirements.txt` 与 `npm install` 步骤，确保回归测试可执行。
+- 前端关键改动后， checklist 强制提醒升级 `CACHE_NAME`。
+
 ### 第5章优化沉淀（已应用到项目文件）
 1. **RULES.md §三语言风格**：现代术语黑名单扩充（博弈/话术/智商掉线）；新增跨文化映照史实核验规则（禁用演义虚构情节/禁张冠李戴/禁因果错置）；模板过渡句黑名单扩充（还有一层背景须交代/另有一层史料背景须说明）。
 2. **quality.py**：AI_PATTERNS_SOFT 扩充（这事说明/还有一层背景须交代/另有一层.*须说明）；MODERN_JARGON 扩充（智商.*掉线/话术）。
