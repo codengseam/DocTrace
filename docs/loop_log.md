@@ -125,6 +125,31 @@
 
 ---
 
+## 养生类课程目录重构与分类归并沉淀（2026-06-24）
+
+### 改动范围
+- 将《饮食养生课》《睡眠与精力修复课》统一归入 `category: 养生`。
+- 按「模块名_章节名」结构重命名睡眠/饮食课文件，使目录与 `_meta.yaml` 的 `sort` 一致。
+- 修复 `src/utils/sorting.py` 的章节排序：优先使用 `chapter_sort`（模块顺序）与 `sort`（章内事件顺序）。
+- 修复 `tests/conftest.py`：当环境缺少 `langgraph` 等依赖时，跳过 workflow mock，避免阻塞无关测试。
+
+### 验证结果
+- `python scripts/check_book_structure.py --output output`：通过。
+- `python scripts/check_chapter_order.py --output output`：通过。
+- `python scripts/build_site.py --output output --site site`：通过。
+- `bash tests/run_regression_suite.sh`：通过。
+- `pytest tests/test_book_structure.py tests/test_sorting.py tests/test_check_chapter_order.py`：通过。
+
+### 暴露的共性问题
+1. 测试环境依赖不完整：`yaml`/`langgraph` 未安装时，原有 `autouse=True` 的 fixture 会强制加载 `src.core.workflow`，导致所有测试失败。
+2. PR 与 master 并行修改同一份笔记目录，容易产生重命名冲突。
+
+### 后续行动
+- 已在 `tests/conftest.py` 中做最小修复：导入 workflow 失败时跳过 mock。
+- 建议在 CI 中安装完整依赖，确保 regression 测试有效；大规模目录重构前先同步 master 状态。
+
+---
+
 ## AI 大模型学习专栏生成沉淀（2026-06-23）
 
 ### 任务概述

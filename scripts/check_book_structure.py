@@ -87,7 +87,12 @@ def _parse_simple_frontmatter(raw: str) -> dict[str, Any]:
         if ":" in stripped:
             key, _, value = stripped.partition(":")
             current_key = key.strip()
-            result[current_key] = value.strip().strip('"').strip("'")
+            raw_value = value.strip()
+            # 无引号的纯数字标量解析为 int，与 PyYAML 行为一致
+            if raw_value.isdigit():
+                result[current_key] = int(raw_value)
+            else:
+                result[current_key] = raw_value.strip('"').strip("'")
     return result
 
 
