@@ -84,6 +84,9 @@ fi
 step "site/data/index.json 存在且有效" \
     "$([ -f site/data/index.json ] && python3 -c "import json;json.load(open('site/data/index.json'))" 2>/dev/null && echo 1 || echo 0)"
 step "site/.nojekyll 存在（BUG-001）" "$([ -f site/.nojekyll ] && echo 1 || echo 0)"
+# BUG-012 回归：index.json 拆分后不再含 notes 键，但必须含 stats.notes
+step "index.json 含 stats.notes 且 >0（BUG-012）" \
+    "$(python3 -c "import json,sys; d=json.load(open('site/data/index.json')); sys.exit(0 if d.get('stats',{}).get('notes',0)>0 else 1)" 2>/dev/null && echo 1 || echo 0)"
 
 # ---------- 5. 阅读器功能 e2e（BUG-002/003/008） ----------
 echo "[5/8] 阅读器功能 e2e (jsdom)"
