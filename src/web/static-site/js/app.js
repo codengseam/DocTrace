@@ -543,6 +543,10 @@
         state.activePath = null;
         state.searchQuery = '';
         if (elements.searchInput) elements.searchInput.value = '';
+        // 返回书架时强制关闭所有遮罩层，避免 sidebar/settings/modal 的蒙层残留在首页
+        closeSidebar();
+        closeSettings();
+        closeModal();
         switchView('home');
         renderBookshelf();
     }
