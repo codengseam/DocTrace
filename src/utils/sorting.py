@@ -116,17 +116,31 @@ def sort_notes_tree(tree: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """对 tree 结构就地按规则排序并返回。
 
     - book 节点按书名排序
-    - 每个 book 的 children（chapter）按 chapter_sort_key 排序
-    - 每个 chapter 的 children（event）按 path 排序（保持稳定）
+    - 每个 book 的 children（chapter）按 chapter_sort_key / chapter_sort 字段排序
+    - 每个 chapter 的 children（event）按 sort 字段排序，无 sort 则回退到 path
     """
     tree.sort(key=lambda node: node.get("title", ""))
     for book_node in tree:
         book_name = book_node.get("title", "")
         children = book_node.get("children") or []
-        children.sort(
-            key=lambda ch: chapter_sort_key(book_name, ch.get("title", ""))
-        )
+
+        def _chapter_key(ch: dict[str, Any]) -> tuple[int, int | float, int, str]:
+            category_order, ordinal, title = chapter_sort_key(
+                book_name, ch.get("title", "")
+            )
+            # 若节点显式声明 chapter_sort，用它覆盖从章节名解析出的 ordinal
+            chapter_sort = ch.get("chapter_sort")
+            if chapter_sort is None:
+                chapter_sort = _FALLBACK_ORDER
+            return (category_order, chapter_sort, ordinal, title)
+
+        children.sort(key=_chapter_key)
         for chapter_node in children:
             events = chapter_node.get("children") or []
-            events.sort(key=lambda e: e.get("path", ""))
+            events.sort(
+                key=lambda e: (
+                    e.get("sort") if e.get("sort") is not None else _FALLBACK_ORDER,
+                    e.get("path", ""),
+                )
+            )
     return tree

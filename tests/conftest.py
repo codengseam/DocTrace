@@ -28,5 +28,9 @@ def mock_env(monkeypatch):
             },
         }
 
-    monkeypatch.setattr("src.core.workflow.load_config", fake_load_config)
+    try:
+        import src.core.workflow  # noqa: F401
+        monkeypatch.setattr("src.core.workflow.load_config", fake_load_config)
+    except ImportError:
+        pass  # 环境缺少 langgraph 等依赖时，不阻塞无需 workflow 的测试
     yield

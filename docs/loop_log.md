@@ -96,6 +96,35 @@
 3. **prompts/critic.md**：新增原文核验（忠于原意不得张冠李戴/论整体不套具体事件）；引文≤20字；名家≥2位非司马光。
 4. **quality.py**：AI_PATTERNS_SOFT 扩充（不是.*而是/他不是.*是/这说明/这话提醒我们/可见/第N层/经得起反复咀嚼/这条规律到今天没变）；MODERN_JARGON 扩充（方法论/资产/润滑剂/精算师/效率极高/效率极低/死穴/模式）。
 
+## 三、开发沉淀记录
+
+### 2026-06-24 养生类课程目录重构与排序修复
+
+**改动范围**
+- 将《饮食养生课》《饮食养生课第二版》《睡眠与精力修复课》统一归入 `category: 养生`。
+- 按「大模块+小章节」结构重命名文件：`模块名_章节名.md`。
+- 将《饮食养生课》两套模块拆分为两本书，其中一套命名为《饮食养生课第二版》。
+- 修复 `src/utils/sorting.py` 的章节排序：支持 `chapter_sort`（模块顺序）与 `sort`（章内事件顺序）。
+- 新增 `scripts/migrate_wellness_books.py` 迁移脚本，实现自动化整理。
+- 新增 `tests/test_migrate_wellness_books.py` 覆盖模块映射与文件名处理。
+- 修复 `tests/conftest.py`：当环境缺少 `langgraph` 等依赖时，不阻塞无需 workflow 的测试。
+
+**验证结果**
+- `python scripts/migrate_wellness_books.py`：旧编号文件已全部迁移，无残留。
+- `python scripts/check_chapter_order.py --output output`：通过。
+- `python scripts/build_site.py --output output --site site`：通过。
+- `python scripts/check_duplicates.py`：通过。
+- `python -m pytest tests/test_migrate_wellness_books.py`：5/5 通过。
+- `ruff check scripts/migrate_wellness_books.py src/utils/sorting.py tests/conftest.py`：通过。
+
+**暴露的共性问题**
+1. 测试环境依赖不完整：`yaml`/`langgraph` 未安装导致部分既有测试失败；`tests/conftest.py` 的 `autouse=True` fixture 强依赖 `src.core.workflow`，使所有测试被迫加载 workflow。
+2. 既有测试与实现不匹配：`tests/test_sorting.py` 中 `史记·秦纪/汉纪`、`唐纪/宋纪/明纪` 等用例对应的 `BOOK_CATEGORY_ORDER` 配置未实现；`tests/test_build_site.py` 仍期望 `index.json` 含 `notes` 字典，而 `build_site.py` 已将笔记正文拆到 `search-index.json`。
+
+**后续行动**
+- 已在 `tests/conftest.py` 中做最小修复：导入 workflow 失败时跳过 mock，避免阻塞无关测试。
+- 建议后续统一处理既有测试与实现的偏差：补全 `BOOK_CATEGORY_ORDER` 或调整测试期望；同步更新 `test_build_site.py` 以匹配当前 `index.json`/`search-index.json` 结构；在 CI 中安装完整依赖确保回归测试有效。
+
 
 ### 第1章优化沉淀（已应用到项目文件）
 1. **RULES.md §三语言风格**：新增软性AI句式黑名单（这件事说明/这是典型的/从X看但从Y看/不是偶然/容易被忽略/最关键的…是/与…一脉相承/放到今天依然成立/这不是X是Y）；新增现代学科术语禁用（博弈论/坐标系/放大器/最小获胜联盟）；新增升华配额（段尾升华≤2处且只在问道悟道/结语）；新增过渡句去模板化；新增古文翻译口语化要求。
