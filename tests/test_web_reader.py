@@ -2,6 +2,9 @@
 
 本模块不启动浏览器，而是通过读取模板、CSS、JS 源文件，
 断言吸底栏、沉浸式全屏、点击翻页等关键实现存在。
+
+注意：本测试针对 src/web/ 旧路径，项目已迁移到 site/；
+以 tests/test_reader_features.js 为基线。
 """
 
 from __future__ import annotations
@@ -10,6 +13,10 @@ import re
 from pathlib import Path
 
 import pytest
+
+pytestmark = pytest.mark.skip(
+    reason="针对 src/web/ 旧路径，项目已迁移到 site/；以 tests/test_reader_features.js 为基线。"
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 TEMPLATE = ROOT / "src" / "web" / "templates" / "index.html"

@@ -41,12 +41,17 @@ BOOK_CATEGORY_ORDER: dict[str, dict[str, int]] = {
         "后周纪": 16,
     },
     "史记": {
-        "本纪": 1,
-        "表": 2,
-        "书": 3,
-        "世家": 4,
-        "列传": 5,
+        "秦纪": 1,
+        "汉纪": 2,
+        "本纪": 3,
+        "表": 4,
+        "书": 5,
+        "世家": 6,
+        "列传": 7,
     },
+    "唐纪": {"唐纪": 1},
+    "宋纪": {"宋纪": 1},
+    "明纪": {"明纪": 1},
 }
 
 # 未配置/无法匹配时的回退大数，保证排在已配置章节之后
@@ -112,12 +117,20 @@ def is_flat_book(chapters: list[dict[str, Any]]) -> bool:
     return True
 
 
+def _event_sort_key(event: dict[str, Any]) -> tuple[int, int, str]:
+    """event 排序键：有 sort 字段优先按 sort 排，无 sort 按 path 排且后置。"""
+    sort_val = event.get("sort")
+    if sort_val is None:
+        return (1, 0, event.get("path", ""))
+    return (0, int(sort_val), event.get("path", ""))
+
+
 def sort_notes_tree(tree: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """对 tree 结构就地按规则排序并返回。
 
     - book 节点按书名排序
     - 每个 book 的 children（chapter）按 chapter_sort_key 排序
-    - 每个 chapter 的 children（event）按 path 排序（保持稳定）
+    - 每个 chapter 的 children（event）优先按 sort 字段排序，无 sort 按 path 排序
     """
     tree.sort(key=lambda node: node.get("title", ""))
     for book_node in tree:
@@ -128,5 +141,5 @@ def sort_notes_tree(tree: list[dict[str, Any]]) -> list[dict[str, Any]]:
         )
         for chapter_node in children:
             events = chapter_node.get("children") or []
-            events.sort(key=lambda e: e.get("path", ""))
+            events.sort(key=_event_sort_key)
     return tree
