@@ -14,6 +14,7 @@ version: 2.0.0
 4. 提交信息符合 [Conventional Commits](https://www.conventionalcommits.org/) 规范
 5. 合并完成后自动清理功能分支
 6. 严禁 force push 到 `master`
+7. **合并/推送前必须清零所有测试与校验问题，包括 P2 级别问题；若发现非本次引入的问题，仍须修复并沉淀到测试集**
 
 # 触发条件
 
@@ -173,12 +174,21 @@ git rebase master
 ## 第 3 步：本地验证（必须全部通过）
 
 ```bash
-python scripts/check_book_structure.py --output output
+python scripts/check_book_structure.py --output output --strict
 python -m pytest tests/test_sorting.py tests/test_check_chapter_order.py tests/test_book_structure.py -q
 python scripts/build_site.py
 ```
 
-全部通过后再继续。如果失败，先修复问题，不要 push。
+**全部通过后再继续。任何失败都不得 push/merge。**
+
+如果 `check_book_structure.py --strict` 失败：
+1. 立即停止，不要 push/merge。
+2. 列出失败的文件与问题级别（P0/P1/P2）。
+3. 修复所有问题——即使它们不是本次改动引入的。AI 生成的项目问题必须在合入前清零。
+4. 若判定为会复发的代码/数据 bug，补充回归测试（`tests/test_*.py`）或更新 `tests/bug_regression_list.md`。
+5. 重新运行 `--strict` 校验，直到通过。
+
+如果 `pytest` 或 `build_site.py` 失败，同理修复后再继续。
 
 ## 模式 A 后续：推送到远程功能分支并发 PR
 
@@ -208,8 +218,8 @@ git push origin <功能分支名> --force
 - 影响范围
 
 ## 验证结果
-- `python scripts/check_book_structure.py --output output`：0 问题
-- `pytest`：54 passed
+- `python scripts/check_book_structure.py --output output --strict`：0 问题
+- `pytest`：全部 passed
 - `python scripts/build_site.py`：成功
 
 ## 合并方式
@@ -258,9 +268,11 @@ git push origin --delete <功能分支名>
 
 无论哪种模式，合并完成后都要在 master 上运行：
 ```bash
-python scripts/check_book_structure.py --output output
+python scripts/check_book_structure.py --output output --strict
 python -m pytest tests/test_sorting.py tests/test_check_chapter_order.py tests/test_book_structure.py -q
 ```
+
+若最终验证失败，必须立即修复并再次 push master（同样走 `--no-verify` 但问题必须解决）。
 
 # 输出格式
 

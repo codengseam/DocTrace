@@ -32,8 +32,10 @@
 - [ ] 新功能有对应的单元测试
 - [ ] 修改现有逻辑后，相关测试已更新
 - [ ] 运行 `pytest` 全部通过（或明确说明跳过原因）
+- [ ] 运行 `python scripts/check_book_structure.py --output output --strict`，P0/P1/P2 全部清零（合并前必须完成）
 - [ ] 边界场景有覆盖：空输入、超长输入、非法路径、并发等
 - [ ] Mock 模式（`DEEP_READING_MOCK=1`）下端到端流程能跑通
+- [ ] 修复了会复发的代码/数据 bug 时，已补充回归测试或更新 `tests/bug_regression_list.md`
 
 ## 四、依赖与配置
 
@@ -63,6 +65,7 @@
 - [ ] 是否需要更新 `src/utils/quality.py` 的检测项？
 - [ ] 是否需要更新本 checklist（`dev-checklist.md`）？
 - [ ] 是否需要在 `docs/loop_log.md` 追加一条开发沉淀记录？
+- [ ] 若修复了历史遗留 bug，是否已记录到 `tests/bug_regression_list.md` 并更新频次？
 - [ ] 本次无新沉淀时，明确说明"本次无新沉淀"
 
 ---

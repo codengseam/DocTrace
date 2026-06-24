@@ -64,10 +64,16 @@
 - **并行提速**：能并行的子任务尽量并行（用 Task 工具启动多个 subagent，或调用 Python 脚本做真并行）。
 - **遵循现有目录结构与命名规范**：见 README §七、§八。
 - **不过度工程化**：只做直接请求或必要的事，不主动加抽象、加配置、加兼容层。
+- **合并前必须清零所有校验问题**：执行 `python scripts/check_book_structure.py --output output --strict`，P0/P1/P2 全部通过后方可进入合并/推送。若发现非本次引入的问题，仍须修复；修复后判断是否为会复发的代码/数据 bug，需要补充回归测试或更新 `tests/bug_regression_list.md`。
 
 ### 第四步：自检
 
 完成后**主动启用自检**，对照 `.trae/checklists/dev-checklist.md` 逐项检查并修复。也可由用户触发 `.trae/skills/dev-selfcheck/SKILL.md`。
+
+自检必须包含：
+- `python scripts/check_book_structure.py --output output --strict` 通过。
+- `pytest` 全部通过。
+- 若修复了历史遗留或会复发的 bug，已补充回归测试或更新 `tests/bug_regression_list.md`。
 
 ### 第五步：沉淀（LoopAgent 思维）
 
@@ -114,3 +120,5 @@
 - **不破坏现有体系**：`.trae/skills/deep-reading/`、`.trae/rules/rules.md`、`prompts/` 下 7 份讲书提示词、`src/utils/quality.py` 不在本规则的修改范围内。
 - **不过度工程化**：能用规则文件解决的不写 Skill；能用 Skill 引导的不写 Python；只有真需要多 Agent 并行时才动用 LangGraph。
 - **不跳过沉淀**：每次开发完成后都要做第五步沉淀复盘，哪怕只是"本次无新沉淀"也要说明。
+- **禁止以「问题非本次引入」为由跳过修复**：合并/推送前 `check_book_structure.py --strict`、`pytest`、回归测试集必须全部通过。
+- **禁止在存在任何校验问题时执行 push/merge**：包括 P2 级别问题。

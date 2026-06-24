@@ -133,3 +133,12 @@ def test_check_book_structure_missing_sort(tmp_path: Path):
     issues, _ = check_book_structure(str(output))
     assert any("缺少必填字段: sort" in i.message for i in issues)
     assert any("缺少必填字段: chapter_sort" in i.message for i in issues)
+
+
+def test_output_has_no_structure_issues():
+    """回归测试：真实 output/ 目录必须零问题（BUG-017 等历史问题不复发）。"""
+    issues, _ = check_book_structure("output")
+    assert not issues, "\n".join(
+        f"{issue.book}/{issue.file}: [{issue.severity}] {issue.message}"
+        for issue in issues
+    )

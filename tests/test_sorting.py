@@ -5,9 +5,15 @@
 - chapter_sort_key：朝代序号、长前缀优先匹配、未配置书回退
 - is_flat_book：空列表、全纯数字、混合、非数字
 - sort_notes_tree：book/chapter/event 三级排序、sort 字段优先、None 回退、稳定排序
+- wellness books 章内 sort 连续性（BUG-017）
 """
 
 from __future__ import annotations
+
+import re
+from pathlib import Path
+
+import pytest
 
 from src.utils.sorting import (
     chapter_sort_key,
@@ -399,3 +405,59 @@ def test_sort_notes_tree_yijing_chapter_and_event_order():
         "咸卦",
         "中孚卦",
     ]
+
+
+# ---------- BUG-017：养生类书籍章内 sort 连续性 ----------
+
+
+WELLNESS_BOOKS = ["睡眠与精力修复课", "饮食养生课", "饮食养生课第二版"]
+FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
+SORT_RE = re.compile(r"^sort:\s*(\d+)\s*$", re.MULTILINE)
+CHAPTER_RE = re.compile(r"^chapter:\s*(.+?)\s*$", re.MULTILINE)
+
+
+def _parse_simple_frontmatter(content: str) -> dict[str, str | int]:
+    data: dict[str, str | int] = {}
+    match = FRONTMATTER_RE.match(content)
+    if not match:
+        return data
+    for line in match.group(1).splitlines():
+        if ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if value.isdigit():
+            value = int(value)
+        data[key] = value
+    return data
+
+
+@pytest.mark.parametrize("book_name", WELLNESS_BOOKS)
+def test_wellness_book_sort_values_are_continuous_per_chapter(book_name: str):
+    """回归测试：养生类书籍每章内 sort 值为 1-based 连续序列（BUG-017）。"""
+    book_dir = Path("output") / book_name
+    if not book_dir.exists():
+        pytest.skip(f"{book_name} 不存在")
+
+    chapter_sorts: dict[str, list[int]] = {}
+    for md_path in sorted(book_dir.rglob("*.md")):
+        if md_path.name.startswith("_"):
+            continue
+        content = md_path.read_text(encoding="utf-8")
+        fm = _parse_simple_frontmatter(content)
+        chapter = fm.get("chapter")
+        sort = fm.get("sort")
+        if not chapter or not isinstance(sort, int):
+            continue
+        chapter_sorts.setdefault(str(chapter), []).append(sort)
+
+    errors = []
+    for chapter, sorts in sorted(chapter_sorts.items()):
+        expected = list(range(1, len(sorts) + 1))
+        if sorted(sorts) != expected:
+            errors.append(
+                f"{book_name}/{chapter}: sort 值 {sorted(sorts)} 期望 {expected}"
+            )
+
+    assert not errors, "\n".join(errors)

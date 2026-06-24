@@ -173,3 +173,21 @@
   4. 返回首页时自动退出沉浸
 - **回归测试**：`tests/test_reader_features.js` 测试10/11/12 + 浏览器验收（进入/唤出 UI/打开目录/退出）
 - **教训**：沉浸/全屏不能只靠系统 API，必须有独立 CSS 状态；UI 隐藏状态要可切换，否则用户会陷入"无入口"的死胡同。
+
+## BUG-017：养生类书籍章内 sort 值不连续
+
+- **首次出现**：2026-06-24
+- **频次**：1（已修复并补充回归测试）
+- **现象**：`check_book_structure.py` 报出 39 个 P2 问题，集中在 `睡眠与精力修复课`、`饮食养生课`、`饮食养生课第二版`
+- **根因**：AI 生成 frontmatter 时把 `sort` 按全书全局编号，未按章内 1-based 连续编号；合并流程中 P2 问题默认不阻断，导致问题堆积
+- **复现**：把任意养生类书籍某章内的 `sort` 改为不连续（如 1,3,4），运行 `python scripts/check_book_structure.py --output output --strict`，退出码 1
+- **修复**：
+  1. 按章重新编号 wellness books 的 `sort` 为 1,2,3...
+  2. `scripts/check_book_structure.py` 新增 `--strict` 参数，P0/P1/P2 任一级别失败返回 1
+  3. CI、pre-push hook、回归测试集统一使用 `--strict`
+  4. 规则/Skill/checklist 明确：合并前必须清零所有校验问题，包括非本次引入的问题
+- **涉及文件**：`scripts/check_book_structure.py`、`.github/workflows/*.yml`、`githooks/pre-push`、`.trae/rules/dev-workflow.md`、`.trae/skills/git-merge-guardian/SKILL.md`、`.trae/skills/dev-selfcheck/SKILL.md`、`.trae/checklists/dev-checklist.md`
+- **回归测试**：
+  - `tests/test_book_structure.py::test_output_has_no_structure_issues`
+  - `tests/test_sorting.py::test_wellness_book_sort_values_are_continuous_per_chapter`
+- **教训**：P2 问题也是 AI 引入的项目债务，不能在合并时默认放行；必须阻断并沉淀到测试集，才能维持项目长期稳定。

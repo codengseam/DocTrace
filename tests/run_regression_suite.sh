@@ -100,7 +100,7 @@ else
     echo "  ⚠️  跳过：node_modules/jsdom 未安装（运行 npm install jsdom marked 启用）"
 fi
 
-# ---------- 6. 书籍结构严格校验（BUG-014，合并前必须清零 P0/P1/P2） ----------
+# ---------- 6. 书籍结构严格校验（BUG-017，合并前必须清零 P0/P1/P2） ----------
 echo "[6/9] 书籍结构严格校验"
 if python3 scripts/check_book_structure.py --output output --strict >/dev/null 2>&1; then
     step "check_book_structure.py --strict 通过" 1
