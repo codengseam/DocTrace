@@ -9,7 +9,9 @@ cd "$(dirname "$0")/.."
 
 PASS=0
 FAIL=0
+WARN=0
 FAILED_STEPS=()
+WARNED_STEPS=()
 
 step() {
     local name="$1"
@@ -21,6 +23,22 @@ step() {
         echo "  ❌ $name"
         FAIL=$((FAIL + 1))
         FAILED_STEPS+=("$name")
+    fi
+}
+
+# 告警项：只提示不计入失败退出码。
+# 用于内容数据质量检查（重复文件、章节排序），与代码回归（BUG-003/011）区分：
+# 代码回归必须阻塞合并，数据质量问题只提醒清理，避免卡死债务清理 PR。
+warn() {
+    local name="$1"
+    local ok="$2"
+    if [ "$ok" = "1" ]; then
+        echo "  ✅ $name"
+        PASS=$((PASS + 1))
+    else
+        echo "  ⚠️  $name（告警，不阻塞）"
+        WARN=$((WARN + 1))
+        WARNED_STEPS+=("$name")
     fi
 }
 
@@ -79,20 +97,20 @@ else
     echo "  ⚠️  跳过：node_modules/jsdom 未安装（运行 npm install jsdom marked 启用）"
 fi
 
-# ---------- 6. 重复文件检查（BUG-005） ----------
+# ---------- 6. 重复文件检查（BUG-005，数据质量，告警） ----------
 echo "[6/8] 重复文件检查"
 if python3 scripts/check_duplicates.py >/dev/null 2>&1; then
-    step "check_duplicates.py 通过" 1
+    warn "check_duplicates.py 通过" 1
 else
-    step "check_duplicates.py 通过" 0
+    warn "check_duplicates.py 通过" 0
 fi
 
-# ---------- 7. 章节排序检查（BUG-004/009） ----------
+# ---------- 7. 章节排序检查（BUG-004/009，数据质量，告警） ----------
 echo "[7/8] 章节排序检查"
 if python3 scripts/check_chapter_order.py >/dev/null 2>&1; then
-    step "check_chapter_order.py 通过" 1
+    warn "check_chapter_order.py 通过" 1
 else
-    step "check_chapter_order.py 通过" 0
+    warn "check_chapter_order.py 通过" 0
 fi
 
 # ---------- 8. HTTP 冒烟测试 ----------
@@ -113,13 +131,19 @@ step "关键资源全部 200" "$ALL_200"
 
 # ---------- 汇总 ----------
 echo ""
-echo "=== 汇总：通过 $PASS，失败 $FAIL ==="
+echo "=== 汇总：通过 $PASS，失败 $FAIL，告警 $WARN ==="
+if [ "$WARN" -gt 0 ]; then
+    echo "告警项（数据质量，不阻塞合并，建议清理）："
+    for s in "${WARNED_STEPS[@]}"; do
+        echo "  - $s"
+    done
+fi
 if [ "$FAIL" -gt 0 ]; then
-    echo "失败项："
+    echo "失败项（代码回归，阻塞合并）："
     for s in "${FAILED_STEPS[@]}"; do
         echo "  - $s"
     done
     exit 1
 fi
-echo "全部通过 ✅"
+echo "代码回归检查全部通过 ✅（数据质量告警 $WARN 项不阻塞）"
 exit 0

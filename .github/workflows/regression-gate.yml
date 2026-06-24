@@ -1,0 +1,44 @@
+name: Regression Gate
+
+# 合并门禁：在 PR 合入 master 前跑回归测试集，防止 AI 合并冲突解决时把历史 bug 带回主分支。
+# 对应 tests/bug_regression_list.md（尤其 BUG-003 沉浸模式回归、BUG-011 合并冲突标记残留）。
+# 详见 README §十四「回归测试集」。
+
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          pip install pyyaml
+          # 阅读器 e2e 依赖（run_regression_suite.sh 第 5 项）
+          npm install jsdom marked
+
+      - name: Run regression suite
+        run: bash tests/run_regression_suite.sh
