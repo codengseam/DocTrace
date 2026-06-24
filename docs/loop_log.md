@@ -106,6 +106,23 @@
 6. **prompts/context_analyst.md**：横向并置（同时期对照事件）；地理纵深；过渡句去模板化。
 7. **quality.py**：AI_PATTERNS 拆分显性/软性；新增 MODERN_JARGON 检测；新增 check_sublimation_quota 升华配额检测。
 
+### 书籍结构规范化与通用校验沉淀
+
+1. **问题发现**：易经课网页首章出现下经「中孚卦」，根因是 `sort_notes_tree` 未使用 frontmatter 中的 `sort`/`chapter_sort`，而是按文件名字符串排序。
+2. **规范制定**：新增 `.trae/checklists/book-structure-checklist.md`，明确：
+   - 文件命名：`output/<book>/<chapter>_<event>.md`
+   - frontmatter 必填：`title`、`book`、`chapter`、`event`、`sort`、`chapter_sort`
+   - `chapter_sort` 表示大模块/阶段顺序；`sort` 表示模块内事件顺序
+   - 允许「细粒度单元」模式：同一 `chapter_sort` 下多个单事件 chapter 时，`sort` 可作为模块内位置标号
+3. **脚本工具**：新增 `scripts/check_book_structure.py`，按 P0/P1/P2 三级校验 frontmatter 完整性、路径格式、文件名与 frontmatter 一致性、章内 sort 唯一递增、chapter_sort 一致性等。
+4. **排序修复**：修复 `src/utils/sorting.py`：
+   - `sort_notes_tree` 优先使用 `chapter_sort`/`sort` 字段
+   - 同 `chapter_sort` 的 chapter 按内部 event 的 `sort` 最小值排序
+   - 补齐 `BOOK_CATEGORY_ORDER`：史记增加秦纪/汉纪，新增唐纪/宋纪/明纪
+5. **全量修复结果**：13 本书全部通过校验，问题数从 1032（P0=503、P1=343、P2=186）降至 0。
+6. **回归测试**：新增 `tests/test_book_structure.py`（10 个用例），`tests/test_sorting.py` 44 个用例全绿，`tests/test_check_chapter_order.py` 15 个用例全绿。
+7. **后续约束**：新增或修改专栏时，必须先通过 `python scripts/check_book_structure.py --output output`；CI 中建议加入此校验。
+
 ---
 
 ## AI 大模型学习专栏生成沉淀（2026-06-23）

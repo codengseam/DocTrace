@@ -1,0 +1,79 @@
+#!/usr/bin/env python3
+"""Git pre-push hook for HaloRead.
+
+Blocks direct pushes to master and runs project-level validation before any push.
+"""
+
+from __future__ import annotations
+
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+
+def get_project_root() -> Path:
+    """从 .git/hooks/pre-push 推断项目根目录。"""
+    hook_path = Path(__file__).resolve()
+    return hook_path.parent.parent.parent
+
+
+def run_command(cmd: list[str], cwd: Path) -> int:
+    """运行命令并返回退出码，实时输出。"""
+    print(f"\n>>> {' '.join(cmd)}")
+    result = subprocess.run(cmd, cwd=cwd)
+    return result.returncode
+
+
+def main() -> int:
+    root = get_project_root()
+    os.chdir(root)
+
+    # pre-push 从 stdin 读取推送引用：local_ref local_sha remote_ref remote_sha
+    lines = sys.stdin.read().strip().splitlines()
+
+    remote_refs = []
+    for line in lines:
+        parts = line.split()
+        if len(parts) >= 4:
+            remote_refs.append(parts[2])
+
+    # 禁止直接 push master/main
+    blocked = {ref for ref in remote_refs if ref in ("refs/heads/master", "refs/heads/main")}
+    if blocked:
+        print("\n[ERROR] 禁止直接 push 到 master/main 分支。")
+        print("        请通过 Pull Request 合并代码。")
+        print("        受影响的 remote refs:", ", ".join(blocked))
+        return 1
+
+    # 如果没有推送代码到分支（如删除标签），跳过检查
+    if not remote_refs:
+        return 0
+
+    print("\n[pre-push] 开始执行 HaloRead 项目级校验...")
+
+    checks = [
+        ["python", "scripts/check_book_structure.py", "--output", "output"],
+        [
+            "python", "-m", "pytest",
+            "tests/test_sorting.py",
+            "tests/test_check_chapter_order.py",
+            "tests/test_book_structure.py",
+            "-q",
+        ],
+        ["python", "scripts/build_site.py"],
+    ]
+
+    for cmd in checks:
+        code = run_command(cmd, root)
+        if code != 0:
+            print(f"\n[ERROR] 校验失败: {' '.join(cmd)}")
+            print("        push 已被阻止，请先修复问题。")
+            return code
+
+    print("\n[pre-push] 所有校验通过，允许 push。")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

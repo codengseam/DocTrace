@@ -178,8 +178,13 @@ def _make_event(title: str, path: str, sort: int | None = None) -> dict:
     return node
 
 
-def _make_chapter(title: str, events: list[dict]) -> dict:
-    return {"title": title, "type": "chapter", "children": events}
+def _make_chapter(
+    title: str, events: list[dict], chapter_sort: int | None = None
+) -> dict:
+    node = {"title": title, "type": "chapter", "children": events}
+    if chapter_sort is not None:
+        node["chapter_sort"] = chapter_sort
+    return node
 
 
 def _make_book(title: str, chapters: list[dict]) -> dict:
@@ -367,3 +372,30 @@ def test_sort_notes_tree_unconfigured_book_chapter_kept():
     chapters = tree[0]["children"]
     # 两者都回退到 (9999, 0, chapter)，按 chapter 字符串序
     assert [c["title"] for c in chapters] == ["第一章", "第二章"]
+
+
+def test_sort_notes_tree_yijing_chapter_and_event_order():
+    """易经课按大模块与卦序排序：chapter_sort 定模块，event sort 定卦序。"""
+    tree = [
+        _make_book(
+            "易经课",
+            [
+                _make_chapter("中孚卦", [_make_event("诚信感物", "z.md", sort=31)], chapter_sort=4),
+                _make_chapter("乾卦", [_make_event("健行不息", "a.md", sort=1)], chapter_sort=3),
+                _make_chapter("基础", [_make_event("四象与八卦", "b.md", sort=2)], chapter_sort=2),
+                _make_chapter("开篇", [_make_event("为什么要学易经", "c.md", sort=2)], chapter_sort=1),
+                _make_chapter("坤卦", [_make_event("厚德载物", "d.md", sort=2)], chapter_sort=3),
+                _make_chapter("咸卦", [_make_event("感应之道", "e.md", sort=1)], chapter_sort=4),
+            ],
+        )
+    ]
+    sort_notes_tree(tree)
+    chapters = tree[0]["children"]
+    assert [c["title"] for c in chapters] == [
+        "开篇",
+        "基础",
+        "乾卦",
+        "坤卦",
+        "咸卦",
+        "中孚卦",
+    ]

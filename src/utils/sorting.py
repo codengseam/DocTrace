@@ -117,29 +117,55 @@ def is_flat_book(chapters: list[dict[str, Any]]) -> bool:
     return True
 
 
-def _event_sort_key(event: dict[str, Any]) -> tuple[int, int, str]:
-    """event 排序键：有 sort 字段优先按 sort 排，无 sort 按 path 排且后置。"""
-    sort_val = event.get("sort")
-    if sort_val is None:
-        return (1, 0, event.get("path", ""))
-    return (0, int(sort_val), event.get("path", ""))
+def _to_int(value: Any) -> int | None:
+    """将节点上的排序值安全转为整数；失败返回 None。"""
+    if value is None:
+        return None
+    if isinstance(value, int):
+        return value
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def sort_notes_tree(tree: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """对 tree 结构就地按规则排序并返回。
 
     - book 节点按书名排序
-    - 每个 book 的 children（chapter）按 chapter_sort_key 排序
-    - 每个 chapter 的 children（event）优先按 sort 字段排序，无 sort 按 path 排序
+    - chapter 节点优先按 frontmatter 中的 chapter_sort 排序；
+      无 chapter_sort 时回退到 chapter_sort_key（朝代/纪序号等）
+    - event 节点优先按 frontmatter 中的 sort 排序；
+      无 sort 时回退到 path 排序（保持稳定）
     """
     tree.sort(key=lambda node: node.get("title", ""))
     for book_node in tree:
         book_name = book_node.get("title", "")
         children = book_node.get("children") or []
-        children.sort(
-            key=lambda ch: chapter_sort_key(book_name, ch.get("title", ""))
-        )
+
+        def chapter_key(ch: dict[str, Any]) -> tuple[int, int, int, str]:
+            explicit = _to_int(ch.get("chapter_sort"))
+            events = ch.get("children") or []
+            event_sorts = [_to_int(e.get("sort")) for e in events]
+            min_event_sort = min(
+                [s for s in event_sorts if s is not None], default=0
+            )
+            if explicit is not None:
+                # 显式 chapter_sort 优先；同组 chapter 按内部 event 的 sort 排序
+                return (0, explicit, min_event_sort, str(ch.get("title", "")))
+            fallback = chapter_sort_key(book_name, ch.get("title", ""))
+            return (1, fallback[0], fallback[1], fallback[2])
+
+        children.sort(key=chapter_key)
+
         for chapter_node in children:
             events = chapter_node.get("children") or []
-            events.sort(key=_event_sort_key)
+
+            def event_key(e: dict[str, Any]) -> tuple[int, int, str]:
+                explicit = _to_int(e.get("sort"))
+                if explicit is not None:
+                    return (0, explicit, "")
+                return (1, 0, str(e.get("path", "")))
+
+            events.sort(key=event_key)
     return tree
