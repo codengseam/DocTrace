@@ -328,3 +328,32 @@
   2. 删除当前分支后，观察其他 agent 分支是否仍残留
   3. 运行 `git branch --merged origin/master`，观察是否漏报这些已等价合入的分支
 - **教训/沉淀**：当工作流绕过 PR（直接合入 master）时，传统 git 合并检测（`--merged`、merge-base ancestor）会失效，所有依赖「分支是否已合入」的工具（分支清理、stale bot、覆盖率统计）都需要补一套「等价合入」判定逻辑。Skill 的分支清理不能只盯当前分支，必须做一次全局巡检；CI 与 skill 共用同一治理脚本，保证判定口径一致。
+
+## 现代职场专栏质检规则误报与内容残留问题（引用冗余、术语硬套、白名单缺失）
+
+- **编号**：BUG-024
+- **首次出现**：2026-06-25
+- **类型**：数据 / 兼容性
+- **环境**：《职场沟通课》67 章内容质检
+- **现象**：67 章中 13-17 篇停留在 93-96 分（目标 ≥97）。具体表现：①12 处「大意据《XX》」引用标注冗余（正文已写"XX在《YY》里/中讲过…"，句末又挂"（大意据《YY》）"）；②2 处「底层操作系统」现代术语硬套；③`check_mixed_language` 把 KPI/HR/offer/bug/BATNA 等行业通用词误报为中英文混杂；④`check_ai_tone` 把"不是X而是Y""可见""第X层""容易被忽略"等常见中文误报为 AI 味；⑤`REDUNDANT_CITATION_PATTERN` 只匹配「在《XX》里」，漏掉「在《XX》中」句式，导致 4 处冗余漏报。
+- **根因**：
+  1. `src/utils/content_quality.py` 的 `REDUNDANT_CITATION_PATTERN` 正则只覆盖「里」字，漏「中」字。
+  2. `check_mixed_language` / `check_ai_tone` 继承自 `quality.py`，原为古籍讲书设计，对现代职场专栏未做白名单/过滤，产生大量误报。
+  3. 内容侧子 Agent 生成时倾向在"XX在《YY》里讲过…"句末再挂"（大意据《YY》）"以求严谨，反成冗余；"底层操作系统"比喻虽生动但属现代术语硬套。
+- **修复**：
+  1. 内容修复 14 处：12 处删除句末「（大意据《XX》）」冗余标注（保留正文出处）；2 处「底层操作系统」重写为「人品是底子」，比喻改为「楼上的装饰/地基」。
+  2. 规则优化 `src/utils/content_quality.py`：
+     - `REDUNDANT_CITATION_PATTERN` 扩展为 `在《[^》]+》[里中]…`，覆盖两种句式。
+     - 新增 `MODERN_ENGLISH_WHITELIST`（22 个行业通用词）和 `check_mixed_language_modern()`。
+     - 新增 `MODERN_AI_OVERSTRICT_PATTERNS`（8 个敏感模式）和 `filter_ai_tone_for_modern()`。
+     - `run_content_quality_checks()` 在 `is_modern` 时改用上述新函数。
+  3. 文档/技能同步：`content-quality.md` §8.2、`content-review/SKILL.md` 现代职场额外检查项补充白名单和 AI 味放宽说明。
+- **涉及文件**：`src/utils/content_quality.py`、`.trae/skills/deep-reading/content-quality.md`、`.trae/skills/content-review/SKILL.md`、`output/职场沟通课/` 下 13 个 .md 文件（终极意义_职场的终极是人品.md + 12 个冗余修复文件）
+- **回归测试**：
+  - `python scripts/check_book_structure.py --output output --strict`：0 问题
+  - `run_content_quality_checks` 全 67 章：最低 97，最高 100，平均 99.4，≥97 分 67/67
+  - 分类排序核对：`_meta.yaml sort=103` 无冲突；10 组 `chapter_sort` 0-9 连续；组内 `sort` 1 起递增无跳号
+- **教训**：
+  1. 质检规则按内容类型分化——古籍与现代专栏的"正常表达"边界不同（如「不是X而是Y」对古籍是 AI 味，对现代职场是常见判断句）。未来新增非史类专栏应先识别内容类型再套用对应规则集，避免一刀切误报。
+  2. 子 Agent 修复后报告"已修"不可轻信，主流程必须重跑 `run_content_quality_checks` 验证分数达标（本次「底层操作系统」第一次 Agent 只改 1 处变体，漏 2 处）。
+  3. 引用标注冗余是子 Agent 通病，写作规范应明确「正文已写明出处的，句末不再挂大意据标注」。

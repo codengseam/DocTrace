@@ -71,6 +71,70 @@ PLACEHOLDER_PATTERNS = [
     r"暂无点评",
 ]
 
+# 现代职场/非史类专栏关键词（book 或 title 含这些词时，跳过司马光等古籍名家强制要求）
+MODERN_BOOK_KEYWORDS = ["职场", "沟通", "面试", "商科", "心理学", "管理", "营销", "销售"]
+
+# 现代 AI 味句式：不是X，是Y（每篇上限 3 处）
+SOFT_AI_PATTERN = re.compile(r"不是[^，。；！？\n]{1,15}[而并]{1,2}是[^，。；！？\n]{1,15}")
+
+# 引用标注冗余：正文已写明出处（在《XX》里/中），句末又挂「大意据《XX》」
+REDUNDANT_CITATION_PATTERN = re.compile(r"在《[^》]+》[里中][^。\n]*（大意据《[^》]+》）")
+
+# 现代术语硬套（描述古代历史时禁用；现代语境建议替换）
+MODERN_JARGON_TERMS = ["底层逻辑", "底层操作系统"]
+
+# 现代职场/商科专栏中可接受的中英文行业通用词（不算中英文混杂）
+MODERN_ENGLISH_WHITELIST = [
+    "KPI", "OKR", "HR", "PR", "CEO", "CFO", "CTO", "COO",
+    "offer", "bug", "BATNA", "CRIB", "PPT", "DNA", "ID",
+    "APP", "API", "PDF", "MBA", "EMBA", "VIP",
+    "360度",  # 360度评价
+]
+
+# 现代职场专栏中过于敏感、易误报的 AI 味模式（由 check_soft_ai_pattern 等专项接管）
+MODERN_AI_OVERSTRICT_PATTERNS = [
+    r"不是.*而是",        # 「不是X而是Y」常见中文判断句，已由 check_soft_ai_pattern 控量
+    r"他不是.*是",        # 同上
+    r"容易被忽略",        # 常见中文，非AI套路
+    r"可见",              # 常见中文，非AI套路
+    r"第[一二三四五六]层", # 分点结构常见，非AI套路
+    r"最关键的.*是",      # 常见中文，非AI套路
+    r"这说明",            # 常见中文，非AI套路
+    r"这事说明",          # 常见中文，非AI套路
+]
+
+# 常见错别字
+COMMON_TYPOS = {
+    "做为": "作为",
+    "按耐": "按捺",
+    "交待": "交代",
+    "既使": "即使",
+    "那怕": "哪怕",
+    "必竞": "毕竟",
+    "凑和": "凑合",
+    "甘败下风": "甘拜下风",
+    "一愁莫展": "一筹莫展",
+    "美仑美奂": "美轮美奂",
+    "不径而走": "不胫而走",
+    "黄梁美梦": "黄粱美梦",
+    "竭泽而鱼": "竭泽而渔",
+    "棉薄之力": "绵薄之力",
+    "墨守陈规": "墨守成规",
+    "磬竹难书": "罄竹难书",
+    "趋之若骛": "趋之若鹜",
+    "声名雀起": "声名鹊起",
+    "谈笑风声": "谈笑风生",
+    "委屈求全": "委曲求全",
+    "不能自己": "不能自已",
+    "一如继往": "一如既往",
+    "仗义直言": "仗义执言",
+    "走头无路": "走投无路",
+    "饮鸠止渴": "饮鸩止渴",
+    "顶力相助": "鼎力相助",
+    "不加思索": "不假思索",
+    "按步就班": "按部就班",
+}
+
 @dataclass
 class ContentQualityReport:
     """内容质检报告。"""
@@ -153,8 +217,14 @@ def check_sources_section(content: str) -> List[str]:
 
 
 def check_years_present(content: str) -> List[str]:
-    """启发式检查关键年份是否给出。"""
-    if _is_philosophy_or_classic(_extract_title(content)):
+    """启发式检查关键年份是否给出。
+
+    对哲学/经典解读类、现代职场/非史类专栏跳过此检查。
+    """
+    title = _extract_title(content)
+    if _is_philosophy_or_classic(title):
+        return []
+    if _is_modern_column(title):
         return []
     body = _strip_frontmatter(content)
     if not YEAR_PATTERN.search(body):
@@ -248,6 +318,93 @@ def _is_philosophy_or_classic(book_or_title: str) -> bool:
     return any(k in book_or_title for k in keywords)
 
 
+def _is_modern_column(book_or_title: str) -> bool:
+    """判断是否为现代职场/非史类专栏，跳过司马光等古籍名家强制要求。"""
+    return any(k in book_or_title for k in MODERN_BOOK_KEYWORDS)
+
+
+def check_soft_ai_pattern(content: str, max_count: int = 3) -> List[str]:
+    """检查「不是X，是Y」软性 AI 句式是否超过上限。"""
+    body = _strip_frontmatter(content)
+    matches = SOFT_AI_PATTERN.findall(body)
+    if len(matches) > max_count:
+        return [
+            f"「不是X，是Y」句式偏多：{len(matches)} 处，建议不超过 {max_count} 处"
+        ]
+    return []
+
+
+def check_redundant_citation(content: str) -> List[str]:
+    """检查引用标注冗余：正文已写明出处，句末又挂「大意据《XX》」。"""
+    body = _strip_frontmatter(content)
+    matches = REDUNDANT_CITATION_PATTERN.findall(body)
+    return [f"引用标注冗余：正文已写明出处，句末又挂「大意据《XX》」"] if matches else []
+
+
+def check_modern_jargon_terms(content: str) -> List[str]:
+    """检查现代术语硬套（底层逻辑、底层操作系统等）。"""
+    body = _strip_frontmatter(content)
+    issues = []
+    for term in MODERN_JARGON_TERMS:
+        if term in body:
+            count = body.count(term)
+            issues.append(f"现代术语硬套：「{term}」出现 {count} 处，建议替换为更朴素表达")
+    return issues
+
+
+def check_mixed_language_modern(content: str) -> List[str]:
+    """现代职场专栏版中英文混杂检查，剔除行业通用词白名单。"""
+    body = _strip_frontmatter(content)
+    # 先把白名单词替换为占位，避免误报
+    cleaned = body
+    for word in MODERN_ENGLISH_WHITELIST:
+        cleaned = cleaned.replace(word, "×" * len(word))
+    matches = re.findall(r"[\u4e00-\u9fff]+[a-zA-Z]{2,}", cleaned)
+    if matches:
+        return [f"检测到可能的中英文混杂：{matches[:3]}"]
+    return []
+
+
+def filter_ai_tone_for_modern(issues: List[str]) -> List[str]:
+    """现代职场专栏过滤掉过于敏感、易误报的 AI 味模式。"""
+    filtered = []
+    for issue in issues:
+        # issue 形如 "疑似 AI 味句式：不是.*而是"
+        if "疑似 AI 味句式：" not in issue:
+            filtered.append(issue)
+            continue
+        pattern = issue.split("：", 1)[1]
+        if pattern in MODERN_AI_OVERSTRICT_PATTERNS:
+            continue
+        filtered.append(issue)
+    return filtered
+
+
+def check_common_typos(content: str) -> List[str]:
+    """检查常见错别字。"""
+    body = _strip_frontmatter(content)
+    issues = []
+    for wrong, right in COMMON_TYPOS.items():
+        if wrong in body:
+            issues.append(f"错别字：「{wrong}」应为「{right}」")
+    return issues
+
+
+def check_title_hierarchy(content: str) -> List[str]:
+    """检查标题层级：正文章节标题不应高于「## 参考来源」。
+
+    若正文出现「^# 」（一级标题）且同时有「## 参考来源」，提示层级倒置。
+    """
+    body = _strip_frontmatter(content)
+    has_h1_chapter = bool(re.search(r"^# [^#]", body, re.MULTILINE))
+    has_h2_sources = bool(re.search(r"^##\s*参考来源", body))
+    # 允许首个 # 作为文档大标题
+    h1_count = len(re.findall(r"^# [^#]", body, re.MULTILINE))
+    if has_h2_sources and h1_count > 1:
+        return ["标题层级倒置：正文用「#」而参考来源用「##」，建议章节统一为「##」"]
+    return []
+
+
 def check_temporal_order(content: str) -> List[str]:
     """启发式检查叙事顺序。
 
@@ -272,25 +429,44 @@ def run_content_quality_checks(content: str) -> ContentQualityReport:
     issues: List[str] = []
     details: Dict[str, List[str]] = {}
 
+    title = _extract_title(content)
+    is_modern = _is_modern_column(title)
+
     # 1. 真实性
     details["truth"] = []
     details["truth"].extend(check_years_present(content))
-    details["truth"].extend(check_famous_critics(content))
+    # 现代职场/非史类专栏跳过司马光等古籍名家强制要求
+    if not is_modern:
+        details["truth"].extend(check_famous_critics(content))
     details["truth"].extend(check_placeholder_sections(content))
+    details["truth"].extend(check_common_typos(content))
 
     # 2. 可读性（复用并扩展 quality.py）
     details["readability"] = []
     ai_tone_issues = check_ai_tone(content)
     ai_tone_issues = _filter_natural_expressions(ai_tone_issues, content)
+    # 现代职场专栏过滤掉过于敏感的 AI 味模式（由 check_soft_ai_pattern 等专项接管控量）
+    if is_modern:
+        ai_tone_issues = filter_ai_tone_for_modern(ai_tone_issues)
     details["readability"].extend(ai_tone_issues)
-    details["readability"].extend(check_modern_jargon(content))
-    details["readability"].extend(check_mixed_language(content))
+    # check_modern_jargon 针对「历史叙事硬套现代术语」，现代职场专栏用「方法论/话术/模式」是正常词，跳过
+    if not is_modern:
+        details["readability"].extend(check_modern_jargon(content))
+    # 现代职场专栏用带白名单的中英文混杂检查（KPI/HR/offer/bug 等行业通用词不算混杂）
+    if is_modern:
+        details["readability"].extend(check_mixed_language_modern(content))
+    else:
+        details["readability"].extend(check_mixed_language(content))
     details["readability"].extend(check_sublimation_quota(content))
     details["readability"].extend(check_internal_repetition(content))
+    details["readability"].extend(check_soft_ai_pattern(content))
+    details["readability"].extend(check_modern_jargon_terms(content))
+    details["readability"].extend(check_title_hierarchy(content))
 
-    # 3. 顺序
+    # 3. 顺序（现代职场专栏跳过历史时间线检查）
     details["sequence"] = []
-    details["sequence"].extend(check_temporal_order(content))
+    if not is_modern:
+        details["sequence"].extend(check_temporal_order(content))
 
     # 4. 引用克制
     details["citation"] = []
@@ -298,6 +474,7 @@ def run_content_quality_checks(content: str) -> ContentQualityReport:
     details["citation"].extend(check_cross_chapter_jump(content))
     details["citation"].extend(check_citation_density(content))
     details["citation"].extend(check_sources_section(content))
+    details["citation"].extend(check_redundant_citation(content))
 
     for key in details:
         issues.extend(details[key])
