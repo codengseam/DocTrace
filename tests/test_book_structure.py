@@ -172,6 +172,40 @@ def test_check_book_structure_detects_zizhi_inconsistent_chapter_sort(tmp_path: 
     assert any(i.severity == "P1" for i in issues)
 
 
+def test_check_book_structure_accepts_mingji_module_name_stage_sort(tmp_path: Path):
+    """明纪阶段模式：模块名作为 chapter，chapter_sort 等于 BOOK_CATEGORY_ORDER 阶段序号，校验通过。"""
+    output = tmp_path / "output"
+    book_dir = output / "明纪"
+    book_dir.mkdir(parents=True)
+    (book_dir / "洪武之治与集权_废相集权.md").write_text(
+        "---\ntitle: 废相集权\nbook: 明纪\nchapter: 洪武之治与集权\nevent: 废相集权\nsort: 2\nchapter_sort: 2\n---\n正文",
+        encoding="utf-8",
+    )
+    (book_dir / "洪武之治与集权_胡蓝之狱.md").write_text(
+        "---\ntitle: 胡蓝之狱\nbook: 明纪\nchapter: 洪武之治与集权\nevent: 胡蓝之狱\nsort: 1\nchapter_sort: 2\n---\n正文",
+        encoding="utf-8",
+    )
+
+    issues, _ = check_book_structure(str(output))
+    assert not issues
+
+
+def test_check_book_structure_detects_mingji_inconsistent_chapter_sort(tmp_path: Path):
+    """明纪阶段模式：chapter_sort 与 BOOK_CATEGORY_ORDER 阶段序号不符，报 P1。"""
+    output = tmp_path / "output"
+    book_dir = output / "明纪"
+    book_dir.mkdir(parents=True)
+    # 洪武之治与集权 应为 chapter_sort=2，故意写成 5 触发告警
+    (book_dir / "洪武之治与集权_废相集权.md").write_text(
+        "---\ntitle: 废相集权\nbook: 明纪\nchapter: 洪武之治与集权\nevent: 废相集权\nsort: 2\nchapter_sort: 5\n---\n正文",
+        encoding="utf-8",
+    )
+
+    issues, _ = check_book_structure(str(output))
+    assert any("洪武之治与集权 的 chapter_sort 与阶段序号 2 不符" in i.message for i in issues)
+    assert any(i.severity == "P1" for i in issues)
+
+
 def test_output_has_no_structure_issues():
     """回归测试：真实 output/ 目录必须零问题（BUG-017 等历史问题不复发）。"""
     issues, _ = check_book_structure("output")

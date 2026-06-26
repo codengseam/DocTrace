@@ -100,14 +100,19 @@ def test_chapter_sort_key_shiji():
 
 
 def test_chapter_sort_key_tang_song_ming():
-    """唐纪/宋纪/明纪 按中文数字序号排序（修复字符串排序 bug）。"""
+    """唐纪/宋纪 按中文数字序号排序；明纪按模块名完全匹配阶段序号。"""
     assert chapter_sort_key("唐纪", "唐纪一") == (1, 1, "唐纪一")
     assert chapter_sort_key("唐纪", "唐纪三十三") == (1, 33, "唐纪三十三")
     assert chapter_sort_key("宋纪", "宋纪三十三") == (1, 33, "宋纪三十三")
-    assert chapter_sort_key("明纪", "明纪一") == (1, 1, "明纪一")
-    assert chapter_sort_key("明纪", "明纪四十二") == (1, 42, "明纪四十二")
-    # 验证不再按字符串序（"明纪三" < "明纪三十" 是字符串序，数字序应为 3 < 30）
-    assert chapter_sort_key("明纪", "明纪三")[1] < chapter_sort_key("明纪", "明纪三十")[1]
+    # 明纪改为模块名模式：chapter 是完整模块名，startswith 完全匹配，
+    # 无数字后缀故 ordinal=0
+    assert chapter_sort_key("明纪", "元末群雄与明朝建立") == (1, 0, "元末群雄与明朝建立")
+    assert chapter_sort_key("明纪", "洪武之治与集权") == (2, 0, "洪武之治与集权")
+    assert chapter_sort_key("明纪", "明亡与清军入关") == (8, 0, "明亡与清军入关")
+    # 阶段序号正确：元末(1) < 洪武(2) < ... < 明亡(8)
+    assert chapter_sort_key("明纪", "元末群雄与明朝建立") < chapter_sort_key("明纪", "明亡与清军入关")
+    # 未配置的模块名回退为大数
+    assert chapter_sort_key("明纪", "不存在的模块")[0] == 9999
 
 
 def test_chapter_sort_key_unconfigured_book():

@@ -323,3 +323,78 @@ def check_numeric_facts(text: str) -> dict:
         manual.append({"pattern": m.group(0), "snippet": text[max(0, m.start() - 20):m.end() + 20], "reason": "需核对职官记录"})
 
     return {"auto_errors": errors, "manual_review": manual}
+
+
+def check_chapter_title_soul(title: str) -> dict:
+    """章回体灵魂标题三维度评分。
+
+    检测 4 种坏模式（详见 .trae/skills/chapter-title-soul/SKILL.md）：
+    1. 事件标签（≤2 字动宾，如"备棺""上疏"）
+    2. 数字+量词（如"九个字""八十五天"）
+    3. 孤立物件指代（如"那支流矢""那封信"）
+    4. 装饰性诗化（如"龙湾的退潮""风雨欲来"）
+
+    Args:
+        title: 单个小标题文本（不含 "## 序号、" 前缀）
+
+    Returns:
+        {"score": 0-5, "reasons": [...]}
+        score < 3 表示需重写
+    """
+    if not title or not title.strip():
+        return {"score": 0, "reasons": ["空标题"]}
+
+    title = title.strip()
+    reasons: List[str] = []
+    score = 5  # 满分起点
+
+    # 坏模式 1: 数字+量词（九个字/八十五天/二十七年/三万人）
+    if re.match(r"^[一二三四五六七八九十百千万千两\d]+个?[字天年人里]$", title):
+        return {"score": 1, "reasons": ["数字+量词模式：信息密度不足，只点对象数量不点意义"]}
+
+    # 坏模式 2: 孤立物件指代（那支流矢/那封信/那把刀/那道旨意）
+    if re.match(r"^那[支把道封个名家员本]", title):
+        return {"score": 1, "reasons": ["孤立物件指代：只点物件不点意义"]}
+
+    # 坏模式 3: 事件标签（≤2 字动宾）
+    if len(title) <= 2:
+        return {"score": 2, "reasons": ["事件标签：标题过短，疑似事件名而非灵魂点睛"]}
+
+    # 好模式命中检测
+    good_patterns = [
+        (r"不.{0,2}不", "双重否定句式：指向必然性"),
+        (r"不是.+是", "颠覆句式：指向冲突"),
+        (r"必", "必然性词"),
+        (r"(替|免|压|撬|挡|忍)不了?|不住", "收束词：指向命运"),
+        (r"而已", "反差词：指向吊诡"),
+        (r"赢了|输了", "反差对比"),
+        (r"陪葬|悖论|讽刺|荒唐", "悖论词"),
+        (r"必须死|必须杀|亡国", "命运教训词"),
+    ]
+    good_hits = 0
+    for pattern, desc in good_patterns:
+        if re.search(pattern, title):
+            good_hits += 1
+            reasons.append(f"好模式命中：{desc}")
+
+    # 坏模式 4: 四字景物装饰性短语（风雨欲来/潮起潮落/落花流水）
+    # 注意：不自动扣分"XX的YY"结构，因为很多好标题用"的"字点反差
+    # （如"举人的命""干净的武器""纸糊的盛世"），自动检测误判率过高
+    verb_words = r"[是必输赢死亡替挡不住不了守护杀战败胜]"
+    if len(title) == 4 and good_hits == 0:
+        if re.search(r"[风雨潮花水月云雪山河春秋]", title) and not re.search(verb_words, title):
+            score = min(score, 2)
+            reasons.append("装饰性诗化：四字景物短语，信息密度不足")
+
+    # 无坏模式且无好模式：根据长度判断
+    if not reasons and good_hits == 0:
+        if len(title) >= 3:
+            score = 3  # 中长标题默认承载信息
+        else:
+            score = 2
+
+    # 有好模式但被坏模式扣分：好模式补救
+    if good_hits > 0 and score < 5:
+        score = min(5, score + good_hits)
+
+    return {"score": max(0, min(5, score)), "reasons": reasons if reasons else ["无扣分"]}
