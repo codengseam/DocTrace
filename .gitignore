@@ -26,3 +26,6 @@ dist/
 build/
 .mypy_cache/
 .ruff_cache/
+
+# 第三方方法论参考（本地克隆，不入仓库）
+vendor/

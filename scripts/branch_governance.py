@@ -477,7 +477,9 @@ def main():
     master_name = "master" if not REF_PREFIX else "master"
     all_branches = [b for b in all_branches if b != master_name and b != "main"]
     if not all_branches:
-        print("未找到远端分支")
+        # 即使无候选分支，也输出含保护分支段落的报告（修复 BUG：dry-run 无候选时输出缺失保护分支段落）
+        print(format_report(reports=[], protected=protected, mode=args.mode,
+                            pattern=args.pattern, threshold=args.threshold))
         return 0
 
     # 过滤候选

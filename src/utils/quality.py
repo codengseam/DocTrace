@@ -188,12 +188,25 @@ def check_citations(content: str) -> List[str]:
 
 def run_quality_check(content: str, required_sections: List[str]) -> Dict[str, List[str]]:
     """运行质量检查，返回分类问题字典（旧接口，保持向后兼容）。"""
+    cliche_report = check_ai_cliches(content)
+    cliche_issues = (
+        [f"AI 套话黑名单命中 {cliche_report['count']} 次：{', '.join(cliche_report['hits'])}"]
+        if cliche_report["level"] == "warning"
+        else []
+    )
+    numeric_report = check_numeric_facts(content)
+    numeric_issues = [
+        f"数字事实硬错误：{e['pattern']}（期望 {e['expected']}，实际 {e['actual']}）"
+        for e in numeric_report["auto_errors"]
+    ]
     return {
         "structure": check_structure(content, required_sections),
         "ai_tone": check_ai_tone(content),
         "modern_jargon": check_modern_jargon(content),
         "mixed_language": check_mixed_language(content),
         "sublimation_quota": check_sublimation_quota(content),
+        "ai_cliches": cliche_issues,
+        "numeric_facts": numeric_issues,
     }
 
 
@@ -205,7 +218,10 @@ def run_quality_checks(
     """运行完整质量检查，返回 QualityReport（新接口）。
 
     检查项：frontmatter 完整性、结构完整性、AI 味句式、现代术语、
-    中英文混杂、引用标记、段尾升华配额。
+    中英文混杂、引用标记、段尾升华配额、AI 套话黑名单、数字事实硬错误。
+
+    注：check_numeric_facts 的 manual_review 项（N 年前/N 岁/N 品官）
+    仅标记不判定，需由 content_reviewer Agent 复核，不计入此处 issues。
     """
     expected_sections = expected_sections or []
     required_frontmatter = required_frontmatter or []
@@ -217,4 +233,93 @@ def run_quality_checks(
     issues.extend(check_mixed_language(content))
     issues.extend(check_citations(content))
     issues.extend(check_sublimation_quota(content))
+
+    cliche_report = check_ai_cliches(content)
+    if cliche_report["level"] == "warning":
+        issues.append(
+            f"AI 套话黑名单命中 {cliche_report['count']} 次：{', '.join(cliche_report['hits'])}"
+        )
+
+    numeric_report = check_numeric_facts(content)
+    for e in numeric_report["auto_errors"]:
+        issues.append(
+            f"数字事实硬错误：{e['pattern']}（期望 {e['expected']}，实际 {e['actual']}）"
+        )
+
     return QualityReport(passed=len(issues) == 0, issues=issues)
+
+
+# AI 套话黑名单（LoopAgent 沉淀：命中 ≥ 3 次判定为 warning）
+AI_CLICHES_BLACKLIST = [
+    "综上所述",
+    "历史的车轮",
+    "让我们看到",
+    "以史为鉴",
+    "在历史的长河中",
+    "不禁让人深思",
+    "宛如一颗璀璨的明珠",
+    "时代的缩影",
+    "深刻地揭示了",
+    "正确废话",
+    "放之四海而皆准",
+]
+
+
+def check_ai_cliches(text: str) -> dict:
+    """检查 AI 套话黑名单。命中 ≥ 3 次返回 warning。
+
+    Returns:
+        {"count": int, "hits": [str], "level": "ok"|"warning"}
+    """
+    hits: List[str] = []
+    count = 0
+    for phrase in AI_CLICHES_BLACKLIST:
+        occurrences = text.count(phrase)
+        if occurrences > 0:
+            count += occurrences
+            hits.append(phrase)
+    level = "warning" if count >= 3 else "ok"
+    return {"count": count, "hits": hits, "level": level}
+
+
+def check_numeric_facts(text: str) -> dict:
+    """检测数字事实硬错误。
+
+    目前能自动检测的：
+    - "N 个字：X" 或 "N 个字，X" 但 len(X) != N
+
+    需要人工/Agent 复核的（本函数只标记，不判定）：
+    - "N 年前/N 年后" 模式
+    - "N 岁" 模式
+    - "N 品官" 模式
+
+    Returns:
+        {
+            "auto_errors": [{"pattern": "...", "expected": N, "actual": M}, ...],
+            "manual_review": [{"pattern": "...", "snippet": "...", "reason": "..."}, ...],
+        }
+    """
+    errors: List[dict] = []
+    manual: List[dict] = []
+
+    # 1. 自动检测："N 个字：X" 或 "N 个字，X"
+    for m in re.finditer("(\\d+)个字[：:，,]\\s*[\"'\u201c\u201d]?([^\"'\u201c\u201d，。！？\\n]{1,20})", text):
+        n = int(m.group(1))
+        x = m.group(2).strip().strip('"\'""')
+        actual = len(x)
+        if actual != n:
+            errors.append({"pattern": m.group(0), "expected": n, "actual": actual})
+
+    # 2. 标记需人工复核："N 年前/N 年后"
+    for m in re.finditer(r'(\d+)年[前后]', text):
+        manual.append({"pattern": m.group(0), "snippet": text[max(0, m.start() - 20):m.end() + 20], "reason": "需核对实际时间跨度"})
+
+    # 3. 标记需人工复核："N 岁"
+    for m in re.finditer(r'(\d+)岁', text):
+        manual.append({"pattern": m.group(0), "snippet": text[max(0, m.start() - 20):m.end() + 20], "reason": "需核对人物生卒年"})
+
+    # 4. 标记需人工复核："N 品官"
+    for m in re.finditer(r'([一二三四五六七八九十\d]+)品官', text):
+        manual.append({"pattern": m.group(0), "snippet": text[max(0, m.start() - 20):m.end() + 20], "reason": "需核对职官记录"})
+
+    return {"auto_errors": errors, "manual_review": manual}

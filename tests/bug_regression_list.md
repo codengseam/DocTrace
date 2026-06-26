@@ -357,3 +357,39 @@
   1. 质检规则按内容类型分化——古籍与现代专栏的"正常表达"边界不同（如「不是X而是Y」对古籍是 AI 味，对现代职场是常见判断句）。未来新增非史类专栏应先识别内容类型再套用对应规则集，避免一刀切误报。
   2. 子 Agent 修复后报告"已修"不可轻信，主流程必须重跑 `run_content_quality_checks` 验证分数达标（本次「底层操作系统」第一次 Agent 只改 1 处变体，漏 2 处）。
   3. 引用标注冗余是子 Agent 通病，写作规范应明确「正文已写明出处的，句末不再挂大意据标注」。
+
+---
+
+## branch_governance dry-run 无候选时输出缺失保护分支段落
+
+- **编号**：BUG-020
+- **首次出现**：2026-06-26
+- **类型**：构建
+- **现象**：`python scripts/branch_governance.py --mode dry-run --pattern "trae/agent-*" --no-fetch` 在无远端分支时只输出"未找到远端分支"，不含"保护分支"或"protected"段落，导致 `tests/run_regression_suite.sh` 第 10 步失败。
+- **根因**：`branch_governance.py` 第 479-481 行，当 `all_branches` 为空时直接 `print("未找到远端分支"); return 0`，跳过了 `format_report()`，而 `format_report()` 才是输出"保护分支"段落的函数。
+- **修复**：无候选分支时仍调用 `format_report(reports=[], protected=protected, ...)` 输出完整报告（含保护分支段落），再 return 0。
+- **涉及文件**：`scripts/branch_governance.py`
+- **回归测试**：`tests/run_regression_suite.sh` 第 10 步"dry-run 报告含保护分支段落"现已通过（18/18）
+
+---
+
+## 内容中"N 个字：X"等数字事实硬错误
+
+- **编号**：BUG-021
+- **首次出现**：2026-06-26
+- **类型**：数据
+- **现象**：灵魂注入试点（明纪·海瑞上疏）中，AI 写出"靠的就是两个字：刚"（刚是一个字）、"得从二十年前说起"（实际 17 年）、"嘉靖四十五年二月上疏"（实际嘉靖四十四年冬）等数字事实硬错误。
+- **根因**：
+  1. AI 在写作时套用"N 个字：X"句式模板时未核对实际字数。
+  2. 涉及年份/年龄时靠估算而非核对史料。
+  3. 现有 `quality.py` 无数字事实检查函数。
+- **修复**：
+  1. `src/utils/quality.py` 新增 `check_numeric_facts(text)`：自动检测"N 个字：X"且 `len(X) != N` 的硬错误；标记"N 年前/N 岁/N 品官"供 Agent 复核。
+  2. `.trae/skills/deep-reading/rules.md` §6.5 新增"数字事实硬约束"：涉及数字必须核对，不能靠估算。
+  3. `.trae/skills/deep-reading/content-quality.md` §9.3 新增"数字事实检查"扣分规则。
+- **涉及文件**：`src/utils/quality.py`、`.trae/skills/deep-reading/rules.md`、`.trae/skills/deep-reading/content-quality.md`、`output/明纪/嘉靖隆庆与张居正改革_海瑞上疏.md`
+- **回归测试**：`check_numeric_facts` 已接入 `run_quality_check` / `run_quality_checks` 主质检流程；`check_ai_cliches` 同步接入。
+- **教训**：
+  1. AI 写作的"低级事实错误"（字数/年份/年龄）不该靠人工 review 发现，必须有自动化拦截。
+  2. 灵魂注入（活人感/史观穿透）与合规（数字事实）是两类独立问题，不能互相替代——灵魂再好，数字错了仍是 P0。
+  3. superpowers 的 `verification-before-completion` 技能对此有直接指导：声称完成前必须运行验证命令并确认输出，证据先于断言。
