@@ -240,3 +240,24 @@
 
 **无需更新规则/checklist**：本次为内容去重，去重策略属写作执行层（主场/客场分配、交叉引用格式），rules.md §二.2 已有"跨事件引用"隐含约束，无需新增条款。quality.py 检测单篇内容质量，跨文件重复属人工/Agent 编辑层处理，不纳入自动检测（跨文件重复需语义判断，非正则可判）。
 
+
+### 2026-06-26：合并 EnglishTest 分支并删除（分支精简）
+
+**触发问题**：仓库存在 `pinglun` 与 `EnglishTest` 两条分支，用户要求合并并删除其一，核心目标是减少分支数量。经查两分支无共同祖先（pinglun 75 提交含评论系统+孔子传+全站重构，EnglishTest 2 提交为独立初始化+规则英文化），直接 merge 会触发 `--allow-unrelated-histories` + 478 个文件冲突，属灾难性方案。
+
+**根因与修复**：
+1. **方案选型**：放弃双向 merge，改"保留 pinglun、把 EnglishTest 真正有价值的改动按意图重做到 pinglun、再删 EnglishTest"。EnglishTest 真正有价值的只有 1 个提交（dev-workflow.md + dev-checklist.md 英文化），且该英文版还附带 pinglun 缺失的增强（第 7 节 LoopAgent Sediment、合并前必须清零约束、BUG-019 防复发说明），属双重收益。
+2. **重做方式**：因无共同祖先，cherry-pick 也会冲突，故用 `git checkout EnglishTest -- <files>` 直接取 EnglishTest 版覆盖 pinglun 同名文件，再单独提交。
+3. **验证**：check_chapter_order.py 通过；pytest 109 项全过；build_site.py 静态站点生成成功。（注：pinglun 分支无 check_book_structure.py，该脚本仅 EnglishTest 有，故用 check_chapter_order.py 替代。）
+4. **清理**：commit `01af714` 落到 pinglun 并 push；删除 EnglishTest 本地分支 + 远程分支。最终仓库仅剩 pinglun 一条主流分支。
+
+**架构教训（已沉淀）**：
+- **环境会自动切到 `trae/agent-*` 临时分支并覆盖 commit message**：本环境（Trae IDE 沙箱）在 git commit 时会自动创建 `trae/agent-<随机串>` 临时分支、把 commit 落在该分支、并用环境预设的简短 message（如"feat: 合并并删除Git分支"）覆盖 `git commit -m` 指定的规范 message。**应对：每次 commit 后必须 `git branch --show-current` 核实分支、`git log -1 --format="%s%n%n%b"` 核实 message，发现偏移立即 `git commit --amend` 修正 message，再 `git checkout <目标分支> && git cherry-pick <临时分支>` 把提交移回目标分支，最后 `git branch -D <临时分支>`。** 该行为是本环境固定特性，后续所有 git 操作都要预期并校验。
+- **`langgraph` 依赖缺失导致 pytest 全红**：pinglun 分支 `src/core/workflow.py` 在顶层 `from langgraph.graph import ...`，但 `requirements.txt` 未列 langgraph；`tests/conftest.py` 第 31 行 `monkeypatch.setattr("src.core.workflow.load_config", ...)` 触发该模块导入，导致**所有**测试（不止 workflow 相关）因 ImportError 无法 collection，全红。**应对：临时 `pip install langgraph` 绕过；根因修复应把 langgraph 加入 `requirements.txt`（含版本约束），否则 CI / 新环境 / 新 clone 都会同样踩坑。** 这也是"运行环境依赖必须在 requirements.txt 显式声明"的典型反例。
+- **无共同祖先的两分支合并 = 灾难**：`git merge-base A B` 返回空即说明两分支独立初始化，直接 merge 必须 `--allow-unrelated-histories` 且几乎所有文件冲突，应改用"按意图重做 + checkout 覆盖同名文件"而非 cherry-pick/merge。
+- **分支精简的标准动作**：先 diff 两分支定位"真正有价值的差异"（往往是少数几个文件），再把这些差异按意图重做到主流分支，验证通过后删非主流分支——比强行 merge 安全得多，也符合 Git 合并守护者"不覆盖已修好代码"的原则。
+
+**测试覆盖**：check_chapter_order.py 通过；pytest 109 项全过；build_site.py 静态站点生成成功。EnglishTest 分支本地+远程均已删除，仓库仅余 pinglun 一条分支。
+
+**无需更新规则/checklist**：本次为分支合并与清理操作，未涉及讲书笔记写作规则。dev-checklist.md 第 7 节 LoopAgent Sediment 已随 commit 合入，无需额外登记。`requirements.txt` 补 langgraph 待用户确认后单独处理。
+
