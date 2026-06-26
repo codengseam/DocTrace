@@ -1,0 +1,2861 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HaloRead 专栏质量全面审查报告</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Helvetica Neue",sans-serif;background:#f0f4f8;color:#1a202c;line-height:1.6;font-size:14px}
+a{color:#4f46e5}
+.header{background:linear-gradient(135deg,#1e293b,#3730a3);color:#fff;padding:36px 32px 28px}
+.header h1{font-size:1.9em;font-weight:800;letter-spacing:-.02em}
+.header .sub{opacity:.7;margin-top:8px;font-size:.95em}
+.header .badge-row{margin-top:16px;display:flex;gap:12px;flex-wrap:wrap}
+.hbadge{background:rgba(255,255,255,.15);border-radius:20px;padding:4px 14px;font-size:.82em;font-weight:600}
+.container{max-width:1200px;margin:0 auto;padding:24px}
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:24px}
+.kpi{background:#fff;border-radius:12px;padding:18px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.kpi .num{font-size:2.2em;font-weight:800;line-height:1.1}
+.kpi .lbl{color:#64748b;font-size:.78em;margin-top:4px;font-weight:500}
+.kpi.red .num{color:#dc2626}
+.kpi.orange .num{color:#ea580c}
+.kpi.yellow .num{color:#ca8a04}
+.kpi.green .num{color:#16a34a}
+.section-card{background:#fff;border-radius:12px;padding:22px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.section-card h2{font-size:1.05em;font-weight:700;color:#334155;margin-bottom:14px}
+.overview-table{width:100%;border-collapse:collapse;font-size:.85em}
+.overview-table th{background:#f8fafc;padding:9px 12px;text-align:left;font-weight:600;color:#475569;border-bottom:2px solid #e2e8f0;white-space:nowrap}
+.overview-table td{padding:8px 12px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+.overview-table tr:last-child td{border-bottom:none}
+.overview-table tr:hover td{background:#f8fafc}
+.overview-table td.num{text-align:center;font-weight:600}
+.overview-table td.red{color:#dc2626}
+.overview-table td.orange{color:#ea580c}
+.overview-table td.yellow{color:#ca8a04}
+.agents-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.agent-box{background:#f8fafc;border-left:3px solid #6366f1;border-radius:6px;padding:10px 14px}
+.agent-name{font-weight:700;font-size:.88em;color:#3730a3}
+.agent-cols{color:#64748b;font-size:.78em;margin-top:3px}
+.col-section{background:#fff;border-radius:12px;margin-bottom:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.col-header{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;cursor:pointer;user-select:none;transition:background .12s}
+.col-header:hover{background:#f8fafc}
+.col-left{display:flex;align-items:center;gap:10px}
+.col-right{display:flex;align-items:center;gap:10px;font-size:.82em;color:#64748b}
+.col-name{font-weight:700;font-size:1em}
+.status-tag{padding:2px 10px;border-radius:20px;font-size:.75em;font-weight:700}
+.status-red{background:#fef2f2;color:#dc2626}
+.status-orange{background:#fff7ed;color:#ea580c}
+.status-yellow{background:#fefce8;color:#ca8a04}
+.status-green{background:#f0fdf4;color:#16a34a}
+.stat{padding:1px 8px;border-radius:4px;background:#f1f5f9}
+.stat-dup{background:#fef2f2;color:#dc2626;font-weight:700}
+.stat-p1{background:#fff7ed;color:#ea580c;font-weight:600}
+.stat-p2{background:#fefce8;color:#ca8a04;font-weight:600}
+.chevron{font-size:.75em;transition:transform .2s;color:#94a3b8}
+.col-header.open .chevron{transform:rotate(180deg)}
+.col-body{padding:0 20px 20px;display:none;border-top:1px solid #f1f5f9}
+.col-body.open{display:block}
+.section-block{margin-top:16px}
+.block-title{font-weight:700;font-size:.9em;color:#334155;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.dup-block .block-title{color:#dc2626}
+.sem-block{background:#f0f9ff;border-radius:8px;padding:14px;border-left:3px solid #0ea5e9}
+.sem-block .block-title{color:#0369a1}
+.sem-block p{font-size:.85em;color:#475569;line-height:1.7}
+.small-table{width:100%;border-collapse:collapse;font-size:.83em}
+.small-table th{background:#fef2f2;padding:7px 10px;text-align:left;font-weight:600;color:#991b1b;border-bottom:1px solid #fecaca}
+.small-table td{padding:7px 10px;border-bottom:1px solid #fff5f5;vertical-align:top}
+.issues-table{width:100%;border-collapse:collapse;font-size:.82em;margin-top:10px}
+.issues-table th{background:#f8fafc;padding:7px 10px;text-align:left;font-weight:600;color:#475569;border-bottom:1px solid #e2e8f0;white-space:nowrap}
+.issues-table td{padding:6px 10px;border-bottom:1px solid #f8fafc;vertical-align:top}
+.issues-table tr:last-child td{border-bottom:none}
+.fname{font-family:"SF Mono",Monaco,monospace;font-size:.78em;color:#6366f1;word-break:break-all;max-width:240px}
+.issue-type{font-weight:600;color:#374151;white-space:nowrap}
+.issue-detail{color:#6b7280}
+.badge{display:inline-block;color:#fff;font-size:.73em;padding:2px 7px;border-radius:3px;font-weight:700;white-space:nowrap}
+.type-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.tag-issue{background:#f1f5f9;color:#475569;padding:2px 10px;border-radius:20px;font-size:.78em;font-weight:600}
+.ok-box{background:#f0fdf4;color:#15803d;border-radius:8px;padding:12px 16px;font-weight:600;font-size:.88em;margin-top:12px}
+footer{text-align:center;color:#94a3b8;font-size:.78em;padding:28px}
+@media(max-width:768px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.agents-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>🔍 HaloRead 专栏质量全面审查报告</h1>
+  <div class="sub">5 组专家 Agent 并行分析 · 机械扫描 + 语义阅读双重覆盖</div>
+  <div class="badge-row">
+    <span class="hbadge">📅 生成时间：2026-06-26</span>
+    <span class="hbadge">📚 16 个专栏</span>
+    <span class="hbadge">📄 686 篇文章</span>
+    <span class="hbadge">🤖 5 组 Agent 并行</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- KPI -->
+  <div class="kpi-grid">
+    <div class="kpi"><div class="num">16</div><div class="lbl">专栏数</div></div>
+    <div class="kpi"><div class="num">686</div><div class="lbl">文章总数</div></div>
+    <div class="kpi red"><div class="num">10</div><div class="lbl">重复事件数<br><small>（需清理）</small></div></div>
+    <div class="kpi orange"><div class="num">112</div><div class="lbl">P1 问题条数</div></div>
+    <div class="kpi yellow"><div class="num">302</div><div class="lbl">P2 问题条数</div></div>
+  </div>
+
+  <!-- Overview -->
+  <div class="section-card">
+    <h2>📊 专栏总览（点击行跳转详情）</h2>
+    <table class="overview-table">
+      <thead><tr><th>专栏名称</th><th>文章数</th><th>重复文件</th><th>P1问题</th><th>P2问题</th><th>总计</th></tr></thead>
+      <tbody><tr onclick="goTo('AI大模型学习')" style="cursor:pointer">
+          <td>🟠 <a href="#col-AI大模型学习" style="color:inherit;text-decoration:none">AI大模型学习</a></td>
+          <td class="num">37</td>
+          <td class="num ">0</td>
+          <td class="num orange">3</td>
+          <td class="num yellow">50</td>
+          <td class="num">53</td>
+        </tr><tr onclick="goTo('三国')" style="cursor:pointer">
+          <td>🟡 <a href="#col-三国" style="color:inherit;text-decoration:none">三国</a></td>
+          <td class="num">25</td>
+          <td class="num ">0</td>
+          <td class="num ">0</td>
+          <td class="num yellow">1</td>
+          <td class="num">1</td>
+        </tr><tr onclick="goTo('史记')" style="cursor:pointer">
+          <td>🔴 <a href="#col-史记" style="color:inherit;text-decoration:none">史记</a></td>
+          <td class="num">53</td>
+          <td class="num red">2</td>
+          <td class="num orange">15</td>
+          <td class="num yellow">27</td>
+          <td class="num">42</td>
+        </tr><tr onclick="goTo('唐纪')" style="cursor:pointer">
+          <td>🔴 <a href="#col-唐纪" style="color:inherit;text-decoration:none">唐纪</a></td>
+          <td class="num">34</td>
+          <td class="num red">1</td>
+          <td class="num ">0</td>
+          <td class="num yellow">17</td>
+          <td class="num">17</td>
+        </tr><tr onclick="goTo('孔子传')" style="cursor:pointer">
+          <td>🟠 <a href="#col-孔子传" style="color:inherit;text-decoration:none">孔子传</a></td>
+          <td class="num">26</td>
+          <td class="num ">0</td>
+          <td class="num orange">27</td>
+          <td class="num yellow">16</td>
+          <td class="num">43</td>
+        </tr><tr onclick="goTo('宋纪')" style="cursor:pointer">
+          <td>🟡 <a href="#col-宋纪" style="color:inherit;text-decoration:none">宋纪</a></td>
+          <td class="num">33</td>
+          <td class="num ">0</td>
+          <td class="num ">0</td>
+          <td class="num yellow">42</td>
+          <td class="num">42</td>
+        </tr><tr onclick="goTo('明纪')" style="cursor:pointer">
+          <td>🔴 <a href="#col-明纪" style="color:inherit;text-decoration:none">明纪</a></td>
+          <td class="num">49</td>
+          <td class="num red">7</td>
+          <td class="num ">0</td>
+          <td class="num yellow">20</td>
+          <td class="num">20</td>
+        </tr><tr onclick="goTo('易经课')" style="cursor:pointer">
+          <td>🟢 <a href="#col-易经课" style="color:inherit;text-decoration:none">易经课</a></td>
+          <td class="num">81</td>
+          <td class="num ">0</td>
+          <td class="num ">0</td>
+          <td class="num ">0</td>
+          <td class="num">0</td>
+        </tr><tr onclick="goTo('理财课')" style="cursor:pointer">
+          <td>🟠 <a href="#col-理财课" style="color:inherit;text-decoration:none">理财课</a></td>
+          <td class="num">57</td>
+          <td class="num ">0</td>
+          <td class="num orange">57</td>
+          <td class="num yellow">111</td>
+          <td class="num">168</td>
+        </tr><tr onclick="goTo('睡眠与精力修复课')" style="cursor:pointer">
+          <td>🟠 <a href="#col-睡眠与精力修复课" style="color:inherit;text-decoration:none">睡眠与精力修复课</a></td>
+          <td class="num">40</td>
+          <td class="num ">0</td>
+          <td class="num orange">1</td>
+          <td class="num yellow">4</td>
+          <td class="num">5</td>
+        </tr><tr onclick="goTo('职场沟通课')" style="cursor:pointer">
+          <td>🟡 <a href="#col-职场沟通课" style="color:inherit;text-decoration:none">职场沟通课</a></td>
+          <td class="num">67</td>
+          <td class="num ">0</td>
+          <td class="num ">0</td>
+          <td class="num yellow">9</td>
+          <td class="num">9</td>
+        </tr><tr onclick="goTo('论语')" style="cursor:pointer">
+          <td>🟠 <a href="#col-论语" style="color:inherit;text-decoration:none">论语</a></td>
+          <td class="num">24</td>
+          <td class="num ">0</td>
+          <td class="num orange">9</td>
+          <td class="num yellow">5</td>
+          <td class="num">14</td>
+        </tr><tr onclick="goTo('资治通鉴')" style="cursor:pointer">
+          <td>🟢 <a href="#col-资治通鉴" style="color:inherit;text-decoration:none">资治通鉴</a></td>
+          <td class="num">50</td>
+          <td class="num ">0</td>
+          <td class="num ">0</td>
+          <td class="num ">0</td>
+          <td class="num">0</td>
+        </tr><tr onclick="goTo('锻炼养生课')" style="cursor:pointer">
+          <td>🟢 <a href="#col-锻炼养生课" style="color:inherit;text-decoration:none">锻炼养生课</a></td>
+          <td class="num">38</td>
+          <td class="num ">0</td>
+          <td class="num ">0</td>
+          <td class="num ">0</td>
+          <td class="num">0</td>
+        </tr><tr onclick="goTo('饮食养生课')" style="cursor:pointer">
+          <td>🟢 <a href="#col-饮食养生课" style="color:inherit;text-decoration:none">饮食养生课</a></td>
+          <td class="num">42</td>
+          <td class="num ">0</td>
+          <td class="num ">0</td>
+          <td class="num ">0</td>
+          <td class="num">0</td>
+        </tr><tr onclick="goTo('饮食养生课第二版')" style="cursor:pointer">
+          <td>🟢 <a href="#col-饮食养生课第二版" style="color:inherit;text-decoration:none">饮食养生课第二版</a></td>
+          <td class="num">30</td>
+          <td class="num ">0</td>
+          <td class="num ">0</td>
+          <td class="num ">0</td>
+          <td class="num">0</td>
+        </tr></tbody>
+    </table>
+  </div>
+
+  <!-- Agent Groups -->
+  <div class="section-card">
+    <h2>🧑‍💼 5 组专家 Agent 分工</h2>
+    <div class="agents-grid">
+      <div class="agent-box"><div class="agent-name">📜 历史专家组A</div><div class="agent-cols">三国 · 史记 · 唐纪</div></div>
+      <div class="agent-box"><div class="agent-name">📜 历史专家组B</div><div class="agent-cols">宋纪 · 明纪 · 资治通鉴</div></div>
+      <div class="agent-box"><div class="agent-name">🧘 哲学文化组</div><div class="agent-cols">论语 · 孔子传 · 易经课</div></div>
+      <div class="agent-box"><div class="agent-name">💼 职场技能组</div><div class="agent-cols">AI大模型学习 · 职场沟通课</div></div>
+      <div class="agent-box"><div class="agent-name">🌿 生活养生组</div><div class="agent-cols">理财课 · 睡眠 · 锻炼 · 饮食（×2）</div></div>
+    </div>
+  </div>
+
+  <!-- Summary of findings -->
+  <div class="section-card">
+    <h2>📋 核心问题归纳（按优先级）</h2>
+    <table class="overview-table">
+      <thead><tr><th>优先级</th><th>问题类型</th><th>受影响专栏</th><th>建议行动</th></tr></thead>
+      <tbody>
+        <tr><td>🔴 P0</td><td>重复文件（新旧命名并存）</td><td>明纪(7)、史记(2)、唐纪(1)</td><td>删除旧命名文件（明纪三十X_ 系列）</td></tr>
+        <tr><td>🟠 P1</td><td>frontmatter 缺字段（created_at/source_agents）</td><td>理财课(57篇)、孔子传(26篇)、史记(11篇)、论语(9篇)</td><td>批量脚本补全 frontmatter</td></tr>
+        <tr><td>🟠 P1</td><td>内联跳转提示（见下章/见上文）</td><td>AI大模型学习(2处)、孔子传(1处)</td><td>全局搜索替换清理</td></tr>
+        <tr><td>🟠 P1</td><td>AI套路句式（我们可以看到/值得注意的是）</td><td>AI大模型学习、睡眠课各1处</td><td>逐篇修改</td></tr>
+        <tr><td>🟡 P2</td><td>缺少「参考来源」章节</td><td>AI大模型学习(37篇全)、理财课(57篇全)、孔子传(15篇)</td><td>批量补全或确认豁免规则</td></tr>
+        <tr><td>🟡 P2</td><td>标题层级问题（正文缺#标题或有多个#标题）</td><td>宋纪(33篇全缺)、唐纪(9篇)、理财课(57篇全缺)</td><td>批量检查正文首行标题</td></tr>
+        <tr><td>🟡 P2</td><td>引用密度过高（>3处/千字）</td><td>史记(19篇)、明纪(13篇)、论语(4篇)、唐纪(1篇)</td><td>参照规范迁至文末</td></tr>
+        <tr><td>🟡 P2</td><td>「不是X而是Y」句式过多（>3次/篇）</td><td>宋纪(7篇)、唐纪(4篇)、睡眠课(3篇)等共30余处</td><td>逐篇改写多样化表达</td></tr>
+        <tr><td>🟡 P2</td><td>历史文中出现现代术语</td><td>史记「降维打击」、唐纪「底层逻辑/闭环」、宋纪「底层逻辑」</td><td>替换为朴素历史语言</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Per-column sections -->
+  
+        <div class="col-section" id="col-AI大模型学习">
+          <div class="col-header" onclick="toggle(this)">
+            <div class="col-left">
+              <span class="col-name">📚 AI大模型学习</span>
+              <span class="status-orange status-tag">🟠 有问题</span>
+            </div>
+            <div class="col-right">
+              <span class="stat">37 篇</span>
+              
+              <span class='stat stat-p1'>P1: 3</span>
+              <span class='stat stat-p2'>P2: 50</span>
+              <span class="chevron">▼</span>
+            </div>
+          </div>
+          <div class="col-body">
+            
+            
+            <div class="section-block sem-block">
+              <div class="block-title">🧠 语义分析观察</div>
+              <p><strong>结构性规律：</strong>全专栏（37篇）缺少「参考来源」章节，部分篇目有标题层级混乱（多个#标题）。「不是X而是Y」句式在多篇超限，是该专栏最普遍的文风问题。</p>
+              <p style="margin-top:8px"><strong>内容质量：</strong>2处内联跳转「见第X章」（《提示词工程_任务与模型选型》《提示词工程_核心提示词技巧》），需清理。整体内容技术准确，案例生动，但参考来源普遍缺失。</p>
+            </div>
+            
+            <div class="section-block">
+              <div class="block-title">🔍 机械扫描问题明细（共 53 条）</div>
+              <div class="type-tags"><span class="tag-issue">缺少参考来源 ×37</span> <span class="tag-issue">「不是X而是Y」过多 ×7</span> <span class="tag-issue">标题层级问题 ×6</span> <span class="tag-issue">内联跳转提示 ×2</span> <span class="tag-issue">AI套路句式 ×1</span></div>
+              <table class="issues-table">
+                <thead><tr><th>文件</th><th>级别</th><th>类型</th><th>详情</th></tr></thead>
+                <tbody><tr>
+                      <td class="fname">Agent与RAG_Agent心智模型.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">Agent与RAG_Agent心智模型.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 5 次（建议≤3次）</td>
+                    </tr><tr>
+                      <td class="fname">Agent与RAG_MCP协议.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">Agent与RAG_RAG全流程.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">Agent与RAG_ReAct范式.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">Agent与RAG_工具调用.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">Agent与RAG_工具调用.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中有 4 个 # 级标题（应只有1个）</td>
+                    </tr><tr>
+                      <td class="fname">Agent与RAG_框架对比.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">上下文工程_LostInTheMiddle.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">上下文工程_RCR框架.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">上下文工程_上下文五大组成.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">上下文工程_记忆压缩.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">上下文工程_记忆压缩.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中有 3 个 # 级标题（应只有1个）</td>
+                    </tr><tr>
+                      <td class="fname">原理直觉_Token最小阅读单位.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">原理直觉_Transformer三大件.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">原理直觉_多模态入门.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">原理直觉_幻觉从哪来.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">原理直觉_幻觉从哪来.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 4 次（建议≤3次）</td>
+                    </tr><tr>
+                      <td class="fname">原理直觉_注意力机制.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">原理直觉_训练三阶段.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">开篇_AI浪潮与你.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">开篇_AI的能力边界.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">开篇_怎么用这份专栏.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">提示词工程_Eval评估.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">提示词工程_Eval评估.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中有 3 个 # 级标题（应只有1个）</td>
+                    </tr><tr>
+                      <td class="fname">提示词工程_任务与模型选型.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">内联跳转提示</td>
+                      <td class="issue-detail">出现: 见第.*?章</td>
+                    </tr><tr>
+                      <td class="fname">提示词工程_任务与模型选型.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">提示词工程_核心提示词技巧.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">内联跳转提示</td>
+                      <td class="issue-detail">出现: 见第.*?章</td>
+                    </tr><tr>
+                      <td class="fname">提示词工程_核心提示词技巧.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">提示词工程_消息结构.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">提示词工程_消息结构.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 5 次（建议≤3次）</td>
+                    </tr><tr>
+                      <td class="fname">提示词工程_防幻觉与约束.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">普通人落地_产品思维.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">普通人落地_变现与护城河.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">AI套路句式</td>
+                      <td class="issue-detail">出现: 我们可以看到</td>
+                    </tr><tr>
+                      <td class="fname">普通人落地_变现与护城河.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">普通人落地_找需求与MVP.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">程序员转型_AI编程工具全景.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">程序员转型_AI编程工具全景.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">程序员转型_提效实战.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">程序员转型_提效实战.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">程序员转型_程序员下一个十年.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">程序员转型_端到端实战.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">程序员转型_端到端实战.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中有 6 个 # 级标题（应只有1个）</td>
+                    </tr><tr>
+                      <td class="fname">趋势与速查_行业全景与未来趋势.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">趋势与速查_行业全景与未来趋势.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 4 次（建议≤3次）</td>
+                    </tr><tr>
+                      <td class="fname">附录_Top50高频名词速查.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">驾驭与循环工程_Harness工程.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">驾驭与循环工程_Loop工程.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">驾驭与循环工程_Loop工程.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 5 次（建议≤3次）</td>
+                    </tr><tr>
+                      <td class="fname">驾驭与循环工程_Subagent与多智能体.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">驾驭与循环工程_Subagent与多智能体.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 4 次（建议≤3次）</td>
+                    </tr><tr>
+                      <td class="fname">驾驭与循环工程_四大护栏与反馈闭环.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">驾驭与循环工程_四大护栏与反馈闭环.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 4 次（建议≤3次）</td>
+                    </tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="col-section" id="col-三国">
+          <div class="col-header" onclick="toggle(this)">
+            <div class="col-left">
+              <span class="col-name">📚 三国</span>
+              <span class="status-yellow status-tag">🟡 轻微问题</span>
+            </div>
+            <div class="col-right">
+              <span class="stat">25 篇</span>
+              
+              
+              <span class='stat stat-p2'>P2: 1</span>
+              <span class="chevron">▼</span>
+            </div>
+          </div>
+          <div class="col-body">
+            
+            
+            <div class="section-block sem-block">
+              <div class="block-title">🧠 语义分析观察</div>
+              <p><strong>结构性规律：</strong>仅1条P2问题（《黄巾之乱与董卓专权_天下大乱》「不是X而是Y」4次）。整体质量优秀。</p>
+              <p style="margin-top:8px"><strong>内容质量：</strong>历史叙事流畅，结构规范。</p>
+            </div>
+            
+            <div class="section-block">
+              <div class="block-title">🔍 机械扫描问题明细（共 1 条）</div>
+              <div class="type-tags"><span class="tag-issue">「不是X而是Y」过多 ×1</span></div>
+              <table class="issues-table">
+                <thead><tr><th>文件</th><th>级别</th><th>类型</th><th>详情</th></tr></thead>
+                <tbody><tr>
+                      <td class="fname">黄巾之乱与董卓专权_天下大乱.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 4 次（建议≤3次）</td>
+                    </tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="col-section" id="col-史记">
+          <div class="col-header" onclick="toggle(this)">
+            <div class="col-left">
+              <span class="col-name">📚 史记</span>
+              <span class="status-red status-tag">🔴 严重问题</span>
+            </div>
+            <div class="col-right">
+              <span class="stat">53 篇</span>
+              <span class='stat stat-dup'>重复 2</span>
+              <span class='stat stat-p1'>P1: 15</span>
+              <span class='stat stat-p2'>P2: 27</span>
+              <span class="chevron">▼</span>
+            </div>
+          </div>
+          <div class="col-body">
+            
+            <div class="section-block dup-block">
+              <div class="block-title">🔴 重复文件（需立即清理）</div>
+              <table class="small-table"><thead><tr><th>重复事件</th><th>文件列表</th></tr></thead>
+              <tbody><tr><td>🔴 <strong>鸿门宴</strong></td><td>汉纪_鸿门宴.md, 秦末大乱与楚汉相争_鸿门宴.md</td></tr><tr><td>🔴 <strong>火烧咸阳</strong></td><td>秦纪_火烧咸阳.md, 秦末大乱与楚汉相争_火烧咸阳.md</td></tr></tbody></table>
+            </div>
+            
+            <div class="section-block sem-block">
+              <div class="block-title">🧠 语义分析观察</div>
+              <p><strong>结构性规律：</strong>「秦人立国与图霸」「秦扫六合与暴政」「商鞅变法」等章节组（共11篇）批量缺少 created_at 和 source_agents，说明这批文章是更早期生成的，未经最新 frontmatter 规范处理。</p>
+              <p style="margin-top:8px"><strong>内容质量：</strong>引用密度问题突出：《彭城之战》每千字5.6处行内引用，远超3处上限；《秦纪_火烧咸阳》5.3处。另有重复文件：「鸿门宴」「火烧咸阳」各有两个版本（新旧命名并存）。历史文章中出现「降维打击」现代术语（《彭城之战》）。</p>
+            </div>
+            
+            <div class="section-block">
+              <div class="block-title">🔍 机械扫描问题明细（共 42 条）</div>
+              <div class="type-tags"><span class="tag-issue">引用密度过高 ×26</span> <span class="tag-issue">frontmatter缺字段 ×15</span> <span class="tag-issue">历史文中现代术语 ×1</span></div>
+              <table class="issues-table">
+                <thead><tr><th>文件</th><th>级别</th><th>类型</th><th>详情</th></tr></thead>
+                <tbody><tr>
+                      <td class="fname">商鞅变法与连横扩张_商鞅变法.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">商鞅变法与连横扩张_商鞅变法.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 3.8 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">商鞅变法与连横扩张_太后主政.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">商鞅变法与连横扩张_太后主政.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 3.3 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">商鞅变法与连横扩张_张仪连横.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">商鞅变法与连横扩张_张仪连横.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 3.3 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">商鞅变法与连横扩张_长平之战.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">商鞅变法与连横扩张_长平之战.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 4.5 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">汉初立国与文景之治_七国之乱.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 3.7 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">汉初立国与文景之治_高祖驾崩.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 3.1 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">秦人立国与图霸_哭庭救楚.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">秦人立国与图霸_哭庭救楚.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 3.9 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">秦人立国与图霸_始封西垂.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">秦人立国与图霸_文公东猎.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">秦人立国与图霸_文公东猎.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 3.4 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">秦人立国与图霸_穆公图霸.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">秦人立国与图霸_穆公图霸.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 4.6 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">秦人立国与图霸_襄公立国.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">秦扫六合与暴政_始皇立制.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">秦扫六合与暴政_焚书坑儒.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">秦扫六合与暴政_焚书坑儒.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 3.3 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">秦扫六合与暴政_王翦灭楚.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">秦扫六合与暴政_王翦灭楚.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 3.6 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">秦扫六合与暴政_长城骊山.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">秦扫六合与暴政_长城骊山.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 4.0 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">秦扫六合与暴政_韩非之死.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">秦扫六合与暴政_韩非之死.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 4.2 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">秦末大乱与楚汉相争_先入关中.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 4.1 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">秦末大乱与楚汉相争_垓下之围.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 3.5 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">秦末大乱与楚汉相争_彭城之战.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">历史文中现代术语</td>
+                      <td class="issue-detail">出现: 降维打击</td>
+                    </tr><tr>
+                      <td class="fname">秦末大乱与楚汉相争_彭城之战.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 5.6 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">秦末大乱与楚汉相争_指鹿为马.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 4.4 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">秦末大乱与楚汉相争_沛公起兵.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 4.2 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">秦末大乱与楚汉相争_火烧咸阳.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 4.0 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">秦末大乱与楚汉相争_破釜沉舟.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 4.2 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">秦末大乱与楚汉相争_背水一战.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 3.8 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">秦末大乱与楚汉相争_还定三秦.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 3.5 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">秦末大乱与楚汉相争_项梁渡江.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 3.9 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">秦末大乱与楚汉相争_鸿沟划界.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 3.9 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">秦末大乱与楚汉相争_鸿门宴.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 4.4 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">秦纪_火烧咸阳.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">秦纪_火烧咸阳.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 5.3 处（上限3处）</td>
+                    </tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="col-section" id="col-唐纪">
+          <div class="col-header" onclick="toggle(this)">
+            <div class="col-left">
+              <span class="col-name">📚 唐纪</span>
+              <span class="status-red status-tag">🔴 严重问题</span>
+            </div>
+            <div class="col-right">
+              <span class="stat">34 篇</span>
+              <span class='stat stat-dup'>重复 1</span>
+              
+              <span class='stat stat-p2'>P2: 17</span>
+              <span class="chevron">▼</span>
+            </div>
+          </div>
+          <div class="col-body">
+            
+            <div class="section-block dup-block">
+              <div class="block-title">🔴 重复文件（需立即清理）</div>
+              <table class="small-table"><thead><tr><th>重复事件</th><th>文件列表</th></tr></thead>
+              <tbody><tr><td>🔴 <strong>纳谏与用人</strong></td><td>贞观之治_纳谏与用人.md, 唐纪七_纳谏与用人.md</td></tr></tbody></table>
+            </div>
+            
+            <div class="section-block sem-block">
+              <div class="block-title">🧠 语义分析观察</div>
+              <p><strong>结构性规律：</strong>「开元盛世」「武周代唐」章节组（共9篇）缺少 # 级标题，正文直接以 ## 开篇，标题层级倒置。重复文件：「纳谏与用人」有两版本（贞观之治_vs_唐纪七_命名）。</p>
+              <p style="margin-top:8px"><strong>内容质量：</strong>「底层逻辑」（《武周代唐_女主称帝》《武周代唐_神龙政变》）、「闭环」（《贞观之治_君臣共治》）出现在历史叙事中，属不当现代术语。「不是X而是Y」句式在《女主称帝》出现5次。</p>
+            </div>
+            
+            <div class="section-block">
+              <div class="block-title">🔍 机械扫描问题明细（共 17 条）</div>
+              <div class="type-tags"><span class="tag-issue">标题层级问题 ×10</span> <span class="tag-issue">「不是X而是Y」过多 ×3</span> <span class="tag-issue">历史文中现代术语 ×3</span> <span class="tag-issue">引用密度过高 ×1</span></div>
+              <table class="issues-table">
+                <thead><tr><th>文件</th><th>级别</th><th>类型</th><th>详情</th></tr></thead>
+                <tbody><tr>
+                      <td class="fname">安史之乱_潼关失守.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">开元盛世_姚崇宋璟.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">开元盛世_姚崇宋璟.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 4 次（建议≤3次）</td>
+                    </tr><tr>
+                      <td class="fname">开元盛世_安禄山崛起.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">开元盛世_安禄山崛起.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 4 次（建议≤3次）</td>
+                    </tr><tr>
+                      <td class="fname">开元盛世_杨贵妃入宫.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">武周代唐_二圣临朝.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">武周代唐_女主称帝.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">历史文中现代术语</td>
+                      <td class="issue-detail">出现: 底层逻辑</td>
+                    </tr><tr>
+                      <td class="fname">武周代唐_女主称帝.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">武周代唐_女主称帝.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 5 次（建议≤3次）</td>
+                    </tr><tr>
+                      <td class="fname">武周代唐_武则天入宫.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">武周代唐_神龙政变.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">历史文中现代术语</td>
+                      <td class="issue-detail">出现: 底层逻辑</td>
+                    </tr><tr>
+                      <td class="fname">武周代唐_酷吏政治.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">武周代唐_高宗继位.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">贞观之治_君臣共治.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">历史文中现代术语</td>
+                      <td class="issue-detail">出现: 闭环</td>
+                    </tr><tr>
+                      <td class="fname">贞观之治_贞观之治的成就与局限.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">贞观之治_贞观开局.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 3.9 处（上限3处）</td>
+                    </tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="col-section" id="col-孔子传">
+          <div class="col-header" onclick="toggle(this)">
+            <div class="col-left">
+              <span class="col-name">📚 孔子传</span>
+              <span class="status-orange status-tag">🟠 有问题</span>
+            </div>
+            <div class="col-right">
+              <span class="stat">26 篇</span>
+              
+              <span class='stat stat-p1'>P1: 27</span>
+              <span class='stat stat-p2'>P2: 16</span>
+              <span class="chevron">▼</span>
+            </div>
+          </div>
+          <div class="col-body">
+            
+            
+            <div class="section-block sem-block">
+              <div class="block-title">🧠 语义分析观察</div>
+              <p><strong>结构性规律：</strong>全专栏（26篇）批量缺少 source_agents 字段。有15篇缺少「参考来源」章节，说明孔子传是较早批次生成，流程未完善。1处内联跳转「详见下章」（《周游列国_见南子》）。</p>
+              <p style="margin-top:8px"><strong>内容质量：</strong>内容整体质量较好，史实引用翔实。《周游列国_见南子》出现「（详见下章）」跳转提示需清理。</p>
+            </div>
+            
+            <div class="section-block">
+              <div class="block-title">🔍 机械扫描问题明细（共 43 条）</div>
+              <div class="type-tags"><span class="tag-issue">frontmatter缺字段 ×26</span> <span class="tag-issue">缺少参考来源 ×16</span> <span class="tag-issue">内联跳转提示 ×1</span></div>
+              <table class="issues-table">
+                <thead><tr><th>文件</th><th>级别</th><th>类型</th><th>详情</th></tr></thead>
+                <tbody><tr>
+                      <td class="fname">三十而立与创办私学_三十而立.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: source_agents</td>
+                    </tr><tr>
+                      <td class="fname">三十而立与创办私学_孔门三杰.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: source_agents</td>
+                    </tr><tr>
+                      <td class="fname">三十而立与创办私学_有教无类.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: source_agents</td>
+                    </tr><tr>
+                      <td class="fname">周游列国_匡地桓魋.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: source_agents</td>
+                    </tr><tr>
+                      <td class="fname">周游列国_见南子.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: source_agents</td>
+                    </tr><tr>
+                      <td class="fname">周游列国_见南子.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">内联跳转提示</td>
+                      <td class="issue-detail">出现: 详见下章</td>
+                    </tr><tr>
+                      <td class="fname">周游列国_陈蔡绝粮.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: source_agents</td>
+                    </tr><tr>
+                      <td class="fname">圣人降生与少年孤苦_三岁丧父.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: source_agents</td>
+                    </tr><tr>
+                      <td class="fname">圣人降生与少年孤苦_三岁丧父.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">圣人降生与少年孤苦_叔梁纥与颜徵在.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: source_agents</td>
+                    </tr><tr>
+                      <td class="fname">圣人降生与少年孤苦_叔梁纥与颜徵在.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">圣人降生与少年孤苦_吾少也贱.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: source_agents</td>
+                    </tr><tr>
+                      <td class="fname">圣人降生与少年孤苦_吾少也贱.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">圣人降生与少年孤苦_孔氏源流.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: source_agents</td>
+                    </tr><tr>
+                      <td class="fname">圣人降生与少年孤苦_孔氏源流.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">圣人降生与少年孤苦_尼丘降生.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: source_agents</td>
+                    </tr><tr>
+                      <td class="fname">圣人降生与少年孤苦_尼丘降生.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">归鲁修业与身后哀荣_作春秋.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: source_agents</td>
+                    </tr><tr>
+                      <td class="fname">归鲁修业与身后哀荣_删诗定礼.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: source_agents</td>
+                    </tr><tr>
+                      <td class="fname">归鲁修业与身后哀荣_弟子守丧.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: source_agents</td>
+                    </tr><tr>
+                      <td class="fname">归鲁修业与身后哀荣_弟子守丧.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">归鲁修业与身后哀荣_归鲁.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: source_agents</td>
+                    </tr><tr>
+                      <td class="fname">归鲁修业与身后哀荣_获麟与卒.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: source_agents</td>
+                    </tr><tr>
+                      <td class="fname">归鲁修业与身后哀荣_追封孔庙.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: source_agents</td>
+                    </tr><tr>
+                      <td class="fname">归鲁修业与身后哀荣_追封孔庙.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">求学立志_五父之衢.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: source_agents</td>
+                    </tr><tr>
+                      <td class="fname">求学立志_五父之衢.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">求学立志_入太庙.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: source_agents</td>
+                    </tr><tr>
+                      <td class="fname">求学立志_入太庙.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">求学立志_志于学.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: source_agents</td>
+                    </tr><tr>
+                      <td class="fname">求学立志_志于学.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">求学立志_问礼老子.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: source_agents</td>
+                    </tr><tr>
+                      <td class="fname">求学立志_问礼老子.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">求学立志_闻韶.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: source_agents</td>
+                    </tr><tr>
+                      <td class="fname">求学立志_闻韶.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">鲁国从政_中都宰.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: source_agents</td>
+                    </tr><tr>
+                      <td class="fname">鲁国从政_中都宰.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">鲁国从政_堕三都.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: source_agents</td>
+                    </tr><tr>
+                      <td class="fname">鲁国从政_堕三都.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">鲁国从政_夹谷之会.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: source_agents</td>
+                    </tr><tr>
+                      <td class="fname">鲁国从政_夹谷之会.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">鲁国从政_阳虎之乱.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: source_agents</td>
+                    </tr><tr>
+                      <td class="fname">鲁国从政_阳虎之乱.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="col-section" id="col-宋纪">
+          <div class="col-header" onclick="toggle(this)">
+            <div class="col-left">
+              <span class="col-name">📚 宋纪</span>
+              <span class="status-yellow status-tag">🟡 轻微问题</span>
+            </div>
+            <div class="col-right">
+              <span class="stat">33 篇</span>
+              
+              
+              <span class='stat stat-p2'>P2: 42</span>
+              <span class="chevron">▼</span>
+            </div>
+          </div>
+          <div class="col-body">
+            
+            
+            <div class="section-block sem-block">
+              <div class="block-title">🧠 语义分析观察</div>
+              <p><strong>结构性规律：</strong>全专栏（33篇）存在大范围标题层级问题——正文缺少 # 级大标题，全部使用 ## 开篇，可能是整批生成时未按规范设置顶级标题。另有6处「不是X而是Y」过密（《海上之盟》8次为最高）。</p>
+              <p style="margin-top:8px"><strong>内容质量：</strong>历史叙事本身较为流畅，「底层逻辑」出现在《南宋衰亡_采石之战》。《南宋衰亡_端平入洛》缺少参考来源章节。</p>
+            </div>
+            
+            <div class="section-block">
+              <div class="block-title">🔍 机械扫描问题明细（共 42 条）</div>
+              <div class="type-tags"><span class="tag-issue">标题层级问题 ×33</span> <span class="tag-issue">「不是X而是Y」过多 ×7</span> <span class="tag-issue">缺少参考来源 ×1</span> <span class="tag-issue">历史文中现代术语 ×1</span></div>
+              <table class="issues-table">
+                <thead><tr><th>文件</th><th>级别</th><th>类型</th><th>详情</th></tr></thead>
+                <tbody><tr>
+                      <td class="fname">仁宗盛治与庆历新政_仁宗盛治.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">仁宗盛治与庆历新政_仁宗盛治.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 4 次（建议≤3次）</td>
+                    </tr><tr>
+                      <td class="fname">仁宗盛治与庆历新政_刘太后临朝.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">仁宗盛治与庆历新政_宋夏战争.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">仁宗盛治与庆历新政_庆历新政.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">仁宗盛治与庆历新政_濮议之争.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">北宋建国与统一_先南后北.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">北宋建国与统一_杯酒释兵权.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">北宋建国与统一_灭北汉.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">北宋建国与统一_灭南唐.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">北宋建国与统一_烛影斧声.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">北宋建国与统一_陈桥兵变.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">北宋建国与统一_陈桥兵变.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 5 次（建议≤3次）</td>
+                    </tr><tr>
+                      <td class="fname">南宋衰亡_史弥远专权.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">南宋衰亡_崖山之战.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">南宋衰亡_崖山之战.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 4 次（建议≤3次）</td>
+                    </tr><tr>
+                      <td class="fname">南宋衰亡_庆元开禧.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">南宋衰亡_端平入洛.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">南宋衰亡_端平入洛.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">南宋衰亡_襄阳之战.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">南宋衰亡_采石之战.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">历史文中现代术语</td>
+                      <td class="issue-detail">出现: 底层逻辑</td>
+                    </tr><tr>
+                      <td class="fname">南宋衰亡_采石之战.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">南宋衰亡_隆兴乾淳.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">熙宁变法与党争_五路伐夏.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">熙宁变法与党争_元祐更化.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">熙宁变法与党争_元祐更化.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 5 次（建议≤3次）</td>
+                    </tr><tr>
+                      <td class="fname">熙宁变法与党争_党争初起.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">熙宁变法与党争_哲宗绍述.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">熙宁变法与党争_王安石变法.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">雍熙北伐与澶渊之盟_澶渊之盟.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">雍熙北伐与澶渊之盟_王小波李顺起义.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">雍熙北伐与澶渊之盟_高粱河与雍熙北伐.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">靖康之耻与南宋偏安_岳飞抗金.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">靖康之耻与南宋偏安_岳飞抗金.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 5 次（建议≤3次）</td>
+                    </tr><tr>
+                      <td class="fname">靖康之耻与南宋偏安_建炎南渡.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">靖康之耻与南宋偏安_徽宗与蔡京.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">靖康之耻与南宋偏安_徽宗与蔡京.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 6 次（建议≤3次）</td>
+                    </tr><tr>
+                      <td class="fname">靖康之耻与南宋偏安_海上之盟.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">靖康之耻与南宋偏安_海上之盟.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 8 次（建议≤3次）</td>
+                    </tr><tr>
+                      <td class="fname">靖康之耻与南宋偏安_绍兴和议.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">靖康之耻与南宋偏安_花石纲与方腊.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">靖康之耻与南宋偏安_靖康之耻.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="col-section" id="col-明纪">
+          <div class="col-header" onclick="toggle(this)">
+            <div class="col-left">
+              <span class="col-name">📚 明纪</span>
+              <span class="status-red status-tag">🔴 严重问题</span>
+            </div>
+            <div class="col-right">
+              <span class="stat">49 篇</span>
+              <span class='stat stat-dup'>重复 7</span>
+              
+              <span class='stat stat-p2'>P2: 20</span>
+              <span class="chevron">▼</span>
+            </div>
+          </div>
+          <div class="col-body">
+            
+            <div class="section-block dup-block">
+              <div class="block-title">🔴 重复文件（需立即清理）</div>
+              <table class="small-table"><thead><tr><th>重复事件</th><th>文件列表</th></tr></thead>
+              <tbody><tr><td>🔴 <strong>国本之争</strong></td><td>万历怠政与晚明危机_国本之争.md, 明纪三十四_国本之争.md</td></tr><tr><td>🔴 <strong>东林党争</strong></td><td>万历怠政与晚明危机_东林党争.md, 明纪三十七_东林党争.md</td></tr><tr><td>🔴 <strong>张居正死后清算</strong></td><td>明纪三十二_张居正死后清算.md, 嘉靖隆庆与张居正改革_张居正死后清算.md</td></tr><tr><td>🔴 <strong>张居正改革</strong></td><td>嘉靖隆庆与张居正改革_张居正改革.md, 明纪三十一_张居正改革.md</td></tr><tr><td>🔴 <strong>万历怠政</strong></td><td>万历怠政与晚明危机_万历怠政.md, 明纪三十三_万历怠政.md</td></tr><tr><td>🔴 <strong>萨尔浒之战</strong></td><td>万历怠政与晚明危机_萨尔浒之战.md, 明纪三十六_萨尔浒之战.md</td></tr><tr><td>🔴 <strong>三大征</strong></td><td>明纪三十五_三大征.md, 万历怠政与晚明危机_三大征.md</td></tr></tbody></table>
+            </div>
+            
+            <div class="section-block sem-block">
+              <div class="block-title">🧠 语义分析观察</div>
+              <p><strong>结构性规律：</strong>最严重问题：7个事件存在重复文件（「明纪三十X」旧命名与新章节命名并存），涉及张居正改革、万历怠政、东林党争、国本之争、萨尔浒之战、三大征共14个冗余文件，应清理旧命名文件。</p>
+              <p style="margin-top:8px"><strong>内容质量：</strong>引用密度普遍偏高（多篇超过4-5处/千字），《成化朝的隐患》5.3处为最高，《土木堡之变》4.3处、《夺门之变》4.6处。</p>
+            </div>
+            
+            <div class="section-block">
+              <div class="block-title">🔍 机械扫描问题明细（共 20 条）</div>
+              <div class="type-tags"><span class="tag-issue">引用密度过高 ×19</span> <span class="tag-issue">「不是X而是Y」过多 ×1</span></div>
+              <table class="issues-table">
+                <thead><tr><th>文件</th><th>级别</th><th>类型</th><th>详情</th></tr></thead>
+                <tbody><tr>
+                      <td class="fname">万历怠政与晚明危机_万历怠政.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 3.3 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">万历怠政与晚明危机_三大征.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 3.3 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">万历怠政与晚明危机_萨尔浒之战.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 4.1 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">万历怠政与晚明危机_魏忠贤专权.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 3.4 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">元末群雄与明朝建立_元末乱世.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 5 次（建议≤3次）</td>
+                    </tr><tr>
+                      <td class="fname">元末群雄与明朝建立_北伐大都.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 3.7 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">嘉靖隆庆与张居正改革_庚戌之变.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 3.5 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">土木之变与夺门之变_京城保卫战.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 4.0 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">土木之变与夺门之变_土木堡之变.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 4.3 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">土木之变与夺门之变_夺门之变.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 4.6 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">成弘正之治与社会转型_刘瑾之乱.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 3.6 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">成弘正之治与社会转型_弘治中兴.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 5.3 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">成弘正之治与社会转型_成化朝的隐患.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 4.7 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">明亡与清军入关_南明与清军入关.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 3.1 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">明亡与清军入关_甲申之变.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 4.2 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">明亡与清军入关_袁崇焕之死.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 4.1 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">明纪三十三_万历怠政.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 3.4 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">明纪三十五_三大征.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 3.3 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">明纪三十六_萨尔浒之战.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 4.2 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">永乐盛世与仁宣之治_靖难之役.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 3.8 处（上限3处）</td>
+                    </tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="col-section" id="col-易经课">
+          <div class="col-header" onclick="toggle(this)">
+            <div class="col-left">
+              <span class="col-name">📚 易经课</span>
+              <span class="status-green status-tag">✅ 通过</span>
+            </div>
+            <div class="col-right">
+              <span class="stat">81 篇</span>
+              
+              
+              
+              <span class="chevron">▼</span>
+            </div>
+          </div>
+          <div class="col-body">
+            
+            
+            <div class="section-block sem-block">
+              <div class="block-title">🧠 语义分析观察</div>
+              <p><strong>结构性规律：</strong>无机械扫描问题，整体质量最优。81篇全部通过。</p>
+              <p style="margin-top:8px"><strong>内容质量：</strong>规范性最好的专栏，frontmatter完整，结构一致。</p>
+            </div>
+            <div class="ok-box">✅ 无机械扫描问题</div>
+          </div>
+        </div>
+        <div class="col-section" id="col-理财课">
+          <div class="col-header" onclick="toggle(this)">
+            <div class="col-left">
+              <span class="col-name">📚 理财课</span>
+              <span class="status-orange status-tag">🟠 有问题</span>
+            </div>
+            <div class="col-right">
+              <span class="stat">57 篇</span>
+              
+              <span class='stat stat-p1'>P1: 57</span>
+              <span class='stat stat-p2'>P2: 111</span>
+              <span class="chevron">▼</span>
+            </div>
+          </div>
+          <div class="col-body">
+            
+            
+            <div class="section-block sem-block">
+              <div class="block-title">🧠 语义分析观察</div>
+              <p><strong>结构性规律：</strong>全专栏（57篇）frontmatter 缺少 created_at、source_agents 两个字段，属于批量性元数据缺失，疑似整批文章未经最终 frontmatter 补全流程。同时全专栏缺少 # 级大标题（均用 ## 开篇），以及缺少「参考来源」章节。内容质量本身较高，案例真实生动。</p>
+              <p style="margin-top:8px"><strong>内容质量：</strong>已读样本《ETF与场内基金》内容详实，金融逻辑准确，叙事案例有代入感，但「穷人思维/富人思维」框架在多篇反复出现，有模板化风险。</p>
+            </div>
+            
+            <div class="section-block">
+              <div class="block-title">🔍 机械扫描问题明细（共 168 条）</div>
+              <div class="type-tags"><span class="tag-issue">frontmatter缺字段 ×57</span> <span class="tag-issue">标题层级问题 ×57</span> <span class="tag-issue">缺少参考来源 ×41</span> <span class="tag-issue">「不是X而是Y」过多 ×13</span></div>
+              <table class="issues-table">
+                <thead><tr><th>文件</th><th>级别</th><th>类型</th><th>详情</th></tr></thead>
+                <tbody><tr>
+                      <td class="fname">兵器与阵法_ETF与场内基金.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_ETF与场内基金.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_ETF与场内基金.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_REITs.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_REITs.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_REITs.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_主动型基金.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_主动型基金.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_主动型基金.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_可转债.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_可转债.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_可转债.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_大额存单与国债.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_大额存单与国债.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_大额存单与国债.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_宽基指数基金.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_宽基指数基金.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_宽基指数基金.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_意外险与养老险.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_意外险与养老险.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_意外险与养老险.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_房产.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_房产.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_房产.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_活期与定期存款.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_活期与定期存款.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_活期与定期存款.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_现金管理类产品.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_现金管理类产品.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_现金管理类产品.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_纯债基金.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_纯债基金.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_纯债基金.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_股票投资.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_股票投资.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_股票投资.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_行业指数基金.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_行业指数基金.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_行业指数基金.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_货币基金.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_货币基金.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_货币基金.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_重疾险与医疗险.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_重疾险与医疗险.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_重疾险与医疗险.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_黄金.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_黄金.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">兵器与阵法_黄金.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">守正与筑基_保险配置的底层逻辑.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">守正与筑基_保险配置的底层逻辑.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">守正与筑基_保险配置的底层逻辑.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">守正与筑基_信用的价值与杠杆.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">守正与筑基_信用的价值与杠杆.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">守正与筑基_信用的价值与杠杆.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">守正与筑基_应急准备金.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">守正与筑基_应急准备金.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">守正与筑基_应急准备金.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">守正与筑基_庞氏骗局与消费陷阱.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">守正与筑基_庞氏骗局与消费陷阱.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">守正与筑基_庞氏骗局与消费陷阱.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">守正与筑基_现金流比利润更重要.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">守正与筑基_现金流比利润更重要.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">守正与筑基_现金流比利润更重要.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">守正与筑基_现金流比利润更重要.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 4 次（建议≤3次）</td>
+                    </tr><tr>
+                      <td class="fname">守正与筑基_记账的真正目的.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">守正与筑基_记账的真正目的.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">守正与筑基_记账的真正目的.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">守正与筑基_记账的真正目的.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 6 次（建议≤3次）</td>
+                    </tr><tr>
+                      <td class="fname">守正与筑基_风险与收益的天平.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">守正与筑基_风险与收益的天平.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">守正与筑基_风险与收益的天平.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">守正与筑基_风险与收益的天平.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 5 次（建议≤3次）</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_P2P的幽灵.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_P2P的幽灵.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_从货殖列传看中国式经商.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_从货殖列传看中国式经商.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_仓位管理与止盈止损.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_仓位管理与止盈止损.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_仓位管理与止盈止损.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 5 次（建议≤3次）</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_价值投资的本质.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_价值投资的本质.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_价值投资的本质.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 4 次（建议≤3次）</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_保本理财的真相.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_保本理财的真相.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_另类投资避坑.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_另类投资避坑.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_基金营销套路.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_基金营销套路.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_塔勒布的反脆弱.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_塔勒布的反脆弱.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_塔勒布的反脆弱.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 4 次（建议≤3次）</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_定投的底层逻辑.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_定投的底层逻辑.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_巴菲特的护城河.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_巴菲特的护城河.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_席勒与非理性繁荣.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_席勒与非理性繁荣.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_漫步华尔街的启示.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_漫步华尔街的启示.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_约翰博格的指数革命.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_约翰博格的指数革命.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_芒格的多元思维.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_芒格的多元思维.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_芒格的多元思维.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 6 次（建议≤3次）</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_达利欧的全天候策略.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_达利欧的全天候策略.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_达利欧的全天候策略.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 6 次（建议≤3次）</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_追涨杀跌的人性陷阱.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_追涨杀跌的人性陷阱.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">心法与避坑_追涨杀跌的人性陷阱.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 4 次（建议≤3次）</td>
+                    </tr><tr>
+                      <td class="fname">觉醒与破局_储蓄是买入未来的自由.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">觉醒与破局_储蓄是买入未来的自由.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">觉醒与破局_储蓄是买入未来的自由.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">觉醒与破局_储蓄是买入未来的自由.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 4 次（建议≤3次）</td>
+                    </tr><tr>
+                      <td class="fname">觉醒与破局_复利的奇迹与陷阱.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">觉醒与破局_复利的奇迹与陷阱.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">觉醒与破局_复利的奇迹与陷阱.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">觉醒与破局_理财不是暴富神话.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">觉醒与破局_理财不是暴富神话.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">觉醒与破局_理财不是暴富神话.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">觉醒与破局_理财不是暴富神话.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 4 次（建议≤3次）</td>
+                    </tr><tr>
+                      <td class="fname">觉醒与破局_穷人思维与富人思维.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">觉醒与破局_穷人思维与富人思维.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">觉醒与破局_穷人思维与富人思维.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">觉醒与破局_第一份财务体检.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">觉醒与破局_第一份财务体检.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">觉醒与破局_第一份财务体检.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">觉醒与破局_资产与负债的真相.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">觉醒与破局_资产与负债的真相.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">觉醒与破局_资产与负债的真相.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">觉醒与破局_金钱羞耻感与认知破局.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">觉醒与破局_金钱羞耻感与认知破局.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">觉醒与破局_金钱羞耻感与认知破局.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">觉醒与破局_金钱羞耻感与认知破局.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 4 次（建议≤3次）</td>
+                    </tr><tr>
+                      <td class="fname">觉醒与破局_钱的去件与来路.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">觉醒与破局_钱的去件与来路.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">觉醒与破局_钱的去件与来路.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">践行与自由_中年收入波动与副业.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">践行与自由_中年收入波动与副业.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">践行与自由_中年收入波动与副业.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">践行与自由_养老储备怎么做.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">践行与自由_养老储备怎么做.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">践行与自由_养老储备怎么做.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">践行与自由_刚上班攒第一桶金.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">践行与自由_刚上班攒第一桶金.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">践行与自由_刚上班攒第一桶金.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">践行与自由_子女教育金与财商启蒙.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">践行与自由_子女教育金与财商启蒙.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">践行与自由_子女教育金与财商启蒙.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">践行与自由_家庭资产配置模板.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">践行与自由_家庭资产配置模板.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">践行与自由_家庭资产配置模板.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">践行与自由_年终奖与买房首付.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">践行与自由_年终奖与买房首付.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">践行与自由_年终奖与买房首付.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">践行与自由_理财的终极意义.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">践行与自由_理财的终极意义.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">践行与自由_理财的终极意义.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">践行与自由_结婚生子财务规划.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">践行与自由_结婚生子财务规划.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">践行与自由_结婚生子财务规划.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">践行与自由_结婚生子财务规划.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 4 次（建议≤3次）</td>
+                    </tr><tr>
+                      <td class="fname">践行与自由_负债怎么合理偿还.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">践行与自由_负债怎么合理偿还.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">践行与自由_负债怎么合理偿还.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">践行与自由_遗产与财富传承.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">践行与自由_遗产与财富传承.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">缺少参考来源</td>
+                      <td class="issue-detail">未找到「参考来源」章节</td>
+                    </tr><tr>
+                      <td class="fname">践行与自由_遗产与财富传承.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="col-section" id="col-睡眠与精力修复课">
+          <div class="col-header" onclick="toggle(this)">
+            <div class="col-left">
+              <span class="col-name">📚 睡眠与精力修复课</span>
+              <span class="status-orange status-tag">🟠 有问题</span>
+            </div>
+            <div class="col-right">
+              <span class="stat">40 篇</span>
+              
+              <span class='stat stat-p1'>P1: 1</span>
+              <span class='stat stat-p2'>P2: 4</span>
+              <span class="chevron">▼</span>
+            </div>
+          </div>
+          <div class="col-body">
+            
+            
+            <div class="section-block sem-block">
+              <div class="block-title">🧠 语义分析观察</div>
+              <p><strong>结构性规律：</strong>整体质量较好，仅有少量问题。「不是X而是Y」句式在4篇中超限，《日间快速修复_散步恢复法》有「值得注意的是」AI套路句式。</p>
+              <p style="margin-top:8px"><strong>内容质量：</strong>内容科学性有保障，叙事节奏较好。</p>
+            </div>
+            
+            <div class="section-block">
+              <div class="block-title">🔍 机械扫描问题明细（共 5 条）</div>
+              <div class="type-tags"><span class="tag-issue">「不是X而是Y」过多 ×4</span> <span class="tag-issue">AI套路句式 ×1</span></div>
+              <table class="issues-table">
+                <thead><tr><th>文件</th><th>级别</th><th>类型</th><th>详情</th></tr></thead>
+                <tbody><tr>
+                      <td class="fname">场景化解决方案_高压加班回血.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 5 次（建议≤3次）</td>
+                    </tr><tr>
+                      <td class="fname">夜间睡眠优化_梦与睡眠质量.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 5 次（建议≤3次）</td>
+                    </tr><tr>
+                      <td class="fname">夜间睡眠优化_黄金九十分钟.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 5 次（建议≤3次）</td>
+                    </tr><tr>
+                      <td class="fname">开篇_你不是缺觉是不会休息.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">「不是X而是Y」过多</td>
+                      <td class="issue-detail">出现 5 次（建议≤3次）</td>
+                    </tr><tr>
+                      <td class="fname">日间快速修复_散步恢复法.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">AI套路句式</td>
+                      <td class="issue-detail">出现: 值得注意的是</td>
+                    </tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="col-section" id="col-职场沟通课">
+          <div class="col-header" onclick="toggle(this)">
+            <div class="col-left">
+              <span class="col-name">📚 职场沟通课</span>
+              <span class="status-yellow status-tag">🟡 轻微问题</span>
+            </div>
+            <div class="col-right">
+              <span class="stat">67 篇</span>
+              
+              
+              <span class='stat stat-p2'>P2: 9</span>
+              <span class="chevron">▼</span>
+            </div>
+          </div>
+          <div class="col-body">
+            
+            
+            <div class="section-block sem-block">
+              <div class="block-title">🧠 语义分析观察</div>
+              <p><strong>结构性规律：</strong>仅9条P2问题，均为「不是X而是Y」句式统计。整体质量较好。</p>
+              <p style="margin-top:8px"><strong>内容质量：</strong>结构规范，内容实用。</p>
+            </div>
+            
+            <div class="section-block">
+              <div class="block-title">🔍 机械扫描问题明细（共 9 条）</div>
+              <div class="type-tags"><span class="tag-issue">标题层级问题 ×9</span></div>
+              <table class="issues-table">
+                <thead><tr><th>文件</th><th>级别</th><th>类型</th><th>详情</th></tr></thead>
+                <tbody><tr>
+                      <td class="fname">职场协作_书面沟通邮件微信.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">职场协作_会议发言.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">职场协作_向上汇报.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">职场协作_向上管理.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">职场协作_工作出错怎么认错.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">职场协作_批评与反馈.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">职场协作_拒绝的艺术.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">职场协作_离职沟通.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr><tr>
+                      <td class="fname">职场协作_跨部门协作.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">标题层级问题</td>
+                      <td class="issue-detail">正文中缺少 # 级标题</td>
+                    </tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="col-section" id="col-论语">
+          <div class="col-header" onclick="toggle(this)">
+            <div class="col-left">
+              <span class="col-name">📚 论语</span>
+              <span class="status-orange status-tag">🟠 有问题</span>
+            </div>
+            <div class="col-right">
+              <span class="stat">24 篇</span>
+              
+              <span class='stat stat-p1'>P1: 9</span>
+              <span class='stat stat-p2'>P2: 5</span>
+              <span class="chevron">▼</span>
+            </div>
+          </div>
+          <div class="col-body">
+            
+            
+            <div class="section-block sem-block">
+              <div class="block-title">🧠 语义分析观察</div>
+              <p><strong>结构性规律：</strong>部分文章（9篇）缺少 created_at、source_agents 字段，为早期生成批次。引用密度极高：《孔子其人_孔子的一生》6.7处/千字，《教育之道_有教无类》4.2处/千字。</p>
+              <p style="margin-top:8px"><strong>内容质量：</strong>已读《孔子其人》：内容扎实，史料引用准确，但行内引用格式（——《论语·XXX》）密集，几乎每段都挂出处，阅读流感较差。需大幅疏减至文末统一来源。</p>
+            </div>
+            
+            <div class="section-block">
+              <div class="block-title">🔍 机械扫描问题明细（共 14 条）</div>
+              <div class="type-tags"><span class="tag-issue">frontmatter缺字段 ×9</span> <span class="tag-issue">引用密度过高 ×5</span></div>
+              <table class="issues-table">
+                <thead><tr><th>文件</th><th>级别</th><th>类型</th><th>详情</th></tr></thead>
+                <tbody><tr>
+                      <td class="fname">为政与治国_为政以德.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">为政与治国_孔子的政治遗憾.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 4.2 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">修身处世与齐家_修身之道.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">天命与终极关怀_天命与人.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">天命与终极关怀_孔子的终极关怀.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">天命与终极关怀_生死观.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">孔子其人_孔子的一生.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 6.7 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">孔子其人_孔子的困顿.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 4.0 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">孔子其人_孔子的性格.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">孔子其人_孔子的性格.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 4.0 处（上限3处）</td>
+                    </tr><tr>
+                      <td class="fname">弟子群像_子路.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">弟子群像_孔门群像.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">教育之道_有教无类.md</td>
+                      <td><span class="badge" style="background:#ea580c">P1</span></td>
+                      <td class="issue-type">frontmatter缺字段</td>
+                      <td class="issue-detail">缺少字段: created_at, source_agents</td>
+                    </tr><tr>
+                      <td class="fname">教育之道_有教无类.md</td>
+                      <td><span class="badge" style="background:#ca8a04">P2</span></td>
+                      <td class="issue-type">引用密度过高</td>
+                      <td class="issue-detail">每千字引用 4.2 处（上限3处）</td>
+                    </tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="col-section" id="col-资治通鉴">
+          <div class="col-header" onclick="toggle(this)">
+            <div class="col-left">
+              <span class="col-name">📚 资治通鉴</span>
+              <span class="status-green status-tag">✅ 通过</span>
+            </div>
+            <div class="col-right">
+              <span class="stat">50 篇</span>
+              
+              
+              
+              <span class="chevron">▼</span>
+            </div>
+          </div>
+          <div class="col-body">
+            
+            
+            <div class="section-block sem-block">
+              <div class="block-title">🧠 语义分析观察</div>
+              <p><strong>结构性规律：</strong>无机械扫描问题，整体质量优秀。50篇全部通过。</p>
+              <p style="margin-top:8px"><strong>内容质量：</strong>frontmatter完整，结构规范，引用克制。</p>
+            </div>
+            <div class="ok-box">✅ 无机械扫描问题</div>
+          </div>
+        </div>
+        <div class="col-section" id="col-锻炼养生课">
+          <div class="col-header" onclick="toggle(this)">
+            <div class="col-left">
+              <span class="col-name">📚 锻炼养生课</span>
+              <span class="status-green status-tag">✅ 通过</span>
+            </div>
+            <div class="col-right">
+              <span class="stat">38 篇</span>
+              
+              
+              
+              <span class="chevron">▼</span>
+            </div>
+          </div>
+          <div class="col-body">
+            
+            
+            <div class="section-block sem-block">
+              <div class="block-title">🧠 语义分析观察</div>
+              <p><strong>结构性规律：</strong>无机械扫描问题。38篇全部通过。</p>
+              <p style="margin-top:8px"><strong>内容质量：</strong>生活健康类内容，规范性好。</p>
+            </div>
+            <div class="ok-box">✅ 无机械扫描问题</div>
+          </div>
+        </div>
+        <div class="col-section" id="col-饮食养生课">
+          <div class="col-header" onclick="toggle(this)">
+            <div class="col-left">
+              <span class="col-name">📚 饮食养生课</span>
+              <span class="status-green status-tag">✅ 通过</span>
+            </div>
+            <div class="col-right">
+              <span class="stat">42 篇</span>
+              
+              
+              
+              <span class="chevron">▼</span>
+            </div>
+          </div>
+          <div class="col-body">
+            
+            
+            <div class="section-block sem-block">
+              <div class="block-title">🧠 语义分析观察</div>
+              <p><strong>结构性规律：</strong>无机械扫描问题。42篇全部通过。</p>
+              <p style="margin-top:8px"><strong>内容质量：</strong>规范性好，内容实用。</p>
+            </div>
+            <div class="ok-box">✅ 无机械扫描问题</div>
+          </div>
+        </div>
+        <div class="col-section" id="col-饮食养生课第二版">
+          <div class="col-header" onclick="toggle(this)">
+            <div class="col-left">
+              <span class="col-name">📚 饮食养生课第二版</span>
+              <span class="status-green status-tag">✅ 通过</span>
+            </div>
+            <div class="col-right">
+              <span class="stat">30 篇</span>
+              
+              
+              
+              <span class="chevron">▼</span>
+            </div>
+          </div>
+          <div class="col-body">
+            
+            
+            <div class="section-block sem-block">
+              <div class="block-title">🧠 语义分析观察</div>
+              <p><strong>结构性规律：</strong>无机械扫描问题。30篇全部通过。</p>
+              <p style="margin-top:8px"><strong>内容质量：</strong>第二版规范性好，对第一版有所改进。</p>
+            </div>
+            <div class="ok-box">✅ 无机械扫描问题</div>
+          </div>
+        </div>
+
+</div>
+<footer>HaloRead 内容质量审查报告 · 机械扫描覆盖全部 686 篇 · 语义分析基于各专栏抽样阅读</footer>
+
+<script>
+function toggle(header){
+  header.classList.toggle('open');
+  header.nextElementSibling.classList.toggle('open');
+}
+function goTo(name){
+  const el=document.getElementById('col-'+name);
+  if(el){
+    el.scrollIntoView({behavior:'smooth',block:'start'});
+    const h=el.querySelector('.col-header');
+    if(!h.classList.contains('open'))toggle(h);
+  }
+}
+// Auto-open problem sections
+document.querySelectorAll('.status-red,.status-orange').forEach(tag=>{
+  const sec=tag.closest('.col-section');
+  if(sec){
+    const h=sec.querySelector('.col-header');
+    h.classList.add('open');
+    sec.querySelector('.col-body').classList.add('open');
+  }
+});
+</script>
+</body>
+</html>
