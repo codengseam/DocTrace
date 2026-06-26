@@ -943,3 +943,64 @@ BUG-013 修复并部署后，PC 浏览器访问 GitHub Pages / ModelScope 均正
 2. 总编Agent 校准：首 5 篇只打标记不强制打回，跑 20 篇后定阈值
 3. 存量 686 篇按"总编 GO/REWORK"分级，REWORK 进重做队列
 4. 考虑把 superpowers 5 个有效技能的核心纪律写成 HaloRead 自己的 .trae/skills/ 原生技能（避免依赖 vendor/）
+
+## Loop #N：superpowers 原生技能化 + 明纪阶段校验 + 章回体灵魂标题自动化
+
+### 背景
+接续 Loop #N-1 的待办第 4 条，把 superpowers 5 个纯方法论技能（verification/systematic-debugging/TDD/receiving-review/writing-plans）原生化；同时解决用户提出的"九个字/那支流矢"等无灵魂标题问题。
+
+### 完成事项
+
+**工程沉淀（superpowers 原生技能化）**
+- 新增 `.trae/skills/verification-before-completion/SKILL.md`：5 核心纪律（每个断言要证据 / 验证必须执行 / 三层覆盖 / 失败即停 / 报告里带证据）
+- 新增 `.trae/skills/systematic-debugging/SKILL.md`：5 纪律（先复现 / 二分定位 / 可证伪假设 / 最小修复 / 回归测试）+ 6 步流程
+- 新增 `.trae/skills/tdd/SKILL.md`：Red-Green-Refactor 循环 + 5 纪律 + 契约表
+- 新增 `.trae/skills/receiving-code-review/SKILL.md`：5 纪律（每条都回应 / 反馈是事实不是攻击 / 修复前先验证 / 修复后验证+沉淀 / 复杂反馈批处理）
+- 新增 `.trae/skills/writing-plans/SKILL.md`：5 纪律（核心目标 / 五要素 / 等确认 / 回滚思维 / 并行化）
+
+**明纪阶段模式强校验**
+- `src/utils/sorting.py`：`BOOK_CATEGORY_ORDER["明纪"]` 从 `{"明纪": 1}` 扩展为 8 模块映射；`STAGE_MODE_BOOKS` 新增 `"明纪"`
+- `tests/test_sorting.py`：更新 `test_chapter_sort_key_tang_song_ming` 适配新模块名格式
+- `tests/test_book_structure.py`：新增 2 个回归测试（明纪一致 sort 通过 / 不一致报 P1）
+
+**章回体灵魂标题方法论 + 自动化检测**
+- 新增 `.trae/skills/chapter-title-soul/SKILL.md`：三维度评分法（信息密度 0-2 / 灵魂指向 0-2 / 呼应节奏 0-1，满分 5，<3 必重写）+ 5 种好模式 + 4 种坏模式 + 重写决策树 + 7 步重写流程
+- `src/utils/quality.py` 新增 `check_chapter_title_soul`：自动检测 4 种坏模式（事件标签/数字量词/孤立物件/装饰诗化）+ 8 种好模式命中加分
+- `tests/test_quality.py`：新增 9 个 TDD 测试覆盖好/坏/边界
+- `.trae/skills/deep-reading/rules.md` §6.4：从"不是事件标签"升级为"不是事件标签，也不是诗化装饰"，补 5 种好模式
+- `.trae/skills/deep-reading/content-quality.md` §9.4：从二元判定升级为三维度评分表
+
+**明纪 41 篇标题批量重写**
+- 扫描 261 个标题，发现 17 个 <3 分（修复误判后从 46 降到 17）
+- 按 5 种好模式重写：4 颠覆句式 + 3 反差对比 + 6 悖论词 + 3 必然性词 + 1 收束词
+- 重写后 261 个标题全部 ≥3 分（其中 34 个命中好模式得 5 分）
+
+### 关键教训
+1. **自动化检测先看误判率，再决定扣分粒度**。`check_chapter_title_soul` 初版对"XX的YY"自动扣分，56% 误判率（举人的命/干净的武器/纸糊的盛世都是好标题）。修复后只对 4 字景物短语自动扣分，"XX的YY"留给人工。检测函数宁缺毋滥，误判比漏判更打击内容作者。
+2. **TDD 在内容质检函数上同样有效**。先写 9 个失败测试（好标题应高分/坏标题应低分/边界）→ 再写实现 → 修误判时加新测试锁定行为。Red-Green-Refactor 不限于业务代码。
+3. **标题句式多样性是隐性约束**。17 个重写标题初版 65% 用"不是X是Y"句式，虽然单篇不违反"每篇≤3处"的硬约束，但读者读完整本会腻。最终平衡为：颠覆 4 / 反差对比 3 / 悖论词 6 / 必然性词 3 / 收束词 1。
+4. **superpowers 的价值在纪律不在工具**。5 个技能的核心都是"反直觉的纪律"（先复现再修 / 先写测试再写代码 / 每条反馈都回应），Trae 原生化时只保留纪律部分，不照搬 prompt 模板。
+5. **阶段模式（STAGE_MODE_BOOKS）从"资治通鉴"扩展到"明纪"**。明纪 8 个模块名（元末群雄与明朝建立 → 明亡与清军入关）作为朝代阶段，chapter_sort 一致即可通过校验。这套路可推广到所有按朝代/阶段分模块的书。
+
+### 规则/checklist/Skill 更新
+- `.trae/skills/{verification-before-completion,systematic-debugging,tdd,receiving-code-review,writing-plans}/SKILL.md`（5 个新增）
+- `.trae/skills/chapter-title-soul/SKILL.md`（新增）
+- `.trae/skills/deep-reading/rules.md` §6.4（增强）
+- `.trae/skills/deep-reading/content-quality.md` §9.4（升级三维度评分）
+- `src/utils/sorting.py`（明纪阶段模式）
+- `src/utils/quality.py`（check_chapter_title_soul）
+- `tests/test_sorting.py` / `tests/test_book_structure.py` / `tests/test_quality.py`（回归测试）
+- `output/明纪/*.md`（17 个标题重写）
+
+### 可复用资产
+- "三维度评分法（信息密度/灵魂指向/呼应节奏）"可推广到史记/资治通鉴/易经课所有专栏
+- `check_chapter_title_soul` 函数可直接接入 ChiefEditor Agent 的终审环节
+- "扫描→列低分→批量重写→句式多样性平衡→重扫验证"流程可复用
+- superpowers 5 原生技能可作为后续所有开发对话的纪律底座
+
+### 待办（下一 Loop）
+1. 灵魂注入推广到史记/资治通鉴（各选 1 篇对标当年明月盲测）
+2. 总编Agent 校准：首 5 篇只打标记不强制打回，跑 20 篇后定阈值
+3. 存量 686 篇按"总编 GO/REWORK"分级，REWORK 进重做队列
+4. 把 check_chapter_title_soul 接入 ChiefEditor Agent 终审（<3 分自动打回重写）
+5. 标题"灵魂"扩展到史记/资治通鉴（先扫描存量低分标题清单）
