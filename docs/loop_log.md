@@ -895,3 +895,51 @@ BUG-013 修复并部署后，PC 浏览器访问 GitHub Pages / ModelScope 均正
 ### 可复用资产
 - `MODERN_ENGLISH_WHITELIST` / `MODERN_AI_OVERSTRICT_PATTERNS` 模式可复用到其他现代非史类专栏（商科/心理学/管理）的白名单与过滤设计。
 - "区分真实问题 vs 误报 → 先修真实问题 → 再优化规则消误报 → 重跑分数验证"的流程可复用于所有质检规则调优场景。
+
+---
+
+## Loop #N：灵魂注入专项 - 明纪·海瑞上疏 AB 盲测（2026-06-26）
+
+### 背景
+千问/coze/智谱联合给出"注入灵魂"计划，Claude Code 给出 review_system.py 审查产物。用户要求把 HaloRead 从"及格 AI 流水线产物"提升到"有当年明月灵魂的顶流水准"。方法论参考 obra/superpowers（MIT），用其 5 个纯方法论技能。
+
+### 核心改动
+1. **试点选样**：明纪·海瑞上疏（对标当年明月《明朝那些事儿》海瑞章节，可盲测）
+2. **AB 盲测 5 轮迭代**：v1（1900字太瘦）→ v1.1（修数字错误）→ v2（5400字+网文技巧）→ v2.1（加章回体小标题）→ v2.2（小标题从"事件标签"升级为"灵魂点睛"）
+3. **固化产物**：
+   - rules.md §6：灵魂注入约束（三约束+网文六技巧+章回体灵魂标题+数字事实硬约束）
+   - content-quality.md §9：灵魂维度（灵魂三问+AI套话黑名单+数字事实检查），质检从四维度升五维度
+   - tone_setter.py + chief_editor.py：定调节点+总编Agent
+   - workflow.py：双节点接入，SOUL_INJECTION_ENABLED 开关
+   - quality.py：check_ai_cliches + check_numeric_facts
+
+### 关键教训
+1. **灵魂注入与合规是两类独立问题，不能互相替代**。灵魂再好（活人感/史观穿透），数字错了（"两个字：刚"实际一字）仍是 P0。check_numeric_facts 必须自动化拦截，不能靠人工 review。
+2. **小标题是"事件标签"还是"灵魂点睛"决定文章质感**。"备棺/上疏/退田"只告诉读者"讲什么"；"不能不刚/天下人不直陛下/撬不动"告诉读者"要刺什么"。后者才是当年明月笔法。
+3. **网文技巧（起承转合+埋钩子）服务于"读起来停不下来"，但不能滑向爽文化**。残酷底色仍为最高优先级——不能用网文的"爽"消解历史的"残酷"。
+4. **ToneSetter 不能定一个调，要定"核心冲突+情感锚点"**。5 个 Specialist 拿同一份基调大纲容易写出同质化的"冰冷残酷"。当年明月的魅力在于逐篇换调（朱元璋冷峻/海瑞悲悯/于谦激昂）。
+5. **总编Agent不是二次质检员，是"一票否决/打回重做"决策者**。合规质检（content_reviewer）管"对不对"，总编管"值不值得发"。两者职责分层，不能合并。
+6. **superpowers 在 Trae 中只能当方法论参考，不能当原生技能**。Trae 不支持 /superpowers:xxx 斜杠命令。实际有效的 5 个纯方法论技能（verification/systematic-debugging/TDD/receiving-review/writing-plans）已被吸收进 HaloRead 自己的 rules/checklist，不需要把 superpowers 原文 push 到仓库（vendor/ 已 gitignore）。
+7. **Trae 会自动 commit，覆盖手动 commit message**。本次 commit message 被 Trae 默认的"feat: 优化读书网站内容策略"覆盖，需用 git commit --amend 修正。后续开发若需规范 commit message，应在 add 后立即 amend。
+
+### 规则/checklist/Skill 更新
+- `.trae/skills/deep-reading/rules.md` §6（新增）
+- `.trae/skills/deep-reading/content-quality.md` §9（新增）+ §一维度表（四维度→五维度）
+- `src/agents/tone_setter.py`（新增）
+- `src/agents/chief_editor.py`（新增）
+- `src/core/workflow.py`（双节点+开关）
+- `src/utils/quality.py`（双函数）
+- `scripts/branch_governance.py`（BUG-020 修复）
+- `tests/bug_regression_list.md`（BUG-020/021）
+
+### 可复用资产
+- "AB 盲测+对标原文+5轮迭代"流程可复用到其他专栏的灵魂注入推广（下一步：史记/资治通鉴）
+- "灵魂三问"（活人测试/洞察独家性/底色敬畏感）可作为所有历史类专栏的终审标准
+- "章回体灵魂标题"设计法（标题点"要刺什么"而非"讲什么"+ 首尾呼应构成命运闭环）可复用
+- check_numeric_facts 的正则模式可扩展（N年/N岁/N品官 → N月/N日/N里/N石等）
+
+### 待办（下一 Loop）
+1. 灵魂注入推广到史记/资治通鉴（各选 1 篇对标当年明月盲测）
+2. 总编Agent 校准：首 5 篇只打标记不强制打回，跑 20 篇后定阈值
+3. 存量 686 篇按"总编 GO/REWORK"分级，REWORK 进重做队列
+4. 考虑把 superpowers 5 个有效技能的核心纪律写成 HaloRead 自己的 .trae/skills/ 原生技能（避免依赖 vendor/）
