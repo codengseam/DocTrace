@@ -929,8 +929,8 @@ BUG-013 修复并部署后，PC 浏览器访问 GitHub Pages / ModelScope 均正
 - `src/agents/chief_editor.py`（新增）
 - `src/core/workflow.py`（双节点+开关）
 - `src/utils/quality.py`（双函数）
-- `scripts/branch_governance.py`（BUG-020 修复）
-- `tests/bug_regression_list.md`（BUG-020/021）
+- `scripts/branch_governance.py`（BUG-025 修复）
+- `tests/bug_regression_list.md`（BUG-025/026）
 
 ### 可复用资产
 - "AB 盲测+对标原文+5轮迭代"流程可复用到其他专栏的灵魂注入推广（下一步：史记/资治通鉴）
