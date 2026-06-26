@@ -1043,3 +1043,62 @@ BUG-013 修复并部署后，PC 浏览器访问 GitHub Pages / ModelScope 均正
 3. 新增 `KNOWLEDGE_TERMS_WHITELIST`（Token/Transformer/Attention/RAG 等）
 4. 理财课/AI课质检误报数对比验证（阶段2 验收指标）
 5. 落实 BUG-026 教训：灵魂类检查按桶路由、合规类全桶共享
+
+---
+
+## 跨分支沉淀：合并 EnglishTest 分支并删除（2026-06-26，分支精简）
+
+> 本条来自另一分支 AI 工作时的典型问题沉淀，与 archetype 分桶无直接关系，但其中的环境特性与依赖管理教训对本项目所有后续工作均适用，故追加归档。
+
+### 触发问题
+仓库存在 `pinglun` 与 `EnglishTest` 两条分支，用户要求合并并删除其一，核心目标是减少分支数量。经查两分支无共同祖先（pinglun 75 提交含评论系统+孔子传+全站重构，EnglishTest 2 提交为独立初始化+规则英文化），直接 merge 会触发 `--allow-unrelated-histories` + 478 个文件冲突，属灾难性方案。
+
+### 根因与修复
+1. **方案选型**：放弃双向 merge，改"保留 pinglun、把 EnglishTest 真正有价值的改动按意图重做到 pinglun、再删 EnglishTest"。EnglishTest 真正有价值的只有 1 个提交（dev-workflow.md + dev-checklist.md 英文化），且该英文版还附带 pinglun 缺失的增强（第 7 节 LoopAgent Sediment、合并前必须清零约束、BUG-019 防复发说明），属双重收益。
+2. **重做方式**：因无共同祖先，cherry-pick 也会冲突，故用 `git checkout EnglishTest -- <files>` 直接取 EnglishTest 版覆盖 pinglun 同名文件，再单独提交。
+3. **验证**：check_chapter_order.py 通过；pytest 109 项全过；build_site.py 静态站点生成成功。（注：pinglun 分支无 check_book_structure.py，该脚本仅 EnglishTest 有，故用 check_chapter_order.py 替代。）
+4. **清理**：commit `01af714` 落到 pinglun 并 push；删除 EnglishTest 本地分支 + 远程分支。最终仓库仅剩 pinglun 一条主流分支。
+
+### 架构教训（已沉淀）
+- **环境会自动切到 `trae/agent-*` 临时分支并覆盖 commit message**：本环境（Trae IDE 沙箱）在 git commit 时会自动创建 `trae/agent-<随机串>` 临时分支、把 commit 落在该分支、并用环境预设的简短 message（如"feat: 合并并删除Git分支"）覆盖 `git commit -m` 指定的规范 message。**应对：每次 commit 后必须 `git branch --show-current` 核实分支、`git log -1 --format="%s%n%n%b"` 核实 message，发现偏移立即 `git commit --amend` 修正 message，再 `git checkout <目标分支> && git cherry-pick <临时分支>` 把提交移回目标分支，最后 `git branch -D <临时分支>`。** 该行为是本环境固定特性，后续所有 git 操作都要预期并校验。
+- **`langgraph` 依赖缺失导致 pytest 全红**：pinglun 分支 `src/core/workflow.py` 在顶层 `from langgraph.graph import ...`，但 `requirements.txt` 未列 langgraph；`tests/conftest.py` 第 31 行 `monkeypatch.setattr("src.core.workflow.load_config", ...)` 触发该模块导入，导致**所有**测试（不止 workflow 相关）因 ImportError 无法 collection，全红。**应对：临时 `pip install langgraph` 绕过；根因修复应把 langgraph 加入 `requirements.txt`（含版本约束），否则 CI / 新环境 / 新 clone 都会同样踩坑。** 这也是"运行环境依赖必须在 requirements.txt 显式声明"的典型反例。当前 archetype 分支同样踩此坑（见上文 loop_log:276），属共性问题。
+- **无共同祖先的两分支合并 = 灾难**：`git merge-base A B` 返回空即说明两分支独立初始化，直接 merge 必须 `--allow-unrelated-histories` 且几乎所有文件冲突，应改用"按意图重做 + checkout 覆盖同名文件"而非 cherry-pick/merge。
+- **分支精简的标准动作**：先 diff 两分支定位"真正有价值的差异"（往往是少数几个文件），再把这些差异按意图重做到主流分支，验证通过后删非主流分支——比强行 merge 安全得多，也符合 Git 合并守护者"不覆盖已修好代码"的原则。
+
+### 测试覆盖
+check_chapter_order.py 通过；pytest 109 项全过；build_site.py 静态站点生成成功。EnglishTest 分支本地+远程均已删除，仓库仅余 pinglun 一条分支。
+
+### 无需更新规则/checklist
+本次为分支合并与清理操作，未涉及讲书笔记写作规则。dev-checklist.md 第 7 节 LoopAgent Sediment 已随 commit 合入，无需额外登记。`requirements.txt` 补 langgraph 待用户确认后单独处理。
+
+---
+
+## 阶段2 质检分桶落地（2026-06-26，archetype 路由）
+
+### 触发问题
+阶段1 打通了 archetype 数据流（`_meta.yaml` → `AgentState.archetype` → `content_reviewer`），但质检层仍是"一把菜刀"：`run_content_quality_checks` 靠 `_is_modern_column`（8 词关键词）和 `_is_philosophy_or_classic`（9 词）做"逃生阀"，漏掉财/技/养生三类，导致理财课被报"缺年份/缺名家"、AI 课被报"中英混杂"。同时 BUG-026 引入的 `check_numeric_facts`/`check_ai_cliches` 根本没接入 `run_content_quality_checks`，通用检查形同虚设。
+
+### 根因与修复
+1. **删除关键词逃生阀，改 archetype 显式路由**：`_is_modern_column`/`_is_philosophy_or_classic` 靠书名子串匹配，本质是"没接 archetype 的补丁"。阶段2 直接删除，`run_content_quality_checks(content, archetype=...)` 按 design.md §8 路由表分桶：narrative 全开古籍规则，modern/knowledge 跳过年份/名家/时间线/现代术语禁用。
+2. **禁区红线守住**：`src/utils/quality.py` 内部函数零改动，所有路由在 `content_quality.py` 调用层完成。`check_numeric_facts` 的 manual_review（N年前后/N岁）误标，在调用层用 `_filter_numeric_manual(manual, archetype)` 过滤——narrative 保留（古籍需核验），modern/knowledge 过滤（现代语境"10年前""30岁"是正常表达）。
+3. **通用检查全桶共享**（BUG-026 教训）：`check_ai_cliches`（套话黑名单）和 `check_numeric_facts` auto_errors（数字硬错误）全桶都跑。接入时注意 `strip_frontmatter`，否则 frontmatter 里的 `sort:1` 会被误标。
+4. **knowledge 桶术语白名单**：新增 `KNOWLEDGE_TERMS_WHITELIST`（27 词：Transformer/Attention/Token/SQL/ACID…）和 `check_mixed_language_knowledge()`，按长度降序替换避免短词破坏长词（Token 先替换会破坏 Tokenizer）。
+5. **fail-fast 校验**：非法 archetype（空串/拼写错误/fiction 未落地/None）直接抛 `ValueError`，不静默走混合态。
+6. **CLI 接线**：`scripts/review_content.py` 加 `--archetype` 参数 + `_meta.yaml` 读取，信源优先级 CLI > _meta.yaml > category 默认映射 > narrative（与 main.py 一致）。规则化质检报告并入 CLI 输出。
+
+### 架构教训（已沉淀）
+- **空真断言（vacuous assertion）是测试反模式**：`test_modern_skips_modern_jargon_check` 原断言 `not any("底层逻辑" in i and "禁用" in i ...)`，但 `check_modern_jargon` 的 issue 文案是"硬塞"、`check_modern_jargon_terms` 是"硬套"，都不含"禁用"——断言恒真，无论实现正确与否都过。**教训：断言里的判别词必须从实际输出文案中提取，不能凭印象写；写完测试要故意改坏实现确认测试能红。**
+- **只测反例不测正例 = 回归漏洞**：原测试只测"modern/knowledge 跳过古籍规则"，没测"narrative 必检古籍规则"。若有人把 `if archetype == 'narrative'` 拼错，narrative 桶会静默跳过年份/名家检查，测试全绿却回归。**教训：路由测试必须正反双向覆盖，加 `TestNarrativeBucketKeepsAncientRules` 正例组 + 黄金样本分数断言。**
+- **正则拆分首段陷阱**：`check_temporal_order` 用 `re.split(r"\n## ", body)`，但 `_strip_frontmatter` 后 body 以 `## ` 开头（首段前无 `\n`），导致首段 `## 讲事情` 未被拆分、`startswith("讲事情")` 失败。**教训：split by `\n## ` 时要考虑首段无前缀换行的情况，用 `(?:^|\n)## ` 兜底。**
+- **专家团评审抓真问题**：架构 8.5/测试 6/规则 7。测试视角 6 分的扣分项（空真断言、正例缺失、边界未测）全是真问题，修复后测试 34 项全绿。**教训：专家团打分低于 7 的维度必须逐条修复后重打分，不能跳过。**
+
+### 测试覆盖
+- `tests/test_content_quality_archetype.py`：34 项契约测试（签名/默认值、modern/knowledge 跳过古籍规则、knowledge 白名单、numeric auto 全桶、ai_cliches 全桶、manual 过滤、legacy helpers 删除、archetype 校验、narrative 正例、黄金样本）。
+- 质检分数对比（阶段2 验收指标）：理财课·ETF 84→100（+16，消除 5 误报）；AI课·Transformer 81→97（+16，消除 5 误报）；资治通鉴·三家分晋 100（无回归）。
+- 三件套：`check_book_structure.py --strict` 0 问题；pytest 221 passed 15 skipped；`run_regression_suite.sh` 18/18。
+- `content-quality.md` §8 从"补救条款"重构为"多桶并行规则集"，补 knowledge 桶与路由表，与 design.md §8 对齐。
+
+### 已更新规则/checklist
+- `.trae/skills/deep-reading/content-quality.md` §8 重构为多桶规则集（路由表 + narrative/modern/knowledge 三桶 + 通用规范）。
+- `tests/bug_regression_list.md` 新增 BUG-027（一刀切误报）、BUG-028（temporal_order 首段拆分）。
+- `docs/archetype-design/design.md` 阶段2 标记完成。

@@ -200,18 +200,44 @@
 - 用户说「检查一下内容」「优化内容」「内容质检」「跑 content review」时触发。
 - 内容批量生成后，建议统一跑一遍质检并输出评分报告。
 
-## 八、现代职场/非史类专栏适配
+## 八、多桶规则集（archetype 路由）
 
-本规则原针对古籍讲书设计（要求司马光「臣光曰」等）。对职场沟通、商科、心理学等现代非史类专栏，按以下适配执行，原规则一至七条与之冲突时以本条为准。
+> 阶段2 已落地：`run_content_quality_checks(content, archetype=...)` 按 archetype 路由规则集。
+> 三桶（narrative/modern/knowledge）为**并行规则集**，非「古籍为默认、其余为补救」——每个桶有独立的合法性。
+> archetype 信源优先级见 `docs/archetype-design/design.md` §5.6（CLI > `_meta.yaml` > category 默认映射 > narrative 兜底）。
 
-### 8.1 真实性适配
+### 8.0 路由表（与 design.md §8 对齐）
+
+| 检查项 | narrative | modern | knowledge | fiction（预留） |
+|---|---|---|---|---|
+| `check_years_present`（年份必填） | ✅ 必检 | ⏭ 跳过 | ⏭ 跳过 | ⏭ 跳过 |
+| `check_famous_critics`（古籍名家） | ✅ 必检 | ⏭ 跳过 | ⏭ 跳过 | ⏭ 跳过 |
+| `check_temporal_order`（时间线） | ✅ 必检 | ⏭ 跳过 | ⏭ 跳过 | ➡️ 改检情节因果链 |
+| `check_modern_jargon`（现代术语禁用） | ✅ 必检 | ⏭ 跳过 | ⏭ 跳过 | ⏭ 跳过 |
+| `check_mixed_language`（中英混杂） | ✅ 严格 | ➡️ modern 白名单 | ➡️ knowledge 术语白名单最宽 | ➡️ 视题材定 |
+| `check_ai_tone`（AI味） | ✅ 严格 | ➡️ 放宽 | ➡️ 放宽 | ➡️ 放宽 |
+| `check_ai_cliches`（套话黑名单，通用） | ✅ | ✅ | ✅ | ✅ |
+| `check_numeric_facts` auto（数字硬错误，通用） | ✅ | ✅ | ✅ | ✅ |
+| `check_numeric_facts` manual（N年/岁/品） | ✅ 标记 | ➡️ 过滤误标 | ➡️ 过滤误标 | ⏭ 跳过 |
+
+> **通用检查红线**（BUG-026 教训：灵魂再好数字错了仍是 P0）：`check_ai_cliches` 和 `check_numeric_facts` auto_errors 全桶都跑；只有 numeric 的 manual_review 触发词按桶调整（narrative 保留 N年前后/N岁，modern/knowledge 过滤——现代语境「10年前」「30岁」是正常表达）。
+
+### 8.1 narrative 桶（古籍专属，规则全开）
+
+资治通鉴/史记/三国/唐宋明纪/孔子传/论语等。年份必填、古籍名家（司马光/臣光曰/司马迁）、时间线、现代术语禁用、严格 AI 味、严格中英混杂。详见规则一至七条。
+
+### 8.2 modern 桶（理财/职场/养生）
+
+理财课、职场沟通课、面试现场、饮食/锻炼/睡眠养生课、大厂晋升指南等。跳过年份/名家/时间线/现代术语禁用，放宽 AI 味，用 `MODERN_ENGLISH_WHITELIST` 做中英混杂白名单。
+
+#### 8.2.1 真实性
 
 - **名家点评放宽**：不强制司马光/臣光曰/司马迁。改为引用与该场景相关的古今名家（如鬼谷子、韩非子、德鲁克、卡尼曼、西奥迪尼、柯维、脱不花等），至少 2 位。
 - **古文引用**：古代名家原文仍须真实有据、单段 ≤ 20 字、出处准确；记不清用「大意据《XXX》」转述，不可把转述伪装成原文加引号。
 - **史料层累**：引用鬼谷子、战国策等有作者ship争议的典籍，必须交代成书年代/作者争议；引用苏秦等有出土文献修订的人物，必须交代（如马王堆帛书《战国纵横家书》）。
 - **现代案例**：商业案例、职场经历须可考，不编造具体公司/人物/数据。
 
-### 8.2 可读性适配
+#### 8.2.2 可读性
 
 - **现代术语边界**：「底层逻辑」「博弈论」「坐标系」「底层操作系统」等在**描述古代历史**时禁用；在**现代职场语境**中属日常词，但仍建议替换为更朴素的表达（如「底层逻辑」→「根本」「本质」「关键」，「底层操作系统」→「底子」「根基」），全篇出现不超过 1 次可容忍。
 - **行业通用词例外**：「bug」「KPI」「offer」「HR」「OKR」「CEO」「BATNA」「CRIB」「PPT」「360度评价」等在描述对应行业时属行业通用词，不算中英文混杂；但「review代码」「人品操作系统有bug」等非必要英文应中文化。完整白名单见 `src/utils/content_quality.py` 的 `MODERN_ENGLISH_WHITELIST`。
@@ -219,13 +245,20 @@
 - **AI 味敏感模式放宽**：现代职场专栏中，「容易被忽略」「可见」「第[一二三四五六]层」「最关键的.*是」「这说明」「这事说明」等过于敏感的模式不计为 AI 味（这些是常见中文表达），完整清单见 `src/utils/content_quality.py` 的 `MODERN_AI_OVERSTRICT_PATTERNS`。
 - **引用标注冗余**：禁止「XX在《YY》里/中讲过……（大意据《YY》）」同句重复标注，正文已写明出处的（含「在《XX》里」「在《XX》中」两种句式），句末不再挂「大意据《YY》」。
 
-### 8.3 结构规范
+### 8.3 knowledge 桶（AI课/易经课）
+
+AI大模型学习、易经课等。跳过年份/名家/时间线/现代术语禁用，放宽 AI 味，用 `KNOWLEDGE_TERMS_WHITELIST` 做中英混杂白名单（最宽，容纳 Transformer/Attention/Token/SQL/ACID 等技术术语）。
+
+- **术语白名单**：`KNOWLEDGE_TERMS_WHITELIST` 含 Transformer/Attention/Token/Tokenizer/Embedding/RAG/LLM/GPT/BERT/GPU/CPU/TPU/API/REST/GraphQL/gRPC/SQL/NoSQL/ACID/BASE/CAP/RDBMS/BTree/LSM/Python/Java/Rust 等。非白名单的中英紧邻混杂（如「这个model很powerful」）仍报。
+- **真实性**：技术原理/复杂度/命令须准确可核验，不编造论文结论或基准数据。
+
+### 8.4 通用结构规范（全桶共享）
 
 - **标题层级**：frontmatter 后首个 `#` 为情境化大标题（不与 frontmatter title 重复），子章节用 `##`，`## 参考来源` 与子章节同级，不出现「章节用 `#` 而参考来源用 `##`」的层级倒置。
 - **frontmatter 八字段**：title/book/chapter/event/created_at/source_agents/sort/chapter_sort 必须完整，chapter 与文件名下划线前部分一致。
 - **文末参考来源**：每条注明书名/篇名及对应内容，不单列书名；纯导读章节可注明「本篇为导读，无外部引用来源」。
 
-### 8.4 常见错别字清单
+### 8.5 通用错别字清单（全桶共享）
 
 质检时重点排查以下高频错别字：
 
@@ -260,7 +293,7 @@
 | 不加思索 | 不假思索 |
 | 按步就班 | 按部就班 |
 
-### 8.5 并行质检后核对
+### 8.6 并行质检后核对（全桶共享）
 
 并行 Agent 质检/修复完成后，主流程必须：
 1. `Glob` 核对实际产出文件数与预期一致（防止子 Agent 输出丢失）。
