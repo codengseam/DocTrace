@@ -141,6 +141,7 @@ Markdown → output/{书名}/{章节}_{事件}.md → Obsidian Vault + 静态站
 ├── docs/
 │   ├── loop_log.md                # LoopAgent 循环日志（索引化，见 §十二）
 │   ├── archetype-design/design.md # archetype 范式分桶设计
+│   ├── feedback-loop/design.md    # 反馈循环规划（与 archetype-design 对照，见 §十六）
 │   ├── superpowers/specs/         # 原始 5 轨道总体规划
 │   ├── reviews/                   # 灵魂注入 spec / AB 盲测 / 评审记录
 │   ├── comments-system/           # 评论系统规划
@@ -259,3 +260,47 @@ python -m http.server 8080 -d site
 - **深刻**：不止于故事，要挖掘本质。
 - **人本**：AI 是阅读伴侣，不是百科检索器；目标是开智悟道，不是信息搬运。
 - **沉淀**：每一次开发都产出可校验的教训，让协作本身也变成可迭代的 Loop。
+
+## 十六、反馈循环规划（写作资产保留与正循环迭代）
+
+详细规划见 [`docs/feedback-loop/design.md`](./docs/feedback-loop/design.md)。本节为索引与核心摘要。
+
+### 缘起
+
+archetype 架构升级（见 [`docs/archetype-design/design.md`](./docs/archetype-design/design.md)）完成后，生成侧已按 narrative/modern/knowledge 三桶正交分层；但反馈回收侧完全空白——数据流单向（输入→生成→质检→保存），没有"发布→反馈→回流→优化"回路。本规划负责把回路补齐，让框架产出从"每次从零开始"升级为"基于历史和反馈持续优化"。
+
+### 四类可复用资产 + 反馈数据
+
+1. **历史提示词**（[prompts/](./prompts/) 三桶共 28 文件）
+2. **引用文献**（当前完全 inline 在 output 里）
+3. **智能体质量评分**（[content_quality.py](./src/utils/content_quality.py) 已有 0-100 分四维度引擎，但生成管线没接线）
+4. **发布后真实读者反馈**（点赞/阅读量/收益/反馈）
+
+### 现状一句话
+
+四类资产成熟度差异巨大，**不能一锅烩**：
+
+- 质量评分：引擎已就绪，只差接线（[workflow.py quality_node](./src/core/workflow.py) 调的是 legacy 无 score 接口）
+- 历史提示词：半结构化，无版本机制
+- 引用文献：完全 inline，无结构化字段
+- 发布后反馈：完全空白，无任何基础设施
+
+### 三档优先级
+
+| 档位 | 内容 | 前置依赖 | 风险 |
+|---|---|---|---|
+| **第一档**（立即做） | 质量评分接入生成管线 + 落盘 + score_history | 无 | 换接口可能影响结构校验门控 |
+| **第二档**（看精力） | 提示词版本化 + 文献结构化 | 第一档 score_history | 历史 output 迁移工作量大 |
+| **第三档**（最关键但风险最大） | 发布后反馈接入 | 第一档 + 用户先定平台 | API 烟囱、指标不可比、必须绑定 archetype |
+
+### 核心约束
+
+- 第三档反馈 schema 设计时，**必须把 `archetype` 作为必填维度**——这是 archetype 升级红利兑现的唯一路径
+- **不要把 [comments-system/](./docs/comments-system/) 评论系统误当成反馈循环基础设施**——它回收的是"作者批注"反馈，不是"读者效果"反馈
+- 规则与实现不一致（[content-quality.md](./.trae/skills/deep-reading/content-quality.md) 五维度 vs [content_quality.py](./src/utils/content_quality.py) 四维度）必须先修，否则评分历史会被"灵魂分漂移"污染
+
+### 一句话结论
+
+**先做第一档（评分接入管线 + 落盘 + score_history），这是唯一不需要外部数据就能跑起来的反馈循环种子。**
+
+完整背景、现状实测、目标收益、三个必避陷阱、实施路径详见 [`docs/feedback-loop/design.md`](./docs/feedback-loop/design.md)。
