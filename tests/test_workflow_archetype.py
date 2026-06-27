@@ -749,15 +749,16 @@ class TestStubWorkflowConsistency:
 
 
 # ---------------------------------------------------------------------------
-# 契约12：真实模式 modern/knowledge 回落 narrative 执行（P0-1 回归）
+# 契约12：阶段4 真实模式 modern/knowledge 直接用 archetype 执行（P0-1 回落已解除）
 # ---------------------------------------------------------------------------
 
-class TestRealModeArchetypeFallback:
-    """P0-1：真实模式（非 stub）下 modern/knowledge 回落 narrative 执行。
+class TestRealModeArchetypeExecution:
+    """阶段4：真实模式（非 stub）下 modern/knowledge 直接用 archetype 执行。
 
-    架构师发现 specialist 硬编码 narrative 段名，quality 用 modern 段名检查会全缺
-    导致不 save。修复：build_workflow 用回落的 exec_archetype=narrative，
-    initial_state.archetype 保留用户意图（供阶段4 读取）。
+    原阶段3 P0-1 修复：specialist 硬编码 narrative 段名，quality 用 modern 段名
+    检查会全缺导致不 save，故 build_workflow 用回落的 exec_archetype=narrative。
+    阶段4 specialist 已按 archetype 路由 prompt+段名，回落已解除，
+    build_workflow 直接收到 archetype，initial_state.archetype 也是 archetype。
     """
 
     def _run_real_mode_capturing_workflow(self, monkeypatch, archetype):
@@ -789,24 +790,24 @@ class TestRealModeArchetypeFallback:
         assert rc == 0, f"main 返回非 0"
         return captured
 
-    def test_modern_real_mode_falls_back_to_narrative_exec(self, monkeypatch):
-        """modern 真实模式：build_workflow 收到 narrative（exec 回落），initial_state 保留 modern。"""
+    def test_modern_real_mode_uses_modern_archetype(self, monkeypatch):
+        """阶段4：modern 真实模式直接用 modern 执行，无回落。"""
         captured = self._run_real_mode_capturing_workflow(monkeypatch, "modern")
-        assert captured["bw_archetype"] == "narrative", (
-            f"build_workflow 应收到 narrative（exec 回落），实际 {captured['bw_archetype']!r}"
+        assert captured["bw_archetype"] == "modern", (
+            f"build_workflow 应收到 modern（阶段4 已解除回落），实际 {captured['bw_archetype']!r}"
         )
         assert captured["state_archetype"] == "modern", (
-            f"initial_state 应保留 modern（用户意图），实际 {captured['state_archetype']!r}"
+            f"initial_state 应为 modern，实际 {captured['state_archetype']!r}"
         )
 
-    def test_knowledge_real_mode_falls_back_to_narrative_exec(self, monkeypatch):
-        """knowledge 真实模式：build_workflow 收到 narrative，initial_state 保留 knowledge。"""
+    def test_knowledge_real_mode_uses_knowledge_archetype(self, monkeypatch):
+        """阶段4：knowledge 真实模式直接用 knowledge 执行，无回落。"""
         captured = self._run_real_mode_capturing_workflow(monkeypatch, "knowledge")
-        assert captured["bw_archetype"] == "narrative"
+        assert captured["bw_archetype"] == "knowledge"
         assert captured["state_archetype"] == "knowledge"
 
-    def test_narrative_real_mode_no_fallback(self, monkeypatch):
-        """narrative 真实模式：不回落，build_workflow 收到 narrative，initial_state 也是 narrative。"""
+    def test_narrative_real_mode_uses_narrative(self, monkeypatch):
+        """narrative 真实模式：build_workflow 和 initial_state 都是 narrative。"""
         captured = self._run_real_mode_capturing_workflow(monkeypatch, "narrative")
         assert captured["bw_archetype"] == "narrative"
         assert captured["state_archetype"] == "narrative"

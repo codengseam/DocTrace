@@ -88,6 +88,7 @@ def run(state: AgentState) -> Dict[str, Any]:
             "sources": sources_md,
             "rules": load_rules(),
         },
+        archetype=archetype,
     )
 
     llm = create_llm(temperature=0.5)

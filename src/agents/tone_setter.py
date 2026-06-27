@@ -9,9 +9,10 @@
 
 输出 JSON：{"tone_outline": "..."}，300-500 字。
 
-注意：当前 prompt 内联在代码中作为 PROMPT 常量。
-按项目约定（src/utils/prompts.py 的 load_prompt 读取 prompts/ 目录），
-应迁移到 prompts/tone_setter.md，并用 load_prompt("tone_setter", {...}) 加载。
+阶段4：prompt 已迁文件，按 archetype 路由（design.md §9.2/§9.3）。
+- narrative：prompts/tone_setter.md（核心史观/情感基调/核心冲突/灵魂锚点/风格锚点）
+- modern：prompts/modern/tone_setter.md（核心洞察/实用基调/核心矛盾/操作锚点）
+- knowledge：prompts/knowledge/tone_setter.md（核心原理/认知基调/核心难点/示例锚点）
 """
 
 import json
@@ -20,35 +21,14 @@ import re
 from typing import Any, Dict
 
 from src.utils.llm import create_llm
+from src.utils.prompts import load_prompt
 
 logger = logging.getLogger(__name__)
 
 
-# 定调节点 prompt。
-# TODO: 迁移到 prompts/tone_setter.md，通过 load_prompt("tone_setter", {...}) 加载。
-PROMPT = """你是 HaloRead 项目的定调节点（ToneSetter）。你的职责是在 5 个 Specialist 写作之前，为本篇定下灵魂基调。
-
-阅读以下史料，输出《本篇核心史观与情感基调大纲》，必须包含五要素：
-1. 核心史观：只能从本事件得出的独家洞察（禁止"以史为鉴"等正确废话）
-2. 情感基调：冰冷/悲悯/激昂/讽刺（逐篇换调，不强制统一）
-3. 核心冲突：本篇人物两难是什么
-4. 灵魂锚点：2-3 个必须写到位的具体场景/细节
-5. 风格锚点：对标当年明月《明朝那些事儿》哪一篇的笔法
-
-约束：
-- 禁止脸谱化标签（奸臣/忠臣/伟人）
-- 洞察必须独家，套在同类人物上不成立才算合格
-- 输出 JSON：{"tone_outline": "..."}，300-500 字
-
-# 输入
-
-书名：{book}
-章节：{chapter}
-事件：{event}
-
-原始史料：
-{source_material}
-"""
+# 阶段4：prompt 已迁移到 prompts/tone_setter.md（narrative）/
+# prompts/modern/tone_setter.md / prompts/knowledge/tone_setter.md。
+# load_prompt 按 archetype 路由，未迁移的桶 fallback 到 narrative + 警告。
 
 
 def _parse_json_response(response: str) -> Dict[str, Any]:
@@ -74,19 +54,21 @@ def run(state: Dict[str, Any]) -> Dict[str, Any]:
     book = state.get("book", "")
     chapter = state.get("chapter", "")
     event = state.get("event", "")
+    archetype = state.get("archetype", "narrative")
     # 原始史料：优先用 source_material，回退到 user_input
     source_material = state.get("source_material", "") or state.get("user_input", "")
 
-    # 用 .replace 而非 .format，避免 prompt 中示例 JSON 的花括号被误当作占位符
-    # （与 src/utils/prompts.py 的 load_prompt 实现保持一致）
-    prompt = PROMPT
-    for key, value in {
-        "book": book,
-        "chapter": chapter,
-        "event": event,
-        "source_material": source_material,
-    }.items():
-        prompt = prompt.replace(f"{{{key}}}", str(value))
+    # 阶段4：按 archetype 加载 prompt（load_prompt 内部做 variables 替换）
+    prompt = load_prompt(
+        "tone_setter",
+        {
+            "book": book,
+            "chapter": chapter,
+            "event": event,
+            "source_material": source_material,
+        },
+        archetype=archetype,
+    )
 
     llm = create_llm(temperature=0.7)
 

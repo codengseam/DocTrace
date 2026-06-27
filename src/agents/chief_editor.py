@@ -19,9 +19,10 @@
 试点期阈值：任一问 fail 即 REWORK。
 试点首 5 篇只打标记不强制打回（verdict 仍输出，主流程不据此阻断）。
 
-注意：当前 prompt 内联在代码中作为 PROMPT 常量。
-按项目约定（src/utils/prompts.py 的 load_prompt 读取 prompts/ 目录），
-应迁移到 prompts/chief_editor.md，并用 load_prompt("chief_editor", {...}) 加载。
+阶段4：prompt 已迁文件，按 archetype 路由（design.md §9.2/§9.3）。
+- narrative：prompts/chief_editor.md（活人测试/洞察独家性/底色敬畏感）
+- modern：prompts/modern/chief_editor.md（实用价值测试/方法独家性/落地可行性）
+- knowledge：prompts/knowledge/chief_editor.md（准确性测试/深度独家性/可操作性）
 """
 
 import json
@@ -30,38 +31,14 @@ import re
 from typing import Any, Dict, Optional
 
 from src.utils.llm import create_llm
+from src.utils.prompts import load_prompt
 
 logger = logging.getLogger(__name__)
 
 
-# 总编终审 prompt。
-# TODO: 迁移到 prompts/chief_editor.md，通过 load_prompt("chief_editor", {...}) 加载。
-PROMPT = """你是 HaloRead 项目的总编（Chief Editor）。合规质检已通过，你只做灵魂终审。
-
-回答三个问题：
-1. 活人测试：核心人物读者读完能用一句话说出他的"两难"吗？不能（仍是标签）→ fail
-2. 洞察独家性：核心洞察套在同类人物（如刚直悲剧：比干/杨椒山/杨涟）上成不成立？套得上（正确废话）→ fail
-3. 底色敬畏感：面对生死悲剧语气是否克制？有戏谑/爽文化 → fail
-
-输出 JSON：
-{
-  "verdict": "GO" | "REWORK",
-  "soul_questions": {
-    "live_human_test": {"pass": true/false, "reason": "..."},
-    "insight_exclusivity": {"pass": true/false, "reason": "..."},
-    "tone_reverence": {"pass": true/false, "reason": "..."}
-  },
-  "rework_direction": "若 REWORK 给具体方向，GO 则 null"
-}
-
-试点期阈值：任一问 fail 即 REWORK。但试点首 5 篇只打标记不强制打回（verdict 仍输出，主流程不据此阻断）。
-
-# 待审成稿
-
-```markdown
-{final_markdown}
-```
-"""
+# 阶段4：prompt 已迁移到 prompts/chief_editor.md（narrative）/
+# prompts/modern/chief_editor.md / prompts/knowledge/chief_editor.md。
+# load_prompt 按 archetype 路由，未迁移的桶 fallback 到 narrative + 警告。
 
 
 def _parse_json_response(response: str) -> Dict[str, Any]:
@@ -92,10 +69,14 @@ def run(state: Dict[str, Any]) -> Dict[str, Any]:
         }
     """
     final_markdown = state.get("final_markdown", "")
+    archetype = state.get("archetype", "narrative")
 
-    # 用 .replace 而非 .format，避免 prompt 中示例 JSON 的花括号被误当作占位符
-    # （与 src/utils/prompts.py 的 load_prompt 实现保持一致）
-    prompt = PROMPT.replace("{final_markdown}", final_markdown)
+    # 阶段4：按 archetype 加载 prompt（load_prompt 内部做 variables 替换）
+    prompt = load_prompt(
+        "chief_editor",
+        {"final_markdown": final_markdown},
+        archetype=archetype,
+    )
 
     llm = create_llm(temperature=0.3)
 
