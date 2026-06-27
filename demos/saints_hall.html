@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>圣贤堂 · 诸圣列传</title>
+  <style>
+    /* ============================================================
+       圣贤堂展厅页 · 三国杀卡牌风（固定手机版尺寸，网格铺满）
+       样式复用自 demos/demo_card.html 的 sg-* 体系
+       ============================================================ */
+    :root {
+      --font-serif: "Noto Serif SC", "Songti SC", "STSong", "SimSun", serif;
+      --font-sans: "PingFang SC", "Microsoft YaHei", sans-serif;
+      --color-gold: #c9a961;
+      --color-crimson: #c84838;
+      --color-ink: #f5ecd9;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-serif);
+      background: radial-gradient(ellipse at top, #3d2817 0%, #2a1a0e 70%);
+      color: var(--color-ink);
+      min-height: 100vh;
+      padding: 28px 18px 48px;
+    }
+
+    /* ============ 展厅标题区 ============ */
+    .hall-header {
+      max-width: 1400px;
+      margin: 0 auto 28px;
+      text-align: center;
+      padding: 22px 16px;
+      background: linear-gradient(135deg, rgba(61,40,23,0.6) 0%, rgba(42,26,14,0.6) 100%);
+      border: 2px solid var(--color-gold);
+      border-radius: 8px;
+      box-shadow: 0 0 24px rgba(201,169,97,0.15);
+    }
+    .hall-title {
+      font-size: 2.4rem;
+      font-weight: 700;
+      color: var(--color-gold);
+      letter-spacing: 0.3em;
+      text-shadow: 0 0 16px rgba(201,169,97,0.5);
+      margin-bottom: 8px;
+    }
+    .hall-subtitle {
+      font-size: 0.88rem;
+      color: rgba(245,236,217,0.65);
+      letter-spacing: 0.15em;
+      line-height: 1.7;
+    }
+    .hall-stats {
+      margin-top: 14px;
+      display: flex;
+      justify-content: center;
+      gap: 22px;
+      flex-wrap: wrap;
+    }
+    .hall-stat {
+      font-size: 0.78rem;
+      color: var(--color-gold);
+      letter-spacing: 0.1em;
+      padding: 4px 14px;
+      border: 1px solid rgba(201,169,97,0.3);
+      border-radius: 12px;
+      background: rgba(201,169,97,0.06);
+    }
+
+    /* ============ 分类筛选 ============ */
+    .hall-filter {
+      max-width: 1400px;
+      margin: 0 auto 22px;
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .filter-btn {
+      padding: 7px 16px;
+      font-family: var(--font-serif);
+      font-size: 0.82rem;
+      color: rgba(245,236,217,0.65);
+      background: rgba(201,169,97,0.08);
+      border: 1px solid rgba(201,169,97,0.3);
+      border-radius: 4px;
+      cursor: pointer;
+      letter-spacing: 0.12em;
+      transition: all 0.2s;
+    }
+    .filter-btn:hover { color: var(--color-gold); border-color: var(--color-gold); }
+    .filter-btn.active {
+      color: #2a1a0e;
+      background: var(--color-gold);
+      border-color: var(--color-gold);
+      font-weight: 700;
+    }
+
+    /* ============ 卡片网格（铺满）============ */
+    .hall-grid {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 22px;
+    }
+
+    /* ============ 三国杀卡牌样式（复用 demo_card.html sg-* 体系）============ */
+    .sg-card {
+      max-width: 360px;
+      width: 100%;
+      margin: 0 auto;
+      background: linear-gradient(135deg, #3d2817 0%, #2a1a0e 100%);
+      border: 2px solid var(--color-gold);
+      border-radius: 8px;
+      box-shadow: 0 0 0 1px #8b7332 inset, 0 0 24px rgba(201,169,97,0.25), 0 8px 32px rgba(0,0,0,0.5);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .sg-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 0 0 1px #8b7332 inset, 0 0 36px rgba(201,169,97,0.4), 0 14px 40px rgba(0,0,0,0.6);
+    }
+    .sg-card::before, .sg-card::after { content: ""; position: absolute; width: 20px; height: 20px; border: 1.5px solid var(--color-gold); pointer-events: none; z-index: 3; }
+    .sg-card::before { top: 6px; left: 6px; border-right: none; border-bottom: none; }
+    .sg-card::after { bottom: 6px; right: 6px; border-left: none; border-top: none; }
+
+    .sg-portrait { position: relative; background: linear-gradient(180deg,#1f1308 0%,#2a1a0e 100%); border-bottom: 1px solid rgba(201,169,97,0.3); height: 300px; overflow: hidden; }
+    .sg-portrait img { width: 100%; height: 100%; object-fit: cover; display: block; filter: sepia(0.12) contrast(1.05); }
+    .sg-portrait::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg,transparent 60%,rgba(42,26,14,0.85) 100%), linear-gradient(90deg,transparent 70%,rgba(42,26,14,0.4) 100%); pointer-events: none; }
+    .sg-stamp { position: absolute; bottom: 14px; left: 12px; z-index: 2; display: flex; flex-direction: column; gap: 5px; }
+    .sg-stamp-title { display: inline-block; padding: 4px 11px; background: linear-gradient(135deg,#a13c2c 0%,#c84838 100%); color: var(--color-ink); font-size: 0.8rem; font-weight: 700; letter-spacing: 0.2em; border-radius: 2px; border: 1px solid var(--color-gold); box-shadow: 0 0 8px rgba(201,169,97,0.4); width: fit-content; }
+    .sg-stamp-no { font-size: 0.68rem; color: var(--color-gold); letter-spacing: 0.15em; }
+    .sg-stamp-sub { font-size: 0.64rem; color: rgba(201,169,97,0.8); letter-spacing: 0.1em; }
+
+    .sg-info { padding: 18px 16px 16px; display: flex; flex-direction: column; gap: 14px; }
+    .sg-name-row { display: flex; align-items: baseline; gap: 11px; flex-wrap: wrap; padding-bottom: 12px; border-bottom: 1px solid rgba(201,169,97,0.3); }
+    .sg-name { font-size: 2rem; font-weight: 700; color: var(--color-gold); letter-spacing: 0.1em; line-height: 1; text-shadow: 0 0 12px rgba(201,169,97,0.4); }
+    .sg-courtesy { font-size: 0.88rem; color: rgba(245,236,217,0.7); letter-spacing: 0.1em; }
+    .sg-tags { display: flex; gap: 7px; flex-wrap: wrap; }
+    .sg-tag { font-size: 0.72rem; color: var(--color-gold); border: 1px solid rgba(201,169,97,0.3); padding: 3px 10px; border-radius: 12px; letter-spacing: 0.08em; background: rgba(201,169,97,0.06); }
+
+    .sg-radar-section { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .sg-radar-wrap { width: 100%; max-width: 230px; aspect-ratio: 1; }
+    .sg-radar-svg { width: 100%; height: 100%; display: block; }
+    .sg-radar-grid { fill: none; stroke: rgba(201,169,97,0.3); stroke-width: 0.8; }
+    .sg-radar-axis { stroke: rgba(201,169,97,0.3); stroke-width: 0.6; stroke-dasharray: 2 2; }
+    .sg-radar-data { fill: rgba(201,169,97,0.28); stroke: var(--color-gold); stroke-width: 1.8; stroke-linejoin: round; filter: drop-shadow(0 0 4px rgba(201,169,97,0.5)); }
+    .sg-radar-point { fill: var(--color-crimson); stroke: var(--color-ink); stroke-width: 1; }
+    .sg-radar-label { fill: var(--color-ink); font-size: 11px; font-weight: 700; font-family: var(--font-serif); text-anchor: middle; dominant-baseline: middle; }
+    .sg-radar-value { fill: var(--color-gold); font-size: 9px; font-family: var(--font-serif); text-anchor: middle; dominant-baseline: middle; }
+
+    .sg-quote { position: relative; padding: 11px 13px 11px 26px; background: rgba(201,169,97,0.06); border-left: 3px solid var(--color-crimson); border-radius: 2px; }
+    .sg-quote::before { content: "\201C"; position: absolute; left: 5px; top: -2px; font-size: 2.2rem; color: var(--color-gold); font-family: serif; line-height: 1.2; opacity: 0.7; }
+    .sg-quote-text { font-size: 1.05rem; font-weight: 600; line-height: 1.5; letter-spacing: 0.04em; }
+    .sg-quote-src { margin-top: 4px; font-size: 0.7rem; color: rgba(245,236,217,0.55); letter-spacing: 0.08em; }
+
+    .sg-deed { display: flex; flex-direction: column; gap: 8px; }
+    .sg-deed-item { display: flex; gap: 9px; align-items: flex-start; }
+    .sg-deed-dot { flex-shrink: 0; width: 7px; height: 7px; border-radius: 50%; background: var(--color-gold); margin-top: 7px; box-shadow: 0 0 6px rgba(201,169,97,0.6); }
+    .sg-deed-body { flex: 1; }
+    .sg-deed-title { font-size: 0.86rem; font-weight: 700; color: var(--color-gold); letter-spacing: 0.06em; }
+    .sg-deed-text { font-size: 0.78rem; color: rgba(245,236,217,0.7); line-height: 1.55; margin-top: 2px; }
+
+    .sg-link { color: var(--color-gold); text-decoration: none; border-bottom: 1px dashed rgba(201,169,97,0.5); transition: all 0.2s; cursor: pointer; }
+    .sg-link:hover { border-bottom-style: solid; color: var(--color-ink); }
+
+    .sg-foot { display: flex; justify-content: space-between; align-items: center; padding-top: 11px; border-top: 1px solid rgba(201,169,97,0.3); font-size: 0.7rem; color: rgba(245,236,217,0.55); letter-spacing: 0.1em; }
+    .sg-foot-bio { flex: 1; line-height: 1.5; margin-right: 11px; }
+
+    .hall-footer {
+      max-width: 1400px;
+      margin: 36px auto 0;
+      text-align: center;
+      font-size: 0.76rem;
+      color: rgba(245,236,217,0.4);
+      letter-spacing: 0.15em;
+      line-height: 1.8;
+    }
+
+    /* ============ 响应式 ============ */
+    @media (max-width: 768px) {
+      body { padding: 20px 12px 36px; }
+      .hall-title { font-size: 1.9rem; letter-spacing: 0.2em; }
+      .hall-grid { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+    }
+    @media (max-width: 480px) {
+      body { padding: 16px 8px 28px; }
+      .hall-title { font-size: 1.6rem; }
+      .hall-grid { grid-template-columns: 1fr; gap: 16px; }
+      .sg-card { max-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hall-header">
+    <h1 class="hall-title">圣 贤 堂</h1>
+    <p class="hall-subtitle">诸圣列传 · 儒家五圣 · 孟子四圣 · 行业诸圣</p>
+    <div class="hall-stats">
+      <span class="hall-stat">共 15 位圣人</span>
+      <span class="hall-stat">儒家五圣 5</span>
+      <span class="hall-stat">孟子四圣 3</span>
+      <span class="hall-stat">行业诸圣 7</span>
+    </div>
+  </header>
+
+  <nav class="hall-filter" id="hallFilter">
+    <button class="filter-btn active" data-filter="all">全部</button>
+    <button class="filter-btn" data-filter="儒家五圣">儒家五圣</button>
+    <button class="filter-btn" data-filter="孟子四圣">孟子四圣</button>
+    <button class="filter-btn" data-filter="行业圣人">行业诸圣</button>
+  </nav>
+
+  <div class="hall-grid" id="hallGrid"></div>
+
+  <footer class="hall-footer">
+    圣贤堂 · 人物卡片展厅 · 圣人卷<br>
+    有跳转链接的圣人点击名言或事迹可查看原文，其余圣贤章节待后续补建
+  </footer>
+
+  <script>
+    // ============ 头像 URL 拼接 ============
+    const PORTRAIT_API = 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=';
+    function portraitUrl(prompt) {
+      return PORTRAIT_API + encodeURIComponent(prompt) + '&image_size=portrait_4_3';
+    }
+    const IMG_ONERROR = 'this.onerror=null;this.src="data:image/svg+xml;utf8,' +
+      encodeURIComponent('<svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"200\\" height=\\"150\\"><rect width=\\"200\\" height=\\"150\\" fill=\\"#2a1a0e\\"/><text x=\\"100\\" y=\\"80\\" font-size=\\"16\\" text-anchor=\\"middle\\" fill=\\"#c9a961\\" font-family=\\"serif\\">圣贤像</text></svg>') + '"';
+
+    // ============ 15 位圣人数据 ============
+    const SAGES = [
+      // ===== 儒家五圣 =====
+      {
+        name: '孔子', courtesyName: '仲尼', title: '至圣',
+        faction: '圣贤堂', subFaction: '儒家五圣',
+        dynasty: '春秋', state: '鲁国', lifespan: '前551–前479', no: '001',
+        portraitPrompt: '春秋时期孔子反差形象，虎背熊腰肌肉发达的壮汉，身高九尺六寸的长人，赤裸上身露出结实肌肉和宽阔肩膀，浓眉大眼短须，面容英武刚毅，单手握缰绳驾驭战车，另一手挥斥方遒，战车上身后跟着几名弟子子路颜回等人，动态构图，水墨国风重彩插画，米白宣纸背景，史诗感历史人物画，体现孔子力士身材与御车绝技',
+        scores: [
+          { dim: '仁德', value: 98, note: '克己复礼为仁，万世楷模' },
+          { dim: '学识', value: 96, note: '删诗书定礼乐，博学多能' },
+          { dim: '教化', value: 99, note: '有教无类，弟子三千贤者七十二' },
+          { dim: '思想', value: 98, note: '仁礼中庸，吾道一以贯之' },
+          { dim: '言传', value: 95, note: '述而不作，论语传世' },
+          { dim: '影响', value: 100, note: '万世师表，至圣先师' }
+        ],
+        quotes: [
+          { text: '三人行，必有我师焉。', source: '《论语·述而》' },
+          { text: '己所不欲，勿施于人。', source: '《论语·卫灵公》' },
+          { text: '学而时习之，不亦说乎？', source: '《论语·学而》' }
+        ],
+        deeds: [
+          { title: '夹谷之会', text: '鲁定公十年任大司寇摄相事，齐鲁会盟任相礼，临危不乱诛优倡震慑齐人，逼齐归还郓汶阳龟阴之田。' },
+          { title: '周游列国', text: '五十五岁率弟子周游列国十四载，历陈蔡绝粮之厄而弦歌不辍，六十八岁返鲁。' },
+          { title: '删订六经', text: '晚年返鲁，删诗书定礼乐序易传修春秋，整理上古文献，奠中华典籍根基。' }
+        ],
+        bio: '春秋鲁国人，儒家学派创始人，删诗书定礼乐，周游列国十四载，弟子三千贤者七十二，被尊为至圣先师。',
+        hasLink: true,
+        linkBook: '论语', linkChapter: '教育之道_学而时习', deedBook: '孔子传', deedChapter: '鲁国从政_夹谷之会'
+      },
+      {
+        name: '颜回', courtesyName: '子渊', title: '复圣',
+        faction: '圣贤堂', subFaction: '儒家五圣',
+        dynasty: '春秋', state: '鲁国', lifespan: '前521–前481', no: '002',
+        portraitPrompt: '春秋复圣颜回反差形象，清瘦却目光炯炯如星的青年书生，衣衫简朴端坐陋巷之中，身旁一箪食一瓢饮，神情安详自得，眉宇间透出超然气度与内在光芒，颠覆寒酸苦读印象，水墨国风重彩卡通插画，米白宣纸背景，史诗感历史人物画',
+        scores: [
+          { dim: '仁德', value: 95, note: '不迁怒不贰过，三月不违仁' },
+          { dim: '学识', value: 92, note: '闻一以知十，孔门好学之首' },
+          { dim: '教化', value: 70, note: '早逝未及授徒讲学' },
+          { dim: '思想', value: 85, note: '默识心通，惜无著述传世' },
+          { dim: '言传', value: 60, note: '早逝无著述传世' },
+          { dim: '影响', value: 88, note: '孔门首席弟子，德行楷模' }
+        ],
+        quotes: [
+          { text: '愿无伐善，无施劳。', source: '《论语·公冶长》' },
+          { text: '仰之弥高，钻之弥坚。夫子循循然善诱人，博我以文，约我以礼，欲罢不能。', source: '《论语·子罕》' }
+        ],
+        deeds: [
+          { title: '箪食瓢饮', text: '居陋巷一箪食一瓢饮，人不堪其忧回也不改其乐，孔子叹其贤，列孔门德行科之首。' },
+          { title: '不贰不迁', text: '不迁怒不贰过，孔子独称其好学，谓能三月不违仁，余则日月至焉而已。' },
+          { title: '早逝恸哭', text: '鲁哀公十四年颜回早逝，孔子恸哭"天丧予"，叹道统无传，后尊为复圣。' }
+        ],
+        bio: '春秋鲁国人，孔门首席弟子，安贫乐道箪食瓢饮，不贰过不迁怒，早逝令孔子恸哭，后尊为复圣。',
+        hasLink: true,
+        linkBook: '论语', linkChapter: '弟子群像_颜回', deedBook: '论语', deedChapter: '弟子群像_颜回'
+      },
+      {
+        name: '曾参', courtesyName: '子舆', title: '宗圣',
+        faction: '圣贤堂', subFaction: '儒家五圣',
+        dynasty: '春秋', state: '鲁国', lifespan: '前505–前435', no: '003',
+        portraitPrompt: '春秋宗圣曾参反差形象，肌肉结实的壮年农夫，手持锄头耕作田间虎口生茧，目光沉静内省鬓角微霜，腰间别着竹简，身形魁梧刚毅，颠覆文弱儒生印象，水墨国风重彩卡通插画，米白宣纸背景，史诗感历史人物画，体现孝道修身三省吾身',
+        scores: [
+          { dim: '仁德', value: 90, note: '孝道立身，三省吾身' },
+          { dim: '学识', value: 88, note: '得孔子一贯之道' },
+          { dim: '教化', value: 92, note: '弟子众多，传道子思' },
+          { dim: '思想', value: 90, note: '著大学孝经，明修齐治平' },
+          { dim: '言传', value: 92, note: '大学孝经传世' },
+          { dim: '影响', value: 93, note: '承上启下，传儒家道统' }
+        ],
+        quotes: [
+          { text: '吾日三省吾身：为人谋而不忠乎？与朋友交而不信乎？传不习乎？', source: '《论语·学而》' },
+          { text: '士不可以不弘毅，任重而道远。', source: '《论语·泰伯》' },
+          { text: '慎终追远，民德归厚矣。', source: '《论语·学而》' }
+        ],
+        deeds: [
+          { title: '三省修身', text: '每日三省吾身，为人谋忠与友交信传习所学；病笃召弟子启予足启予手，全受全归守身体发肤之孝。' },
+          { title: '著述传道', text: '传为大学孝经作者，阐发修身齐家治国平天下之旨与孝道大义，承孔子一贯之道。' },
+          { title: '承传道统', text: '孔子传曾子，曾子传子思，子思传孟子，曾子上承孔子下启思孟，为儒家道统关键一环。' }
+        ],
+        bio: '春秋鲁国人，孔子晚年弟子，著大学孝经，传道统于子思，吾日三省吾身，后尊为宗圣。',
+        hasLink: false
+      },
+      {
+        name: '孔伋', courtesyName: '子思', title: '述圣',
+        faction: '圣贤堂', subFaction: '儒家五圣',
+        dynasty: '战国', state: '鲁国', lifespan: '前483–前402', no: '004',
+        portraitPrompt: '战国述圣子思反差形象，少年老成的青年学者，面容清俊却目光深邃如渊，执笔悬腕书写竹简，神情专注沉静身形挺拔，眉间有超越年龄的沉稳与思辨锋芒，颠覆稚嫩少年印象，水墨国风重彩卡通插画，米白宣纸背景，史诗感历史人物画',
+        scores: [
+          { dim: '仁德', value: 88, note: '慎独修身，诚明为本' },
+          { dim: '学识', value: 90, note: '师从曾子，博通经典' },
+          { dim: '教化', value: 80, note: '授业门人，传道孟子' },
+          { dim: '思想', value: 92, note: '著中庸阐天命性道' },
+          { dim: '言传', value: 85, note: '中庸传世' },
+          { dim: '影响', value: 90, note: '开思孟学派，传道于孟子' }
+        ],
+        quotes: [
+          { text: '天命之谓性，率性之谓道，修道之谓教。', source: '《中庸》' },
+          { text: '博学之，审问之，慎思之，明辨之，笃行之。', source: '《中庸》' },
+          { text: '莫见乎隐，莫显乎微，故君子慎其独也。', source: '《中庸》' }
+        ],
+        deeds: [
+          { title: '著《中庸》', text: '十六岁作中庸（传说），阐发天命之谓性率性之谓道，论慎独诚明中和，为儒家心性之学奠基。' },
+          { title: '师承传道', text: '师从曾子得孔子家学与曾子之传，授业门人，孟子受业于子思门人，遂开思孟学派。' }
+        ],
+        bio: '战国鲁国人，孔子嫡孙名孔伋字子思，师从曾子，著中庸阐发中庸之道，传道于孟子，后尊为述圣。',
+        hasLink: false
+      },
+      {
+        name: '孟子', courtesyName: '子舆', title: '亚圣',
+        faction: '圣贤堂', subFaction: '儒家五圣',
+        dynasty: '战国', state: '邹国', lifespan: '约前372–前289', no: '005',
+        portraitPrompt: '战国亚圣孟子反差形象，身形魁梧气宇轩昂的壮年男子，手持长剑立于诸侯朝堂之上，张口雄辩目光如炬须髯飞扬，浑身散发浩然之气衣袂翻飞，颠覆迂腐说客印象，水墨国风重彩卡通插画，米白宣纸背景，史诗感历史人物画，体现豪迈雄辩',
+        scores: [
+          { dim: '仁德', value: 92, note: '性善论，仁政说' },
+          { dim: '学识', value: 95, note: '博学善辩，通五经' },
+          { dim: '教化', value: 90, note: '游说诸侯，授徒讲学' },
+          { dim: '思想', value: 96, note: '性善仁政，浩然之气' },
+          { dim: '言传', value: 95, note: '孟子七篇，雄辩传世' },
+          { dim: '影响', value: 96, note: '亚圣之尊，道统继承' }
+        ],
+        quotes: [
+          { text: '民为贵，社稷次之，君为轻。', source: '《孟子·尽心下》' },
+          { text: '富贵不能淫，贫贱不能移，威武不能屈，此之谓大丈夫。', source: '《孟子·滕文公下》' },
+          { text: '自反而缩，虽千万人，吾往矣。', source: '《孟子·公孙丑上》' }
+        ],
+        deeds: [
+          { title: '游说诸侯', text: '率弟子周游梁齐宋滕鲁诸国，游说梁惠王齐宣王行仁政，虽见礼遇而道不行，晚年退而著书。' },
+          { title: '性善仁政', text: '倡性善论谓人皆有恻隐羞恶辞让是非四端，主仁政民贵君轻，开儒家心性政治之学。' },
+          { title: '著《孟子》七篇', text: '晚年退居与弟子万章公孙丑著孟子七篇，雄辩滔滔气盛言宜，遂成亚圣之尊。' }
+        ],
+        bio: '战国邹国人，受业于子思门人，倡性善论，游说诸侯行仁政，著孟子七篇，后尊为亚圣。',
+        hasLink: false
+      },
+
+      // ===== 孟子四圣（孔子已在儒家五圣，此处补 3 位）=====
+      {
+        name: '伯夷', courtesyName: '—', title: '圣之清者',
+        faction: '圣贤堂', subFaction: '孟子四圣',
+        dynasty: '商末周初', state: '孤竹国', lifespan: '约前11世纪', no: '006',
+        portraitPrompt: '商末圣之清者伯夷反差形象，清瘦孤傲的白须老者，面容清癯颧骨高耸，眼神倔强不屈透着清介之气，身披粗麻衣脚踏草鞋，手持采薇竹篮独立于首阳山绝壁之上，脚下野薇丛生远处苍茫周原，狂风鼓荡衣袍老人昂首望天宁折不弯，水墨国风重彩卡通插画，米白宣纸背景，史诗感历史人物画',
+        scores: [
+          { dim: '仁德', value: 96, note: '让国高义，清廉绝俗' },
+          { dim: '学识', value: 75, note: '孤竹隐士，不以博学见称' },
+          { dim: '教化', value: 70, note: '闻其风者顽夫廉懦夫立志' },
+          { dim: '思想', value: 80, note: '清介孤高，治则进乱则退' },
+          { dim: '言传', value: 60, note: '述而不作，言行赖史记孟子转述' },
+          { dim: '影响', value: 85, note: '首阳高风，砥砺士林两千载' }
+        ],
+        quotes: [
+          { text: '非其君不事，非其民不使。', source: '《孟子·万章下》' }
+        ],
+        deeds: [
+          { title: '让国逃周', text: '孤竹君遗命立弟叔齐，伯夷遵父命让位逃去，叔齐亦不肯立而逃，兄弟相偕去国适周，海内高其义。' },
+          { title: '叩马而谏', text: '武王伐纣，伯夷叔齐叩马而谏，以父死不葬爰及干戈为不孝，以臣弑君为不仁；太公曰此义人也扶而去之。' },
+          { title: '采薇首阳', text: '义不食周粟隐于首阳山采薇而食，作歌登彼西山兮采其薇矣，遂饿且死；孔子称其不降其志不辱其身。' }
+        ],
+        bio: '商末孤竹国君长子，与弟叔齐让国逃周，义不食周粟采薇首阳山饿死，孟子尊为圣之清者。',
+        hasLink: false
+      },
+      {
+        name: '伊尹', courtesyName: '—', title: '圣之任者',
+        faction: '圣贤堂', subFaction: '孟子四圣',
+        dynasty: '商初', state: '有莘国', lifespan: '约前16世纪', no: '007',
+        portraitPrompt: '商初圣之任者伊尹反差形象，身形魁梧膀阔腰圆的厨子出身宰辅，腰系粗布围裙背负一口青铜大鼎鼎耳缠布以肩承之，目光锐利如鹰隼眉宇间有经纶天下之相鬓发如戟，背景为商初宫室炊烟鼎中隐见汤羹翻滚，水墨国风重彩卡通插画，米白宣纸背景，史诗感历史人物画',
+        scores: [
+          { dim: '仁德', value: 88, note: '自任天下，思天下不被尧舜之泽' },
+          { dim: '学识', value: 88, note: '知味说汤，通晓治道王道' },
+          { dim: '教化', value: 82, note: '放太甲于桐宫三年训其悔过' },
+          { dim: '思想', value: 85, note: '先觉觉后觉，自任天下之重' },
+          { dim: '言传', value: 78, note: '训辞载于尚书商书' },
+          { dim: '影响', value: 92, note: '佐汤灭夏开商基业，废立之正' }
+        ],
+        quotes: [
+          { text: '天之生斯民也，使先知觉后知，先觉觉后觉。', source: '《孟子·万章下》' }
+        ],
+        deeds: [
+          { title: '负鼎说汤', text: '本有莘氏庖人，负鼎俎为媵臣入商，以烹调滋味为喻说汤，论王道伐夏救民，汤举以为相。' },
+          { title: '自任天下', text: '耕于有莘之野而乐尧舜之道，曰天之生斯民也使先知觉后知，自任以天下之重。' },
+          { title: '放太甲于桐', text: '太甲既立三年不明暴虐，伊尹放之于桐宫三年自摄政当国；太甲悔过自新，伊尹迎归亳还政。' }
+        ],
+        bio: '商初有莘氏庖人出身，负鼎说汤佐灭夏桀，自任天下之重，放太甲于桐宫训王悔过，孟子尊为圣之任者。',
+        hasLink: false
+      },
+      {
+        name: '柳下惠', courtesyName: '禽', title: '圣之和者',
+        faction: '圣贤堂', subFaction: '孟子四圣',
+        dynasty: '春秋', state: '鲁国', lifespan: '约前7世纪', no: '008',
+        portraitPrompt: '春秋圣之和者柳下惠反差形象，温润如玉的中年文官，面庞丰润和厚眉眼含笑，宽袍大袖端坐于一株垂柳之下柳枝拂肩，神态从容不迫双手拢袖，气度宽和包容怀中空无一物却自有一股坐怀不乱的正定之气，水墨国风重彩卡通插画，米白宣纸背景，史诗感历史人物画',
+        scores: [
+          { dim: '仁德', value: 90, note: '宽和容众，遗佚不怨阨穷不悯' },
+          { dim: '学识', value: 80, note: '鲁国士师典理刑狱，断狱称平' },
+          { dim: '教化', value: 75, note: '直道事人，闻其风者鄙夫宽' },
+          { dim: '思想', value: 78, note: '和而不同，不以三黜易其道' },
+          { dim: '言传', value: 70, note: '言行见论语孟子，无专著传世' },
+          { dim: '影响', value: 82, note: '坐怀不乱，和圣之风' }
+        ],
+        quotes: [
+          { text: '直道而事人，焉往而不三黜？', source: '《论语·微子》' }
+        ],
+        deeds: [
+          { title: '坐怀不乱', text: '夜宿郭门遇女子无依，恐其冻死，解衣裹之抱坐怀中至晓而终不及乱，操守坚正，世传为和圣。' },
+          { title: '三黜不去', text: '为鲁国士师典理刑狱，三度遭黜而不去鲁；人问何不他适，答直道而事人焉往而不三黜，守道不苟去。' },
+          { title: '遗佚不怨', text: '不羞污君不辞小官，进不隐贤必以其道，遗佚而不怨阨穷而不悯，与乡人处由由然不忍去。' }
+        ],
+        bio: '春秋鲁国大夫展获，名获字禽，食邑柳下谥惠，坐怀不乱三黜不去，宽和容众不羞污君，孟子尊为圣之和者。',
+        hasLink: false
+      },
+
+      // ===== 行业诸圣 =====
+      {
+        name: '孙武', courtesyName: '长卿', title: '兵圣',
+        faction: '圣贤堂', subFaction: '行业圣人',
+        dynasty: '春秋', state: '齐国', lifespan: '约前545–前470', no: '009',
+        portraitPrompt: '春秋兵圣孙武反差形象，身披青铜甲胄手持令旗的冷峻统帅，面容如铁不怒自威，身后吴军甲士阵列森严，透出斩二妃立军法的肃杀气场，动态构图，水墨国风重彩卡通插画，米白宣纸背景，史诗感历史人物画',
+        scores: [
+          { dim: '谋略', value: 98, note: '不战而屈人之兵，上兵伐谋' },
+          { dim: '用兵', value: 97, note: '知己知彼，百战不殆' },
+          { dim: '治军', value: 90, note: '斩二妃立威，法令如山' },
+          { dim: '应变', value: 95, note: '兵无常势，水无常形' },
+          { dim: '著述', value: 98, note: '兵法十三篇，开兵学之祖' },
+          { dim: '影响', value: 100, note: '兵学圣典，千古兵家之师' }
+        ],
+        quotes: [
+          { text: '知己知彼，百战不殆。', source: '《孙子兵法·谋攻篇》' }
+        ],
+        deeds: [
+          { title: '斩姬立威', text: '吴王阖闾试之以宫中美女，孙武三令五申而宫女皆笑，遂斩吴王二宠姬以明军法，众皆惊服队列为之一整。' },
+          { title: '著兵法十三篇', text: '应吴王之请著孙子兵法十三篇，言简意深开兵家之先河，后世奉为兵学圣典。' }
+        ],
+        bio: '孙武（约前545–前470），字长卿，春秋齐国乐安人后入吴，著孙子兵法十三篇辅吴王阖闾破楚入郢，尊为兵圣。',
+        hasLink: false
+      },
+      {
+        name: '王羲之', courtesyName: '逸少', title: '书圣',
+        faction: '圣贤堂', subFaction: '行业圣人',
+        dynasty: '东晋', state: '琅琊', lifespan: '303–361', no: '010',
+        portraitPrompt: '东晋书圣王羲之反差形象，风流倜傥的魏晋名士，微醺状态执笔挥毫作兰亭序，墨迹飞舞如行云流水，身侧白鹅悠然伴游，袒胸露怀任诞不羁，动态构图，水墨国风重彩卡通插画，米白宣纸背景，史诗感历史人物画',
+        scores: [
+          { dim: '笔法', value: 99, note: '飘若浮云，矫若惊龙' },
+          { dim: '结体', value: 98, note: '增损古法，裁成今体' },
+          { dim: '章法', value: 97, note: '兰亭一序，浑然天成' },
+          { dim: '气韵', value: 99, note: '字字殊异，无一雷同' },
+          { dim: '创新', value: 96, note: '变汉魏朴质为今体行书' },
+          { dim: '影响', value: 100, note: '书圣之名，千载不朽' }
+        ],
+        quotes: [
+          { text: '群贤毕至，少长咸集。', source: '《兰亭集序》' }
+        ],
+        deeds: [
+          { title: '兰亭醉书', text: '永和九年三月三日，王羲之与群贤会于会稽山阴兰亭，乘醉挥毫作兰亭序，酒醒后再书数十本皆不及，遂为千古第一行书。' },
+          { title: '书经换鹅', text: '山阴有道士养好鹅，羲之求之，道士请写道德经换鹅，羲之欣然写毕笼鹅而归。' }
+        ],
+        bio: '王羲之（303–361），字逸少，东晋琅琊人后居会稽山阴，官至右军将军世称王右军，变汉魏朴质为今体，尊为书圣。',
+        hasLink: false
+      },
+      {
+        name: '张仲景', courtesyName: '仲景', title: '医圣',
+        faction: '圣贤堂', subFaction: '行业圣人',
+        dynasty: '东汉', state: '南阳', lifespan: '约150–219', no: '011',
+        portraitPrompt: '东汉医圣张仲景反差形象，悬壶济世的中年医者，长髯飘飘眉目慈悲，一手手持药葫芦一手持医书，身后药柜密布药香氤氲，神情专注而温厚，动态构图，水墨国风重彩卡通插画，米白宣纸背景，史诗感历史人物画',
+        scores: [
+          { dim: '医理', value: 98, note: '勤求古训，精研素问九卷' },
+          { dim: '辨证', value: 99, note: '六经辨证，开辨证论治之先' },
+          { dim: '方剂', value: 98, note: '经方之祖，方证相应' },
+          { dim: '医德', value: 96, note: '上以疗君亲，下以救贫贱' },
+          { dim: '著述', value: 99, note: '伤寒杂病论，医方之祖' },
+          { dim: '影响', value: 98, note: '医圣之名，垂范千载' }
+        ],
+        quotes: [
+          { text: '勤求古训，博采众方。', source: '《伤寒杂病论·序》' }
+        ],
+        deeds: [
+          { title: '著伤寒杂病论', text: '东汉末年疫病流行，宗族二百余十年间死亡三分有二，张仲景勤求古训博采众方，撰成伤寒杂病论，确立六经辨证与辨证论治体系。' },
+          { title: '坐堂行医', text: '相传任长沙太守时，每月初一十五大开公堂坐诊行医，救活甚众，坐堂医之名由此而来。' }
+        ],
+        bio: '张仲景（约150–219），名机字仲景，东汉南阳人，著伤寒杂病论创六经辨证，奠中医辨证论治根基，尊为医圣。',
+        hasLink: false
+      },
+      {
+        name: '吴道子', courtesyName: '道子', title: '画圣',
+        faction: '圣贤堂', subFaction: '行业圣人',
+        dynasty: '唐代', state: '阳翟', lifespan: '约680–759', no: '012',
+        portraitPrompt: '唐代画圣吴道子反差形象，狂放不羁的画师，长发披散衣袂飘举，手持巨笔挥毫绘天王图，笔下神佛衣带当风凌空飞动，神色痴狂如有神助，动态构图，水墨国风重彩卡通插画，米白宣纸背景，史诗感历史人物画',
+        scores: [
+          { dim: '线条', value: 99, note: '吴带当风，圆转飘逸' },
+          { dim: '造型', value: 95, note: '人物生动，八面生意' },
+          { dim: '气韵', value: 98, note: '天衣飞扬，满壁风动' },
+          { dim: '创新', value: 97, note: '莼菜条描法，变顾陆之体' },
+          { dim: '产量', value: 92, note: '长安寺院壁画三百余间' },
+          { dim: '影响', value: 95, note: '画圣之尊，百代画工祖师' }
+        ],
+        quotes: [
+          { text: '众密如秋林，疏可走马。', source: '后世画论评吴道子画境' }
+        ],
+        deeds: [
+          { title: '绘送子天王图', text: '传吴道子绘送子天王图（今存宋摹本），白描人物衣纹飞动，神佛气度威严，开吴带当风之典范。' },
+          { title: '一日画嘉陵江', text: '唐玄宗命吴道子入蜀写嘉陵江景，归而于大同殿一日画嘉陵江三百里，与李思训数月之功并称神妙。' }
+        ],
+        bio: '吴道子（约680–759），字道子，唐代阳翟人，玄宗召入内廷，擅人物神佛创吴带当风描法，尊为画圣。',
+        hasLink: false
+      },
+      {
+        name: '杜甫', courtesyName: '子美', title: '诗圣',
+        faction: '圣贤堂', subFaction: '行业圣人',
+        dynasty: '唐代', state: '巩县', lifespan: '712–770', no: '013',
+        portraitPrompt: '唐代诗圣杜甫反差形象，忧国忧民的清瘦诗翁，麻衣草履登高远眺，身后秋风茅屋摇摇欲坠，面带忧色却目光坚定如炬，鬓发萧瑟而脊梁挺直，动态构图，水墨国风重彩卡通插画，米白宣纸背景，史诗感历史人物画',
+        scores: [
+          { dim: '炼字', value: 97, note: '语不惊人死不休' },
+          { dim: '意境', value: 98, note: '沉郁顿挫，气象宏阔' },
+          { dim: '格律', value: 96, note: '律切精深，集古今大成' },
+          { dim: '忧民', value: 99, note: '穷年忧黎元，叹息肠内热' },
+          { dim: '创新', value: 95, note: '乐府新题，即事名篇' },
+          { dim: '影响', value: 98, note: '诗史千载，诗圣之名' }
+        ],
+        quotes: [
+          { text: '安得广厦千万间，大庇天下寒士俱欢颜。', source: '《茅屋为秋风所破歌》' }
+        ],
+        deeds: [
+          { title: '困顿长安', text: '杜甫困居长安十年求仕不得，朝扣富儿门暮随肥马尘，备尝人间冷暖，遂发穷年忧黎元之叹。' },
+          { title: '漂泊诗史', text: '安史之乱起，杜甫漂泊西南，于成都筑草堂夔州登高，以诗纪时政民瘼被誉为诗史，终老于湘江舟中。' }
+        ],
+        bio: '杜甫（712–770），字子美，唐代巩县人自号少陵野老，沉郁顿挫以诗纪史被誉为诗史，尊为诗圣。',
+        hasLink: false
+      },
+      {
+        name: '陆羽', courtesyName: '鸿渐', title: '茶圣',
+        faction: '圣贤堂', subFaction: '行业圣人',
+        dynasty: '唐代', state: '竟陵', lifespan: '733–804', no: '014',
+        portraitPrompt: '唐代茶圣陆羽反差形象，隐逸清癯的茶人，布衣芒鞋手捧茶碗细细品鉴，身后茶山云雾缭绕茶香氤氲，面容清癯有茶癖之相，目光专注如鉴泉石，动态构图，水墨国风重彩卡通插画，米白宣纸背景，史诗感历史人物画',
+        scores: [
+          { dim: '识茶', value: 99, note: '辨茶之源，识茶之性' },
+          { dim: '烹艺', value: 98, note: '二十四器，烹茶之法' },
+          { dim: '品鉴', value: 97, note: '品水鉴泉，辨天下二十水' },
+          { dim: '著述', value: 99, note: '茶经三卷，茶学开山' },
+          { dim: '推广', value: 95, note: '倡导煎茶，移风易俗' },
+          { dim: '影响', value: 96, note: '茶圣之名，泽被百代' }
+        ],
+        quotes: [
+          { text: '茶之为饮，发乎神农氏。', source: '《茶经·六之饮》' }
+        ],
+        deeds: [
+          { title: '闭门著茶经', text: '陆羽隐居苕溪闭门著茶经三卷，述茶之源具造器煮饮事出略图，开茶学之始，自此天下益知饮茶。' },
+          { title: '品水鉴泉', text: '陆羽精于品水尝辨天下水泉高下列二十品，识扬子江南零水为天下第七，传为佳话。' }
+        ],
+        bio: '陆羽（733–804），字鸿渐，唐代竟陵人自号桑苎翁，著茶经三卷开茶学之始，尊为茶圣。',
+        hasLink: false
+      },
+      {
+        name: '司马迁', courtesyName: '子长', title: '史圣',
+        faction: '圣贤堂', subFaction: '行业圣人',
+        dynasty: '西汉', state: '夏阳', lifespan: '约前145–前86', no: '015',
+        portraitPrompt: '西汉史圣司马迁反差形象，受宫刑后仍秉笔直书的史官，面容清癯刚毅不屈，伏案修史于烛火之下，身后竹简堆积如山，目光穿透历史长河深邃如炬，动态构图，水墨国风重彩卡通插画，米白宣纸背景，史诗感历史人物画',
+        scores: [
+          { dim: '考据', value: 97, note: '网罗天下放失旧闻，考之行事' },
+          { dim: '叙事', value: 99, note: '纪传体例，开史书新体' },
+          { dim: '史识', value: 98, note: '究天人之际，通古今之变' },
+          { dim: '文采', value: 98, note: '史家之绝唱，无韵之离骚' },
+          { dim: '秉笔', value: 100, note: '不虚美不隐恶，实录直书' },
+          { dim: '影响', value: 99, note: '二十四史之首，百代史宗' }
+        ],
+        quotes: [
+          { text: '究天人之际，通古今之变，成一家之言。', source: '《报任安书》' }
+        ],
+        deeds: [
+          { title: '发愤著史记', text: '司马迁承父职任太史令，周游天下网罗旧闻，欲成一家之书，历十余年撰成史记一百三十篇，开纪传体之先。' },
+          { title: '李陵之祸', text: '天汉二年李陵兵败降匈奴，司马迁为之辩护触怒汉武帝受宫刑，忍辱负重发愤著书，终成史记。' }
+        ],
+        bio: '司马迁（约前145–前86），字子长，西汉夏阳人，任太史令因李陵之祸受宫刑，发愤著史记一百三十篇开纪传体之先，尊为史圣。',
+        hasLink: false
+      }
+    ];
+
+    // ============ 雷达图 SVG 生成（复用 demo_card 逻辑）============
+    function buildRadar(scores) {
+      const cx = 150, cy = 150, R = 110, n = scores.length;
+      const angles = scores.map((_, i) => (-90 + i * (360 / n)) * Math.PI / 180);
+      const rings = [0.2, 0.4, 0.6, 0.8, 1.0].map(r =>
+        angles.map(a => (cx + R * r * Math.cos(a)).toFixed(1) + ',' + (cy + R * r * Math.sin(a)).toFixed(1)).join(' '));
+      const dataPts = scores.map((s, i) => {
+        const r = (s.value / 100) * R;
+        return { x: cx + r * Math.cos(angles[i]), y: cy + r * Math.sin(angles[i]) };
+      });
+      const dataPoly = dataPts.map(p => p.x.toFixed(1) + ',' + p.y.toFixed(1)).join(' ');
+      const axes = angles.map(a => ({ x: cx + R * Math.cos(a), y: cy + R * Math.sin(a) }));
+      const labels = scores.map((s, i) => {
+        const lr = R + 24;
+        return { x: cx + lr * Math.cos(angles[i]), y: cy + lr * Math.sin(angles[i]), dim: s.dim, value: s.value };
+      });
+      return { rings, dataPoly, axes, dataPts, labels, cx, cy };
+    }
+
+    function renderRadar(scores) {
+      const r = buildRadar(scores);
+      return `<svg class="sg-radar-svg" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+        ${r.rings.map(pts => `<polygon class="sg-radar-grid" points="${pts}"></polygon>`).join('')}
+        ${r.axes.map(a => `<line class="sg-radar-axis" x1="${r.cx}" y1="${r.cy}" x2="${a.x.toFixed(1)}" y2="${a.y.toFixed(1)}"></line>`).join('')}
+        <polygon class="sg-radar-data" points="${r.dataPoly}"></polygon>
+        ${r.dataPts.map(p => `<circle class="sg-radar-point" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.2"></circle>`).join('')}
+        ${r.labels.map(l => `<text class="sg-radar-label" x="${l.x.toFixed(1)}" y="${(l.y-6).toFixed(1)}">${l.dim}</text><text class="sg-radar-value" x="${l.x.toFixed(1)}" y="${(l.y+8).toFixed(1)}">${l.value}</text>`).join('')}
+      </svg>`;
+    }
+
+    // ============ 章节链接生成（仅 hasLink=true 时有效）============
+    // demos/ 目录下无 index.html，指向上一级 site/index.html（部署产物，已验证存在）
+    function chapterLink(book, chapter) {
+      return '../site/index.html?book=' + encodeURIComponent(book) + '&chapter=' + encodeURIComponent(chapter);
+    }
+
+    // ============ 渲染单张圣人卡片 ============
+    function renderCard(s) {
+      const portrait = portraitUrl(s.portraitPrompt);
+      const top = s.quotes[0];
+
+      // 防御性校验：以字段存在性判断是否生成链接，避免 hasLink=true 但字段缺失生成 undefined 链接
+      const hasQuoteLink = !!(s.linkBook && s.linkChapter);
+      const hasDeedLink = !!(s.deedBook && s.deedChapter);
+
+      // 名言渲染：有跳转用 <a>，无跳转用 <span>
+      const quoteHtml = hasQuoteLink
+        ? `<a class="sg-link sg-quote-text" href="${chapterLink(s.linkBook, s.linkChapter)}" target="_blank" rel="noopener" title="查看原文">${top.text} ↗</a>`
+        : `<span class="sg-quote-text">${top.text}</span>`;
+
+      // 事迹渲染：有跳转用 <a>，无跳转用 <span>
+      const deedsHtml = s.deeds.slice(0, 3).map(d => {
+        const titleHtml = hasDeedLink
+          ? `<a class="sg-link sg-deed-title" href="${chapterLink(s.deedBook, s.deedChapter)}" target="_blank" rel="noopener">${d.title} ↗</a>`
+          : `<span class="sg-deed-title">${d.title}</span>`;
+        return `<div class="sg-deed-item">
+          <div class="sg-deed-dot"></div>
+          <div class="sg-deed-body">
+            ${titleHtml}
+            <div class="sg-deed-text">${d.text}</div>
+          </div>
+        </div>`;
+      }).join('');
+
+      return `<article class="sg-card" data-faction="${s.subFaction}">
+        <div class="sg-portrait">
+          <img src="${portrait}" alt="${s.name}立绘" loading="lazy" onerror="${IMG_ONERROR}">
+          <div class="sg-stamp">
+            <span class="sg-stamp-title">${s.title}</span>
+            <span class="sg-stamp-no">NO.${s.no} · ${s.dynasty} · ${s.state}</span>
+            <span class="sg-stamp-sub">${s.subFaction}</span>
+          </div>
+        </div>
+        <div class="sg-info">
+          <div class="sg-name-row">
+            <span class="sg-name">${s.name}</span>
+            <span class="sg-courtesy">${s.courtesyName !== '—' ? '字 ' + s.courtesyName : '史佚其字'}</span>
+          </div>
+          <div class="sg-tags">
+            <span class="sg-tag">${s.dynasty}</span>
+            <span class="sg-tag">${s.state}</span>
+            <span class="sg-tag">${s.lifespan}</span>
+          </div>
+          <div class="sg-radar-section">
+            <div class="sg-radar-wrap">${renderRadar(s.scores)}</div>
+          </div>
+          <div class="sg-quote">
+            ${quoteHtml}
+            <div class="sg-quote-src">—— ${top.source}</div>
+          </div>
+          <div class="sg-deed">${deedsHtml}</div>
+          <div class="sg-foot">
+            <span class="sg-foot-bio">${s.bio}</span>
+            <span>圣贤堂 · ${s.no}</span>
+          </div>
+        </div>
+      </article>`;
+    }
+
+    // ============ 渲染网格 + 筛选 ============
+    const grid = document.getElementById('hallGrid');
+
+    function renderGrid(filter = 'all') {
+      const list = filter === 'all' ? SAGES : SAGES.filter(s => s.subFaction === filter);
+      grid.innerHTML = list.map(renderCard).join('');
+    }
+
+    renderGrid();
+
+    // 筛选按钮
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderGrid(btn.dataset.filter);
+      });
+    });
+  </script>
+</body>
+</html>
