@@ -55,8 +55,8 @@
 
 ## 六、Trae Skill 边界（新增/修改 Skill 时检查）
 
-- [ ] Skill 文件未声称能"调度 sub-agents"或"直接调用 MCP tools"（Skill 做不到）
-- [ ] Skill 需要真并行时，已改为触发 Python 脚本（路径 B）
+- [ ] Skill 文件未声称能"调度 sub-agents"或"直接调用 MCP tools"（Skill 文件本身做不到）
+- [ ] Skill 需要真并行时，优先引导主 Agent 用 `Task` 工具启动 subagent（路径 C，主路径）；或触发 Python 脚本（路径 B，可选增强）。详见 `.trae/rules/dev-workflow.md §零`
 - [ ] Skill 的触发条件清晰、不与现有 Skill 重叠
 - [ ] Skill 与 `.trae/rules/dev-workflow.md` 声明的边界一致
 

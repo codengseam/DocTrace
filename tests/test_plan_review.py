@@ -1,10 +1,20 @@
-"""计划评审工作流测试：验证多 Agent 并行评审流程。"""
+"""计划评审工作流测试：验证多 Agent 并行评审流程。
+
+路径 B（langgraph）的单元测试。无 langgraph 环境下整体 skip，
+避免收集期 ImportError 中断 pytest（BUG-031 回归保护）。
+主路径（会话内 Task 工具并行）的文档契约测试见 tests/test_plan_review_skill.py。
+"""
 
 import os
 import tempfile
 from pathlib import Path
 
-from src.core.plan_review_workflow import build_review_workflow
+import pytest
+
+# 路径 B 依赖 langgraph；无 langgraph 时优雅 skip，而非收集期 ImportError 中断。
+pytest.importorskip("langgraph")
+
+from src.core.plan_review_workflow import build_review_workflow  # noqa: E402
 
 
 def test_review_workflow_compiles():

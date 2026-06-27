@@ -2,8 +2,13 @@ import os
 import tempfile
 from pathlib import Path
 
-import src.core.workflow as workflow_module
-from src.core.workflow import build_workflow
+import pytest
+
+# 依赖 langgraph；无 langgraph 时优雅 skip，避免收集期 ImportError 中断 pytest（BUG-031 同源修复）。
+pytest.importorskip("langgraph")
+
+import src.core.workflow as workflow_module  # noqa: E402
+from src.core.workflow import build_workflow  # noqa: E402
 
 
 def test_workflow_compiles():

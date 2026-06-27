@@ -21,11 +21,14 @@
 | **直接调用 MCP tools** | **不支持** |
 | 执行代码、保存文件、维护状态 | **不支持** |
 
-**重要**：当用户提到"启用多个 agent""专家团并行""多 Agent 评审"时，不要假装 Skill 可以调度子 Agent。可行路径只有两条：
-- **路径 A**：由单个 Agent 串行切换视角（架构师→测试→规则），伪并行。
-- **路径 B**：Skill 触发本地 Python 脚本（如 `python scripts/review_plan.py`），由 Python 引擎（LangGraph）做真并行。
+**重要**：当用户提到"启用多个 agent""专家团并行""多 Agent 评审"时，不要假装 Skill **文件本身**可以调度子 Agent。可行路径有三条：
+- **路径 C（主路径）**：主 Agent 经 Skill 引导，用 Trae `Task` 工具（`subagent_type` 参数）在**当前会话内**启动多个 subagent 并行执行，主 Agent 汇总。无需外部依赖。调度纪律见 `.trae/skills/dispatching-parallel-agents/SKILL.md`。
+- **路径 A**：由单个 Agent 串行切换视角（架构师→测试→规则），伪并行。仅当 Task 工具不可用时降级使用。
+- **路径 B**：Skill 触发本地 Python 脚本（如 `python scripts/review_plan.py`），由 Python 引擎（LangGraph）做真并行。需 `.env` + `langgraph` 已安装，环境缺失时降级到路径 C。
 
-本项目已为路径 B 配备基础设施：`src/agents/` + `src/core/workflow.py` + `scripts/review_plan.py`。
+**能力边界澄清**：上表"创建/调度 sub-agents 不支持"指 **Skill 文件本身**不调度；主 Agent 经 Skill 引导后调用 `Task` 工具启动 subagent 不违反此约束——Skill 只引导，执行靠主 Agent + 原生工具。详见 BUG-031 沉淀。
+
+本项目已为路径 B 配备基础设施：`src/agents/` + `src/core/workflow.py` + `scripts/review_plan.py`；路径 C 由 `Task` 工具原生支持，无需额外基础设施。
 
 ## 一、默认协作流程（每次开发对话自动生效）
 

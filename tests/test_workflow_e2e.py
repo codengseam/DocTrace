@@ -4,7 +4,18 @@ import os
 import tempfile
 from pathlib import Path
 
-from src.core.workflow import build_workflow
+import pytest
+
+# 依赖 langgraph；无 langgraph 时优雅 skip，避免收集期 ImportError 中断 pytest（BUG-031 同源修复）。
+pytest.importorskip("langgraph")
+
+# 额外检测：若 langgraph 是 test_workflow_archetype 注入的 fake（全局 sys.modules 污染），
+# importorskip 会被骗过，但 e2e 需要真实编排（invoke 跑全节点），fake 无法满足 → skip。
+import langgraph as _lg_check  # noqa: E402
+if getattr(_lg_check, "_FAKE", False):
+    pytest.skip("langgraph 是 fake mock，e2e 需真实 langgraph 编排", allow_module_level=True)
+
+from src.core.workflow import build_workflow  # noqa: E402
 
 
 def test_workflow_end_to_end_with_mock():

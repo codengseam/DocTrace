@@ -90,7 +90,10 @@ Specialist Agents 并行工作：
 │   │   │   ├── SKILL.md    # Skill 定义
 │   │   │   ├── rules.md    # 内容生成规则（按需加载）
 │   │   │   └── content-quality.md  # 内容质检规则（按需加载）
-│   │   └── content-review/ # Trae Skill 交互入口（内容质检）
+│   │   ├── content-review/ # Trae Skill 交互入口（内容质检）
+│   │   ├── plan-review/    # 计划评审（会话内 Task 工具启动多 subagent 并行评审）
+│   │   ├── dispatching-parallel-agents/  # 并行调度纪律（适配 Trae Task 工具）
+│   │   └── ...             # 另含 dev-selfcheck / git-merge-guardian / tdd / systematic-debugging / verification-before-completion / receiving-code-review / writing-plans / chapter-title-soul
 │   ├── rules/
 │   │   ├── dev-workflow.md     # 开发协作流程规则（自动加载）
 │   │   └── bug-reporting.md    # Bug 记录与回归规范（自动加载）

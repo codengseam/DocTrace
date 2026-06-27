@@ -465,3 +465,32 @@
   1. 环境降级路径（PyYAML 未装 fallback 内置解析器）的产物类型与正常路径不一致（dict vs list），下游消费者必须 isinstance 兜底，不能假设结构。
   2. 内置简单 YAML 解析器对嵌套结构的处理是脆弱点，未来应评估是否强制 PyYAML 依赖或重写解析器。
 - **待办**：`src/core/workflow.py:get_required_sections`（行 65-66）有相同 bug，在会话A+B 范围内，本会话不修（避禁区冲突）。装 PyYAML 后该路径不触发，CI 装依赖则不暴露。
+
+## plan-review skill 环境缺失时硬阻塞无降级路径
+
+- **编号**：BUG-031
+- **首次出现**：2026-06-27
+- **类型**：兼容性 / 工具链
+- **现象**：每次调用 `plan-review` skill 都会硬阻塞在两个点：
+  1. 默认模式：`scripts/review_plan.py` 检测到 `LLM_API_KEY` 未配置，直接 `return 1` 退出。
+  2. Mock 模式：`from src.core.plan_review_workflow import build_review_workflow` 触发 `ModuleNotFoundError: No module named 'langgraph'`，裸 traceback 后退出。
+  skill v1.0.0 仅设计了路径 B（langgraph Python 引擎），无任何降级路径，环境不满足时评审完全跑不起来。skill 文档「错误处理」章节还含 `scripts/review_plan.py 不存在` 的误导条目——但文件实际存在（commit `bfd342c` 添加，git 历史从未删除）。
+- **根因**：
+  1. skill v1.0.0 把路径 B（langgraph 真并行）当成唯一路径，未考虑 `.env` / `langgraph` 缺失场景。
+  2. dev-workflow.md §零虽规定 Skill 不能调度 sub-agents（指 Skill 文件本身不能），但 Trae 的 `Task` 工具（`subagent_type` 参数）支持会话内启动 subagent——这条原生能力未被 skill 利用。
+  3. `scripts/review_plan.py` 延迟导入 `langgraph` 时未捕获 `ImportError`，直接抛裸 traceback。
+  4. skill 文档「错误处理」章节把不存在的 `scripts/review_plan.py 不存在` 当作分支处理，与实际文件状态不符，误导调用方。
+- **修复**：
+  1. `.trae/skills/plan-review/SKILL.md` 升级到 v2.0.0：主路径改为**会话内用 `Task` 工具启动 3 个 `general_purpose_task` subagent 并行评审**（架构师/测试/规则），主 Agent 汇总；路径 B 降级为可选增强；环境缺失时不硬阻塞，自动走主路径。
+  2. 新增 `.trae/skills/dispatching-parallel-agents/SKILL.md`：原生自 `obra/superpowers`（MIT），适配 Trae Task 工具，提供并行调度纪律（同一响应多 Task = 并行、subagent 指令自包含、返回后检查冲突）。
+  3. `scripts/review_plan.py` 延迟导入 `langgraph` 处加 `try/except ImportError`，输出友好提示（含主路径替代方案）而非裸 traceback。
+  4. 删除 skill 文档「错误处理」里 `scripts/review_plan.py 不存在` 的误导条目。
+- **涉及文件**：`.trae/skills/plan-review/SKILL.md`、`.trae/skills/dispatching-parallel-agents/SKILL.md`（新增）、`scripts/review_plan.py`
+- **回归测试**：
+  - `tests/test_plan_review_skill.py`：19 项测试（18 项文档契约 + 1 项 review_plan.py 降级行为测试），覆盖主路径定义、并行调度、路径 B 降级、错误处理无误导条目、三角色齐备、报告结构、版本历史、langgraph 缺失时退出码 1 + 友好提示 + 无裸 traceback。
+  - `tests/run_regression_suite.sh` 第 11 步：脚本级断言 SKILL.md 含「主路径」「Task」「subagent_type」「不硬阻塞」关键词。
+- **教训**：
+  1. Skill 设计要区分「Skill 文件本身的能力」与「Trae 原生工具的能力」——Skill 不能调度 sub-agents，但 Skill 可以引导主 Agent 使用 `Task` 工具。dev-workflow.md §零的「Skill 不能调度 sub-agents」不等于「会话内不能并行」。
+  2. 任何依赖外部环境（`.env` / 第三方包）的 skill 必须有降级路径，禁止硬阻塞。主路径应优先选择无外部依赖的方案。
+  3. skill 文档的「错误处理」章节必须与实际文件/环境状态一致，不能写「文件不存在」这种与 git 历史不符的分支。
+  4. obra/superpowers 当时判定 `dispatching-parallel-agents`「依赖原生 subagent 调度，Trae 做不到」已过时——Trae Task 工具支持 `subagent_type`，会话内并行是原生能力。技术判定需要随工具能力更新而复核。

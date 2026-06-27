@@ -59,6 +59,9 @@ def _ensure_langgraph_available():
     graph_mod.START = "__start__"
     graph_mod.END = "__end__"
     langgraph_mod.graph = graph_mod
+    # 自标识为 fake，供其他测试（如 test_workflow_e2e）检测并 skip，
+    # 避免本模块的全局 mock 污染让 importorskip 失效后用 fake 跑真实编排测试。
+    langgraph_mod._FAKE = True
     sys.modules["langgraph"] = langgraph_mod
     sys.modules["langgraph.graph"] = graph_mod
 

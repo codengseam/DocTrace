@@ -70,7 +70,18 @@ def main() -> int:
         return 1
 
     # 延迟导入，避免在参数解析阶段就加载 LangGraph
-    from src.core.plan_review_workflow import build_review_workflow
+    try:
+        from src.core.plan_review_workflow import build_review_workflow
+    except ImportError as e:
+        print(
+            "Error: 路径 B（LangGraph 真并行）依赖未就绪。\n"
+            f"  导入失败：{e}\n"
+            "  请运行 `pip install langgraph` 安装依赖，或改走主路径：\n"
+            "  在 Trae 会话内调用 plan-review skill，由 Task 工具启动多个 subagent 并行评审（无需 .env、无需 langgraph）。\n"
+            "  详见 .trae/skills/plan-review/SKILL.md。",
+            file=sys.stderr,
+        )
+        return 1
 
     initial_state = {
         "plan_text": plan_text,

@@ -340,7 +340,10 @@ AI_CLICHES_BLACKLIST = [
 
 ### 仅参考（7 个，依赖 Trae 不支持的能力）
 
-- `dispatching-parallel-agents` / `requesting-code-review` / `subagent-driven-development`：依赖原生 subagent 调度，HaloRead 走 LangGraph 路径 B 替代。
+> **2026-06-27 复核更新（BUG-031）**：`dispatching-parallel-agents` 已原生化为 `.trae/skills/dispatching-parallel-agents/SKILL.md`，适配 Trae `Task` 工具（`subagent_type` 参数）。原判定"依赖原生 subagent 调度，Trae 做不到"已过时——Task 工具支持会话内启动 subagent。下方 6 个技能的"仅参考"判定不变。
+
+- ~~`dispatching-parallel-agents`~~：**已原生化**（见 `.trae/skills/dispatching-parallel-agents/SKILL.md`），作为 `plan-review` skill 并行评审主路径的调度底座。
+- `requesting-code-review` / `subagent-driven-development`：仍依赖 Trae 不支持的原生 subagent 调度形态，HaloRead 走 LangGraph 路径 B 或 Task 工具路径 C 替代。
 - `using-superpowers`：依赖 session-start hook，Trae 做不到。
 - `using-git-worktrees`：HaloRead 单仓库，引入 worktree 属过度工程化。
 - `finishing-a-development-branch` / `executing-plans`：与 HaloRead 已有 git-merge-guardian + dev-workflow 重叠。
