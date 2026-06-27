@@ -435,7 +435,7 @@ body[data-view="reader"] .brand-header {
 .hero {
     background: var(--bg);
     border-bottom: 1px solid var(--divider);
-    padding: 72px 24px;
+    padding: 40px 24px 32px;
     text-align: center;
 }
 
@@ -446,29 +446,29 @@ body[data-view="reader"] .brand-header {
 
 .hero-title {
     font-family: var(--font-serif);
-    font-size: 36px;
+    font-size: 28px;
     font-weight: 700;
     color: var(--ink);
-    margin-bottom: 14px;
+    margin-bottom: 8px;
     letter-spacing: 0.02em;
     line-height: 1.3;
 }
 
 .hero-subtitle {
-    font-size: 16px;
+    font-size: 14px;
     color: var(--accent);
     letter-spacing: 0.06em;
     opacity: 0.9;
-    margin-bottom: 24px;
+    margin-bottom: 14px;
 }
 
 .hero-stats {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 32px;
-    margin-bottom: 28px;
-    font-size: 14px;
+    gap: 28px;
+    margin-bottom: 0;
+    font-size: 13px;
     color: var(--ink-secondary);
 }
 
@@ -481,111 +481,71 @@ body[data-view="reader"] .brand-header {
 
 .hero-stats .stat-value {
     font-family: var(--font-serif);
-    font-size: 24px;
+    font-size: 20px;
     font-weight: 700;
     color: var(--ink);
 }
 
 .hero-stats .stat-label {
-    font-size: 12px;
+    font-size: 11px;
     letter-spacing: 0.04em;
 }
 
-/* ===== 圣贤堂入口卡片 ===== */
-.hero-entry {
-    margin-top: 28px;
-    display: flex;
-    justify-content: center;
-}
-
-.entry-card {
+/* ===== 导航栏圣贤堂按钮 ===== */
+.nav-saints {
     display: inline-flex;
     align-items: center;
-    gap: 14px;
-    padding: 14px 22px;
-    background: linear-gradient(135deg, var(--card) 0%, var(--bg) 100%);
-    border: 1.5px solid var(--accent);
-    border-radius: 12px;
-    text-decoration: none;
-    color: var(--ink);
+    gap: 7px;
+    padding: 7px 14px 7px 8px !important;
+    background: linear-gradient(135deg, rgba(161, 60, 44, 0.08) 0%, rgba(201, 169, 97, 0.08) 100%);
+    border: 1.5px solid rgba(201, 169, 97, 0.5);
+    border-radius: 20px;
+    opacity: 1 !important;
+    font-family: var(--font-serif);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--ink) !important;
     transition: all 0.25s ease;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-    max-width: 100%;
+    box-shadow: 0 1px 6px rgba(161, 60, 44, 0.1);
 }
 
-.entry-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
-    border-color: var(--accent-strong, var(--accent));
+.nav-saints:hover {
+    background: linear-gradient(135deg, rgba(161, 60, 44, 0.15) 0%, rgba(201, 169, 97, 0.15) 100%) !important;
+    border-color: var(--accent);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(161, 60, 44, 0.18);
 }
 
-.entry-card:active {
-    transform: translateY(0);
-}
-
-.entry-card-icon {
-    flex-shrink: 0;
-    width: 42px;
-    height: 42px;
-    display: flex;
+.nav-saints-icon {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    width: 26px;
+    height: 26px;
     background: linear-gradient(135deg, #a13c2c 0%, #c84838 100%);
     color: #f5ecd9;
     font-family: var(--font-serif);
-    font-size: 20px;
+    font-size: 15px;
     font-weight: 700;
-    border-radius: 8px;
+    border-radius: 50%;
     border: 1px solid #c9a961;
-    box-shadow: 0 0 8px rgba(201, 169, 97, 0.4);
-}
-
-.entry-card-body {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.entry-card-title {
-    font-family: var(--font-serif);
-    font-size: 17px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-}
-
-.entry-card-desc {
-    font-size: 12px;
-    color: var(--accent);
-    letter-spacing: 0.04em;
-    opacity: 0.85;
-}
-
-.entry-card-arrow {
+    box-shadow: 0 0 6px rgba(201, 169, 97, 0.5);
     flex-shrink: 0;
-    font-size: 18px;
-    color: var(--accent);
-    transition: transform 0.25s ease;
 }
 
-.entry-card:hover .entry-card-arrow {
-    transform: translateX(4px);
+.nav-saints:hover .nav-saints-icon {
+    box-shadow: 0 0 10px rgba(201, 169, 97, 0.7);
 }
 
 @media (max-width: 480px) {
-    .entry-card {
-        padding: 12px 18px;
-        gap: 10px;
+    .nav-saints {
+        padding: 6px 12px 6px 7px !important;
+        gap: 6px;
     }
-    .entry-card-icon {
-        width: 36px;
-        height: 36px;
-        font-size: 17px;
-    }
-    .entry-card-title {
-        font-size: 15px;
-    }
-    .entry-card-desc {
-        font-size: 11px;
+    .nav-saints-icon {
+        width: 22px;
+        height: 22px;
+        font-size: 13px;
     }
 }
 
@@ -1724,15 +1684,30 @@ body[data-view="home"] .bottom-bar {
     }
 
     .hero {
-        padding: 48px 20px;
+        padding: 28px 16px 22px;
     }
 
     .hero-title {
-        font-size: 28px;
+        font-size: 22px;
+        margin-bottom: 6px;
+    }
+
+    .hero-subtitle {
+        font-size: 12px;
+        margin-bottom: 10px;
     }
 
     .hero-stats {
-        gap: 20px;
+        gap: 18px;
+        font-size: 12px;
+    }
+
+    .hero-stats .stat-value {
+        font-size: 17px;
+    }
+
+    .hero-stats .stat-label {
+        font-size: 10px;
     }
 
     .bookshelf-section {
