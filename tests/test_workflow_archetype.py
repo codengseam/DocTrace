@@ -413,7 +413,7 @@ class TestQualityNodeArchetypeRouting:
 # ---------------------------------------------------------------------------
 
 class TestSoulInjectionArchetypeRouting:
-    """narrative 启用 tone_setter/chief_editor；modern/knowledge 跳过走原 else 分支。
+    """三桶均启用 tone_setter/chief_editor（阶段4 边链裁剪后 modern/knowledge 也启用）。
 
     用 CapturingGraph 验证节点注册与边，不真跑图。
     """
@@ -423,7 +423,7 @@ class TestSoulInjectionArchetypeRouting:
         calls = {"nodes": [], "edges": []}
 
         # 隔离环境差异：强制 soul injection 三个开关为 True，
-        # 让路由逻辑只由 archetype 决定（narrative 启用 / modern·knowledge 跳过）。
+        # 让路由逻辑只由 archetype 决定（三桶均启用，区别在 specialist 节点裁剪）。
         # 生产环境 agent 可用性是独立问题，不在此契约测试范围。
         monkeypatch.setattr("src.core.workflow.SOUL_INJECTION_ENABLED", True)
         monkeypatch.setattr("src.core.workflow._TONE_SETTER_AVAILABLE", True)
@@ -456,66 +456,111 @@ class TestSoulInjectionArchetypeRouting:
         assert "tone_setter" in calls["nodes"], "narrative 应注册 tone_setter"
         assert "chief_editor" in calls["nodes"], "narrative 应注册 chief_editor"
 
-    def test_modern_skips_soul_nodes(self, monkeypatch):
-        """modern 桶不注册 tone_setter/chief_editor。"""
+    def test_modern_registers_soul_nodes(self, monkeypatch):
+        """阶段4 边链裁剪：modern 桶也注册 tone_setter/chief_editor（prompt 已建）。"""
         calls = self._capture_graph_topology("modern", monkeypatch)
-        assert "tone_setter" not in calls["nodes"], "modern 应跳过 tone_setter"
-        assert "chief_editor" not in calls["nodes"], "modern 应跳过 chief_editor"
+        assert "tone_setter" in calls["nodes"], "modern 应注册 tone_setter（阶段4 已开启）"
+        assert "chief_editor" in calls["nodes"], "modern 应注册 chief_editor（阶段4 已开启）"
 
-    def test_knowledge_skips_soul_nodes(self, monkeypatch):
-        """knowledge 桶不注册 tone_setter/chief_editor。"""
+    def test_knowledge_registers_soul_nodes(self, monkeypatch):
+        """阶段4 边链裁剪：knowledge 桶也注册 tone_setter/chief_editor。"""
         calls = self._capture_graph_topology("knowledge", monkeypatch)
-        assert "tone_setter" not in calls["nodes"], "knowledge 应跳过 tone_setter"
-        assert "chief_editor" not in calls["nodes"], "knowledge 应跳过 chief_editor"
+        assert "tone_setter" in calls["nodes"], "knowledge 应注册 tone_setter"
+        assert "chief_editor" in calls["nodes"], "knowledge 应注册 chief_editor"
+
+    def test_modern_specialists_trimmed(self, monkeypatch):
+        """modern 桶只注册需要的 4 specialist（historian/critic/context_analyst），
+        不注册 biographer/philosopher（design.md §10.5 modern 映射无此二 agent）。
+        """
+        calls = self._capture_graph_topology("modern", monkeypatch)
+        nodes = calls["nodes"]
+        # modern 桶需要的 specialist（editor 是汇总节点不算 specialist）
+        for spec in ("historian", "critic", "context_analyst"):
+            assert spec in nodes, f"modern 应注册 {spec}"
+        # modern 桶不需要的 specialist
+        assert "biographer" not in nodes, "modern 不应注册 biographer（无对应段）"
+        assert "philosopher" not in nodes, "modern 不应注册 philosopher（无对应段）"
+
+    def test_knowledge_specialists_trimmed(self, monkeypatch):
+        """knowledge 桶只注册需要的 4 specialist（context_analyst/historian/biographer），
+        不注册 critic/philosopher。
+        """
+        calls = self._capture_graph_topology("knowledge", monkeypatch)
+        nodes = calls["nodes"]
+        for spec in ("context_analyst", "historian", "biographer"):
+            assert spec in nodes, f"knowledge 应注册 {spec}"
+        assert "critic" not in nodes, "knowledge 不应注册 critic（无对应段）"
+        assert "philosopher" not in nodes, "knowledge 不应注册 philosopher（无对应段）"
+
+    def test_narrative_keeps_all_5_specialists(self, monkeypatch):
+        """narrative 桶保留全部 5 specialist（零回归）。"""
+        calls = self._capture_graph_topology("narrative", monkeypatch)
+        nodes = calls["nodes"]
+        for spec in ("historian", "biographer", "context_analyst", "critic", "philosopher"):
+            assert spec in nodes, f"narrative 应注册 {spec}（零回归）"
 
     def test_modern_edge_chain_complete(self, monkeypatch):
-        """modern 桶完整边链（对称 narrative）：orchestrator→5 Specialist→editor→quality
-        →save→END（走原 else 分支，无 tone_setter/chief_editor）。
+        """modern 桶完整边链：orchestrator→tone_setter→3 Specialist→editor→quality
+        →chief_editor→save→END（阶段4 边链裁剪 + soul injection 开启）。
 
-        P1-1：原测试只查 save 节点存在，链头链身裸奔。现逐条断言 else 分支边。
+        modern specialist：historian(入戏)/critic(破题)/context_analyst(方法论)。
+        避坑/践行由 editor 补写（prompts/modern/editor.md §避坑段补写指令）。
         """
         calls = self._capture_graph_topology("modern", monkeypatch)
         edges = calls["edges"]
-        # orchestrator → 5 Specialist 直连（else 分支，不经 tone_setter）
-        for spec in ("historian", "biographer", "context_analyst", "critic", "philosopher"):
-            assert ("orchestrator", spec) in edges, (
-                f"modern 应有 orchestrator→{spec} 直连（else 分支）"
+        modern_specialists = ("historian", "critic", "context_analyst")
+        # orchestrator → tone_setter（soul injection 开启）
+        assert ("orchestrator", "tone_setter") in edges, (
+            "modern 应有 orchestrator→tone_setter 边（soul injection 已开启）"
+        )
+        # tone_setter → 3 Specialist 并行扇出
+        for spec in modern_specialists:
+            assert ("tone_setter", spec) in edges, (
+                f"modern 应有 tone_setter→{spec} 边"
             )
-        # 5 Specialist → editor 扇入
-        for spec in ("historian", "biographer", "context_analyst", "critic", "philosopher"):
+        # 3 Specialist → editor 扇入
+        for spec in modern_specialists:
             assert (spec, "editor") in edges, (
                 f"modern 应有 {spec}→editor 扇入边"
             )
-        # editor → quality → save → END
+        # editor → quality → chief_editor → save → END
         assert ("editor", "quality") in edges, "modern 应有 editor→quality 边"
+        assert ("chief_editor", "save") in edges, "modern 应有 chief_editor→save 边"
         assert ("save", "__end__") in edges, "modern 应有 save→END 边"
-        # 反断言：modern 不应有 soul injection 节点/边
-        assert ("orchestrator", "tone_setter") not in edges, (
-            "modern 不应有 orchestrator→tone_setter 边"
-        )
-        assert ("chief_editor", "save") not in edges, (
-            "modern 不应有 chief_editor→save 边"
-        )
+        # 反断言：modern 不应有裁剪掉的 specialist 边
+        assert ("tone_setter", "biographer") not in edges, "modern 不应有 tone_setter→biographer 边"
+        assert ("tone_setter", "philosopher") not in edges, "modern 不应有 tone_setter→philosopher 边"
+        assert ("biographer", "editor") not in edges, "modern 不应有 biographer→editor 边"
+        # 反断言：modern 不应有 orchestrator→Specialist 直连（应经 tone_setter）
+        for spec in modern_specialists:
+            assert ("orchestrator", spec) not in edges, (
+                f"modern 不应有 orchestrator→{spec} 直连（应经 tone_setter）"
+            )
 
     def test_knowledge_edge_chain_complete(self, monkeypatch):
-        """knowledge 桶完整边链（对称 modern）。"""
+        """knowledge 桶完整边链：orchestrator→tone_setter→3 Specialist→editor→quality
+        →chief_editor→save→END。
+
+        knowledge specialist：context_analyst(概念)/historian(原理)/biographer(实践)。
+        速查/自测由 editor 补写。
+        """
         calls = self._capture_graph_topology("knowledge", monkeypatch)
         edges = calls["edges"]
-        for spec in ("historian", "biographer", "context_analyst", "critic", "philosopher"):
-            assert ("orchestrator", spec) in edges, (
-                f"knowledge 应有 orchestrator→{spec} 直连"
-            )
-            assert (spec, "editor") in edges, (
-                f"knowledge 应有 {spec}→editor 扇入边"
-            )
+        knowledge_specialists = ("context_analyst", "historian", "biographer")
+        assert ("orchestrator", "tone_setter") in edges, "knowledge 应有 orchestrator→tone_setter 边"
+        for spec in knowledge_specialists:
+            assert ("tone_setter", spec) in edges, f"knowledge 应有 tone_setter→{spec} 边"
+            assert (spec, "editor") in edges, f"knowledge 应有 {spec}→editor 边"
         assert ("editor", "quality") in edges
+        assert ("chief_editor", "save") in edges
         assert ("save", "__end__") in edges
-        assert ("orchestrator", "tone_setter") not in edges
-        assert ("chief_editor", "save") not in edges
+        # 反断言：裁剪掉的 specialist
+        assert ("tone_setter", "critic") not in edges, "knowledge 不应有 tone_setter→critic 边"
+        assert ("tone_setter", "philosopher") not in edges, "knowledge 不应有 tone_setter→philosopher 边"
 
     def test_narrative_edge_chain_complete(self, monkeypatch):
         """narrative 桶完整边链：orchestrator→tone_setter→5 Specialist→editor→quality
-        →chief_editor→save→END（design.md §10.6）。
+        →chief_editor→save→END（design.md §10.6，零回归）。
 
         不只查节点存在，逐条断言关键边，防止"注册了节点却忘了连边"。
         """
@@ -593,28 +638,26 @@ class TestQualityRouterConditionalEdge:
         assert captured["router_fn"] is not None, "未捕获到 quality 的 router_fn"
         return captured["router_fn"]
 
-    def test_modern_pass_goes_to_save(self, monkeypatch):
-        """modern 桶 quality 通过（errors 空）→ router_fn 返回 'save'。
+    def test_modern_pass_goes_to_chief_editor(self, monkeypatch):
+        """modern 桶 quality 通过（errors 空）→ router_fn 返回 'chief_editor'。
 
-        P1-5：补反断言 != 'chief_editor'，防止 _soul_injection_for_archetype 误判
-        modern 为 True 导致 modern 误走终审。
+        阶段4 边链裁剪后 modern 启用 soul injection，quality 通过走终审再 save
+        （design.md §10.6，与 narrative 一致）。
         """
         router_fn = self._capture_router_fn("modern", monkeypatch)
         result = router_fn({"errors": []})
-        assert result == "save"
-        assert result != "chief_editor", "modern 不应走 chief_editor 终审"
+        assert result == "chief_editor", "modern 启用 soul injection 后应走终审"
 
     def test_modern_fail_goes_to_end(self, monkeypatch):
         """modern 桶 quality 失败（errors 非空）→ router_fn 返回 END。"""
         router_fn = self._capture_router_fn("modern", monkeypatch)
         assert router_fn({"errors": ["缺讲人物"]}) == "__end__"
 
-    def test_knowledge_pass_goes_to_save(self, monkeypatch):
-        """knowledge 桶 quality 通过 → 'save'（P1-5：含 != chief_editor 反断言）。"""
+    def test_knowledge_pass_goes_to_chief_editor(self, monkeypatch):
+        """knowledge 桶 quality 通过 → 'chief_editor'（阶段4 三桶均走终审）。"""
         router_fn = self._capture_router_fn("knowledge", monkeypatch)
         result = router_fn({"errors": []})
-        assert result == "save"
-        assert result != "chief_editor", "knowledge 不应走 chief_editor 终审"
+        assert result == "chief_editor", "knowledge 启用 soul injection 后应走终审"
 
     def test_knowledge_fail_goes_to_end(self, monkeypatch):
         """knowledge 桶 quality 失败 → END。"""
@@ -664,13 +707,17 @@ class TestSoulInjectionForArchetypePureFunction:
         assert _soul_injection_for_archetype("narrative") is False
 
     @pytest.mark.parametrize("arch", ["modern", "knowledge"])
-    def test_non_narrative_always_returns_false(self, monkeypatch, arch):
-        """modern/knowledge 即使三开关全 True 也不启用（design.md §10.6）。"""
+    def test_non_narrative_all_flags_on_returns_true(self, monkeypatch, arch):
+        """阶段4 边链裁剪后：modern/knowledge 三开关全 True 也启用 soul injection。
+
+        原 design.md §10.6 modern/knowledge 跳过，因 prompt 未建 + 边链未裁剪。
+        阶段4 内容工作落地后 prompt 已建 + 边链按桶裁剪，三桶均启用。
+        """
         monkeypatch.setattr("src.core.workflow.SOUL_INJECTION_ENABLED", True)
         monkeypatch.setattr("src.core.workflow._TONE_SETTER_AVAILABLE", True)
         monkeypatch.setattr("src.core.workflow._CHIEF_EDITOR_AVAILABLE", True)
         from src.core.workflow import _soul_injection_for_archetype
-        assert _soul_injection_for_archetype(arch) is False
+        assert _soul_injection_for_archetype(arch) is True
 
     def test_invalid_archetype_returns_false(self, monkeypatch):
         """非法 archetype 兜底 False（不启用 soul injection）。"""

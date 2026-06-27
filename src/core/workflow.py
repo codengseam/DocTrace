@@ -67,13 +67,14 @@ def get_required_sections(archetype: str) -> list:
 
 
 def _soul_injection_for_archetype(archetype: str) -> bool:
-    """narrative 启用 tone_setter/chief_editor；modern/knowledge 跳过（design.md §10.6）。
+    """三桶均启用 tone_setter/chief_editor（design.md §10.6，阶段4 边链裁剪后）。
 
-    阶段4 落地 modern/knowledge 版 prompt 后再开启对应桶；
-    现阶段 modern/knowledge 走原 else 分支保持 save 链路完整。
+    阶段3 仅 narrative 启用，因 modern/knowledge prompt 未建 + 边链未裁剪；
+    阶段4 落地 modern/knowledge 版 prompt + 按桶裁剪 specialist 后三桶均启用。
+    非法 archetype 兜底 False（不启用）。
     """
     return (
-        archetype == "narrative"
+        archetype in _VALID_ARCHETYPES
         and SOUL_INJECTION_ENABLED
         and _TONE_SETTER_AVAILABLE
         and _CHIEF_EDITOR_AVAILABLE
@@ -215,14 +216,29 @@ def build_workflow(
         logger.info("笔记已保存至 %s", path)
         return {"output_path": str(path)}
 
+    # 阶段4 边链裁剪：按 archetype 从 SECTION_TEMPLATES 反查需要的 specialist
+    # 名单（去重，去掉 editor 汇总节点）。narrative=5, modern=3, knowledge=3。
+    section_map = editor.SECTION_TEMPLATES.get(
+        archetype, editor.SECTION_TEMPLATES["narrative"]
+    )
+    needed_specialists = sorted({
+        agent for agent in section_map.values() if agent != "editor"
+    })
+
+    # specialist 节点函数映射（按需注册；未在 archetype 段映射中的不注册）
+    specialist_fns = {
+        "historian": historian_node,
+        "biographer": biographer_node,
+        "context_analyst": context_analyst_node,
+        "critic": critic_node,
+        "philosopher": philosopher_node,
+    }
+
     graph.add_node("orchestrator", orchestrator_node)
     if use_soul_injection:
         graph.add_node("tone_setter", tone_setter_node)
-    graph.add_node("historian", historian_node)
-    graph.add_node("biographer", biographer_node)
-    graph.add_node("context_analyst", context_analyst_node)
-    graph.add_node("critic", critic_node)
-    graph.add_node("philosopher", philosopher_node)
+    for spec_name in needed_specialists:
+        graph.add_node(spec_name, specialist_fns[spec_name])
     graph.add_node("editor", editor_node)
     graph.add_node("quality", quality_node)
     if use_soul_injection:
@@ -231,25 +247,15 @@ def build_workflow(
 
     graph.add_edge(START, "orchestrator")
     if use_soul_injection:
-        # orchestrator → tone_setter(串行) → 5 Specialist(并行)
+        # orchestrator → tone_setter(串行注入) → Specialist(并行扇出)
         graph.add_edge("orchestrator", "tone_setter")
-        graph.add_edge("tone_setter", "historian")
-        graph.add_edge("tone_setter", "biographer")
-        graph.add_edge("tone_setter", "context_analyst")
-        graph.add_edge("tone_setter", "critic")
-        graph.add_edge("tone_setter", "philosopher")
+        fan_out_src = "tone_setter"
     else:
-        # 原管线：orchestrator 直连 5 Specialist
-        graph.add_edge("orchestrator", "historian")
-        graph.add_edge("orchestrator", "biographer")
-        graph.add_edge("orchestrator", "context_analyst")
-        graph.add_edge("orchestrator", "critic")
-        graph.add_edge("orchestrator", "philosopher")
-    graph.add_edge("historian", "editor")
-    graph.add_edge("biographer", "editor")
-    graph.add_edge("context_analyst", "editor")
-    graph.add_edge("critic", "editor")
-    graph.add_edge("philosopher", "editor")
+        # 原管线：orchestrator 直连 Specialist
+        fan_out_src = "orchestrator"
+    for spec_name in needed_specialists:
+        graph.add_edge(fan_out_src, spec_name)
+        graph.add_edge(spec_name, "editor")
     graph.add_edge("editor", "quality")
     graph.add_conditional_edges("quality", quality_router)
     if use_soul_injection:
