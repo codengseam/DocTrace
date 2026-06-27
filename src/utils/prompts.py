@@ -1,3 +1,4 @@
+import warnings
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -11,6 +12,11 @@ RULES_PRIMARY = Path(".trae/skills/deep-reading/rules.md")
 RULES_FALLBACK = Path("RULES.md")
 
 
+# 阶段4：已落地的 archetype 桶（fiction 预留未落地，不在此列）。
+# narrative 读原 prompts/{name}.md；modern/knowledge 读 prompts/{archetype}/{name}.md。
+_LANDED_ARCHETYPES = {"narrative", "modern", "knowledge"}
+
+
 def load_rules() -> str:
     """加载项目写作规则，优先读主库，主库不存在则读从库。"""
     for path in (RULES_PRIMARY, RULES_FALLBACK):
@@ -19,8 +25,37 @@ def load_rules() -> str:
     return ""
 
 
-def load_prompt(name: str, variables: Optional[Dict[str, Any]] = None) -> str:
-    path = Path("prompts") / f"{name}.md"
+def load_prompt(
+    name: str,
+    variables: Optional[Dict[str, Any]] = None,
+    archetype: str = "narrative",
+) -> str:
+    """加载 prompt 文件，按 archetype 选子目录（design.md §九阶段4、§11.4）。
+
+    - narrative（默认）：读原 prompts/{name}.md（兼容，禁区不动）
+    - modern/knowledge：读 prompts/{archetype}/{name}.md；文件不存在时 fallback
+      到 narrative 原路径 + UserWarning（渐进迁移友好，不静默掩盖忘迁）
+    - 非法 archetype（含 fiction 未落地）：兜底 narrative
+    """
+    if archetype not in _LANDED_ARCHETYPES:
+        archetype = "narrative"
+
+    original_path = Path("prompts") / f"{name}.md"
+
+    if archetype == "narrative":
+        path = original_path
+    else:
+        bucket_path = Path("prompts") / archetype / f"{name}.md"
+        if bucket_path.exists():
+            path = bucket_path
+        else:
+            warnings.warn(
+                f"{archetype} 桶 prompt '{name}' 未迁移，fallback 到 narrative 原路径",
+                UserWarning,
+                stacklevel=2,
+            )
+            path = original_path
+
     if not path.exists():
         raise FileNotFoundError(f"Prompt file not found: {path}")
     content = path.read_text(encoding="utf-8")
