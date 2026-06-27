@@ -46,14 +46,14 @@ echo "=== HaloRead 回归测试集 ==="
 echo ""
 
 # ---------- 1. 合并冲突标记检查（BUG-011） ----------
-echo "[1/10] 合并冲突标记检查"
+echo "[1/11] 合并冲突标记检查"
 CONFLICTS=$(grep -rn "^<<<<<<< HEAD\|^>>>>>>> origin/master" \
     --include="*.py" --include="*.yml" --include="*.md" --include="*.js" \
     --include="*.css" --include="*.html" . 2>/dev/null | grep -v node_modules | grep -v "/.git/" | wc -l)
 step "无合并冲突标记残留 (found=$CONFLICTS)" "$([ "$CONFLICTS" = "0" ] && echo 1 || echo 0)"
 
 # ---------- 2. app.js 语法检查（BUG-003/008） ----------
-echo "[2/10] app.js 语法检查"
+echo "[2/11] app.js 语法检查"
 if node --check site/js/app.js 2>/dev/null; then
     step "site/js/app.js 语法正确" 1
 else
@@ -61,7 +61,7 @@ else
 fi
 
 # ---------- 3. 沉浸模式关键代码 + 防横屏/防强制全屏（BUG-003/BUG-020 回归） ----------
-echo "[3/10] 沉浸模式回归检查"
+echo "[3/11] 沉浸模式回归检查"
 APP_JS="site/js/app.js"
 HAS_TOGGLE=$(grep -c "toggleImmersiveMode" "$APP_JS" 2>/dev/null || true)
 HAS_ENTER=$(grep -c "enterImmersiveMode" "$APP_JS" 2>/dev/null || true)
@@ -79,7 +79,7 @@ step "不调用 Fullscreen API (防部分浏览器强制横屏, found=$NO_FULLSC
     "$([ "$NO_FULLSCREEN" = "0" ] && echo 1 || echo 0)"
 
 # ---------- 4. 构建站点（BUG-011/004） ----------
-echo "[4/10] 构建静态站点"
+echo "[4/11] 构建静态站点"
 if python3 scripts/build_site.py --output output --site site >/dev/null 2>&1; then
     step "build_site.py 执行成功" 1
 else
@@ -93,7 +93,7 @@ step "index.json 含 stats.notes 且 >0（BUG-012）" \
     "$(python3 -c "import json,sys; d=json.load(open('site/data/index.json')); sys.exit(0 if d.get('stats',{}).get('notes',0)>0 else 1)" 2>/dev/null && echo 1 || echo 0)"
 
 # ---------- 5. 阅读器功能 e2e（BUG-002/003/008） ----------
-echo "[5/10] 阅读器功能 e2e (jsdom)"
+echo "[5/11] 阅读器功能 e2e (jsdom)"
 if [ -d node_modules/jsdom ]; then
     if node tests/test_reader_features.js >/dev/null 2>&1; then
         step "test_reader_features.js 全部通过" 1
@@ -105,7 +105,7 @@ else
 fi
 
 # ---------- 6. 书籍结构严格校验（BUG-017，合并前必须清零 P0/P1/P2） ----------
-echo "[6/10] 书籍结构严格校验"
+echo "[6/11] 书籍结构严格校验"
 if python3 scripts/check_book_structure.py --output output --strict >/dev/null 2>&1; then
     step "check_book_structure.py --strict 通过" 1
 else
@@ -113,7 +113,7 @@ else
 fi
 
 # ---------- 7. 重复文件检查（BUG-005，数据质量，告警） ----------
-echo "[7/10] 重复文件检查"
+echo "[7/11] 重复文件检查"
 if python3 scripts/check_duplicates.py >/dev/null 2>&1; then
     warn "check_duplicates.py 通过" 1
 else
@@ -121,7 +121,7 @@ else
 fi
 
 # ---------- 8. 章节排序检查（BUG-004/009，数据质量，告警） ----------
-echo "[8/10] 章节排序检查"
+echo "[8/11] 章节排序检查"
 if python3 scripts/check_chapter_order.py >/dev/null 2>&1; then
     warn "check_chapter_order.py 通过" 1
 else
@@ -129,7 +129,7 @@ else
 fi
 
 # ---------- 9. HTTP 冒烟测试 ----------
-echo "[9/10] HTTP 冒烟测试"
+echo "[9/11] HTTP 冒烟测试"
 python3 -m http.server 8092 --bind 127.0.0.1 --directory site >/dev/null 2>&1 &
 SERVER_PID=$!
 sleep 1
@@ -145,7 +145,7 @@ kill $SERVER_PID 2>/dev/null || true
 step "关键资源全部 200" "$ALL_200"
 
 # ---------- 10. 分支治理脚本冒烟（BUG-023） ----------
-echo "[10/10] 分支治理脚本冒烟 (BUG-023)"
+echo "[10/11] 分支治理脚本冒烟 (BUG-023)"
 if [ -f scripts/branch_governance.py ]; then
     step "branch_governance.py 存在" 1
 else
@@ -165,6 +165,14 @@ step "dry-run 报告含保护分支段落" \
 # execute 无 --yes 必须失败
 python3 scripts/branch_governance.py --mode execute --pattern "trae/agent-*" --no-fetch >/dev/null 2>&1
 step "execute 无 --yes 时拒绝执行 (rc!=0)" "$([ "$?" -ne "0" ] && echo 1 || echo 0)"
+
+# ---------- 11. loop_log 结构校验 ----------
+echo "[11/11] loop_log 结构校验"
+if python3 scripts/check_loop_log.py >/dev/null 2>&1; then
+    step "check_loop_log.py 通过" 1
+else
+    step "check_loop_log.py 通过" 0
+fi
 
 # ---------- 汇总 ----------
 echo ""

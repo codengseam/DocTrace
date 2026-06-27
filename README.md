@@ -97,6 +97,10 @@ Specialist Agents 并行工作：
 │   └── checklists/
 │       └── content-checklist.md  # 内容质检 checklist
 ├── .env.example           # 环境变量示例（API Key 等）
+├── docs/                  # 项目文档
+│   ├── loop_log.md            # LoopAgent 循环日志（开发沉淀）
+│   └── archive/               # 历史归档
+│       └── loop_log_fossils.md    # 早期测评框架与 20 章评分表（不再更新）
 ├── output/                # 生成的讲书笔记，按书分类、章节排序
 │   ├── 资治通鉴/
 │   │   ├── 周纪一_三家分晋.md

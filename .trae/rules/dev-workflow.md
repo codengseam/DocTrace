@@ -58,6 +58,13 @@
 
 ### 第三步：执行
 
+**开始前必读 loop_log**：
+1. 用 Grep 工具按本次任务主题关键词检索 `docs/loop_log.md`
+2. 若命中相关记录，引用命中的 H2 标题行号作为本次执行的前置参考（格式：`参考历史教训：docs/loop_log.md#L<行号>`）
+3. 若无命中，在执行报告中显式声明"本次任务无相关历史教训"，方可进入执行
+
+**禁止**：仅填"未发现相关教训"一句话即过，必须先执行 Grep 检索动作。
+
 执行时遵守以下规范：
 
 - **优先复用现有能力**：先查 `.trae/skills/`、`.trae/rules/`、`.trae/checklists/`、`prompts/`、`src/agents/`、`src/core/` 是否已有可复用的 Skill / 规则 / 提示词 / Agent，避免重复造轮子。
@@ -83,6 +90,23 @@
 - 是否需要更新 `.trae/rules/` 或 `src/utils/quality.py`？
 - 是否需要更新 `.trae/checklists/dev-checklist.md`？
 - 是否需要在 `docs/loop_log.md` 追加一条开发沉淀记录？
+
+**loop_log 写入门槛**（启发式，不强制白名单）：
+
+写了不亏的（建议写）：
+- 暴露了新的共性/反复问题（非单次 bug）
+- 产出了可复用资产/方法论（如三维度评分法、主场客场去重策略）
+- 触发了规则/checklist/Skill 的实际更新
+
+别往 loop_log 写的（去对应文件）：
+- 纯内容生成日志 → 去 `output/` 自身或 commit message
+- 单点 bug 修复 → 去 `tests/bug_regression_list.md`
+- 纯部署配置调整 → 去 commit message 或 README
+
+**写 loop_log 时必带的 #lesson slug**（从下表选，多选用空格分隔）：
+- `git_hygiene` / `reader_interaction` / `content_quality` / `book_structure` / `deployment` / `soul_injection` / `ai_course`
+
+完整 slug 主题表与方案 C 手册见 `docs/loop_log.md` 文件末尾。
 
 **目标**：让开发协作本身也变成可迭代的 Loop，沉淀经验，避免同类问题反复出现。
 
