@@ -208,6 +208,20 @@ def main() -> int:
         print("[DRY RUN] 跳过工作流调用，不生成笔记。")
         return 0
 
+    # 阶段3：执行层（specialist/editor prompt）尚未按 archetype 分桶（阶段4 落地）。
+    # 真实模式下 modern/knowledge 会因 specialist 硬编码 narrative 段名导致 quality 失败（P0-1）。
+    # 阶段4 specialist 改造前，真实模式统一回落 narrative 执行；stub 模式已 return，保留分桶展示。
+    # 注意：initial_state['archetype'] 保留用户意图（modern/knowledge），供阶段4 specialist 读取；
+    # 仅 build_workflow 用回落的 exec_archetype，保证 quality 检查与 specialist 生成段名匹配。
+    exec_archetype = archetype
+    if archetype != "narrative":
+        print(
+            f"警告：archetype {archetype!r} 真实生成尚未落地（阶段4），"
+            f"回落 narrative 执行",
+            file=sys.stderr,
+        )
+        exec_archetype = "narrative"
+
     from src.core.workflow import build_workflow
 
     initial_state = {
@@ -223,7 +237,7 @@ def main() -> int:
         "errors": [],
     }
 
-    app = build_workflow(output_base=args.output_dir, archetype=archetype)
+    app = build_workflow(output_base=args.output_dir, archetype=exec_archetype)
     final_state = app.invoke(initial_state)
 
     if final_state.get("errors"):

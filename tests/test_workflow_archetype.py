@@ -227,6 +227,31 @@ class TestEditorSectionTemplates:
                     f"{arch}/{section} 映射到未知 agent: {agent_name}"
                 )
 
+    @pytest.mark.parametrize("bad", ["", "fiction", "不存在", None])
+    def test_section_to_agent_map_invalid_falls_back_to_narrative(self, bad):
+        """P1-3：_section_to_agent_map 对非法 archetype 兜底返回 narrative 映射。"""
+        from src.agents import editor
+        result = editor._section_to_agent_map(bad)
+        assert result == editor.SECTION_TEMPLATES["narrative"], (
+            f"非法 archetype {bad!r} 应兜底 narrative 映射"
+        )
+
+    def test_section_templates_keys_match_config(self):
+        """P2-3：editor.SECTION_TEMPLATES 每桶 key 集合 == config.section_templates 对应桶列表。
+
+        防止 config 加了段但 editor 映射没同步（双真相源漂移）。
+        """
+        from src.agents import editor
+        cfg = load_config(PROJECT_ROOT / "config.yaml")
+        templates = cfg["section_templates"]
+        for arch in ("narrative", "modern", "knowledge"):
+            editor_keys = set(editor.SECTION_TEMPLATES[arch].keys())
+            config_keys = set(templates[arch])
+            assert editor_keys == config_keys, (
+                f"{arch} 桶 editor 与 config 段名不一致："
+                f"editor={editor_keys} config={config_keys}"
+            )
+
 
 # ---------------------------------------------------------------------------
 # 契约5：main._generate_stub 按 archetype 生成对应段数
@@ -443,21 +468,50 @@ class TestSoulInjectionArchetypeRouting:
         assert "tone_setter" not in calls["nodes"], "knowledge 应跳过 tone_setter"
         assert "chief_editor" not in calls["nodes"], "knowledge 应跳过 chief_editor"
 
-    def test_modern_keeps_save_chain(self, monkeypatch):
-        """modern 桶走原 else 分支，save 链路完整（不因跳过 soul 而断链）。"""
+    def test_modern_edge_chain_complete(self, monkeypatch):
+        """modern 桶完整边链（对称 narrative）：orchestrator→5 Specialist→editor→quality
+        →save→END（走原 else 分支，无 tone_setter/chief_editor）。
+
+        P1-1：原测试只查 save 节点存在，链头链身裸奔。现逐条断言 else 分支边。
+        """
         calls = self._capture_graph_topology("modern", monkeypatch)
-        assert "save" in calls["nodes"], "modern 必须保留 save 节点"
-        assert ("save", "__end__") in calls["edges"] or ("save", "END") in calls["edges"], (
-            "modern save→END 边缺失，链路断"
+        edges = calls["edges"]
+        # orchestrator → 5 Specialist 直连（else 分支，不经 tone_setter）
+        for spec in ("historian", "biographer", "context_analyst", "critic", "philosopher"):
+            assert ("orchestrator", spec) in edges, (
+                f"modern 应有 orchestrator→{spec} 直连（else 分支）"
+            )
+        # 5 Specialist → editor 扇入
+        for spec in ("historian", "biographer", "context_analyst", "critic", "philosopher"):
+            assert (spec, "editor") in edges, (
+                f"modern 应有 {spec}→editor 扇入边"
+            )
+        # editor → quality → save → END
+        assert ("editor", "quality") in edges, "modern 应有 editor→quality 边"
+        assert ("save", "__end__") in edges, "modern 应有 save→END 边"
+        # 反断言：modern 不应有 soul injection 节点/边
+        assert ("orchestrator", "tone_setter") not in edges, (
+            "modern 不应有 orchestrator→tone_setter 边"
+        )
+        assert ("chief_editor", "save") not in edges, (
+            "modern 不应有 chief_editor→save 边"
         )
 
-    def test_knowledge_keeps_save_chain(self, monkeypatch):
-        """knowledge 桶 save 链路完整。"""
+    def test_knowledge_edge_chain_complete(self, monkeypatch):
+        """knowledge 桶完整边链（对称 modern）。"""
         calls = self._capture_graph_topology("knowledge", monkeypatch)
-        assert "save" in calls["nodes"]
-        assert ("save", "__end__") in calls["edges"] or ("save", "END") in calls["edges"], (
-            "knowledge save→END 边缺失，链路断"
-        )
+        edges = calls["edges"]
+        for spec in ("historian", "biographer", "context_analyst", "critic", "philosopher"):
+            assert ("orchestrator", spec) in edges, (
+                f"knowledge 应有 orchestrator→{spec} 直连"
+            )
+            assert (spec, "editor") in edges, (
+                f"knowledge 应有 {spec}→editor 扇入边"
+            )
+        assert ("editor", "quality") in edges
+        assert ("save", "__end__") in edges
+        assert ("orchestrator", "tone_setter") not in edges
+        assert ("chief_editor", "save") not in edges
 
     def test_narrative_edge_chain_complete(self, monkeypatch):
         """narrative 桶完整边链：orchestrator→tone_setter→5 Specialist→editor→quality
@@ -467,6 +521,8 @@ class TestSoulInjectionArchetypeRouting:
         """
         calls = self._capture_graph_topology("narrative", monkeypatch)
         edges = calls["edges"]
+        # START → orchestrator（图入口，P2-6 补）
+        assert ("__start__", "orchestrator") in edges, "应有 START→orchestrator 入口边"
         # orchestrator → tone_setter（串行注入，非直连 Specialist）
         assert ("orchestrator", "tone_setter") in edges, (
             "narrative 应有 orchestrator→tone_setter 边"
@@ -486,13 +542,12 @@ class TestSoulInjectionArchetypeRouting:
         assert ("chief_editor", "save") in edges, (
             "narrative 应有 chief_editor→save 边（终审后保存）"
         )
-        assert ("save", "__end__") in edges or ("save", "END") in edges, (
-            "narrative 应有 save→END 边"
-        )
+        assert ("save", "__end__") in edges, "narrative 应有 save→END 边"
         # 关键反断言：narrative 不应有 orchestrator→Specialist 直连（那是 else 分支）
-        assert ("orchestrator", "historian") not in edges, (
-            "narrative 不应有 orchestrator→historian 直连（应经 tone_setter）"
-        )
+        for spec in ("historian", "biographer", "context_analyst", "critic", "philosopher"):
+            assert ("orchestrator", spec) not in edges, (
+                f"narrative 不应有 orchestrator→{spec} 直连（应经 tone_setter）"
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -539,9 +594,15 @@ class TestQualityRouterConditionalEdge:
         return captured["router_fn"]
 
     def test_modern_pass_goes_to_save(self, monkeypatch):
-        """modern 桶 quality 通过（errors 空）→ router_fn 返回 'save'。"""
+        """modern 桶 quality 通过（errors 空）→ router_fn 返回 'save'。
+
+        P1-5：补反断言 != 'chief_editor'，防止 _soul_injection_for_archetype 误判
+        modern 为 True 导致 modern 误走终审。
+        """
         router_fn = self._capture_router_fn("modern", monkeypatch)
-        assert router_fn({"errors": []}) == "save"
+        result = router_fn({"errors": []})
+        assert result == "save"
+        assert result != "chief_editor", "modern 不应走 chief_editor 终审"
 
     def test_modern_fail_goes_to_end(self, monkeypatch):
         """modern 桶 quality 失败（errors 非空）→ router_fn 返回 END。"""
@@ -549,9 +610,11 @@ class TestQualityRouterConditionalEdge:
         assert router_fn({"errors": ["缺讲人物"]}) == "__end__"
 
     def test_knowledge_pass_goes_to_save(self, monkeypatch):
-        """knowledge 桶 quality 通过 → 'save'。"""
+        """knowledge 桶 quality 通过 → 'save'（P1-5：含 != chief_editor 反断言）。"""
         router_fn = self._capture_router_fn("knowledge", monkeypatch)
-        assert router_fn({"errors": []}) == "save"
+        result = router_fn({"errors": []})
+        assert result == "save"
+        assert result != "chief_editor", "knowledge 不应走 chief_editor 终审"
 
     def test_knowledge_fail_goes_to_end(self, monkeypatch):
         """knowledge 桶 quality 失败 → END。"""
@@ -617,3 +680,133 @@ class TestSoulInjectionForArchetypePureFunction:
         from src.core.workflow import _soul_injection_for_archetype
         assert _soul_injection_for_archetype("fiction") is False
         assert _soul_injection_for_archetype("") is False
+
+
+# ---------------------------------------------------------------------------
+# 契约10：get_required_sections fallback 路径（P1-2）
+# ---------------------------------------------------------------------------
+
+class TestGetRequiredSectionsFallback:
+    """config.section_templates 缺失时 fallback 到 quality_check.required_sections。
+
+    P1-2：原 fake_load_config 永远返回完整 section_templates，fallback 路径零覆盖。
+    """
+
+    def test_no_section_templates_falls_back_to_quality_check(self, monkeypatch):
+        """config 无 section_templates 时，narrative 回落到 quality_check.required_sections。"""
+        legacy = ["讲事情", "讲人物", "讲背景", "讲道理", "问道悟道", "结语"]
+        monkeypatch.setattr(
+            "src.core.workflow.load_config",
+            lambda: {"quality_check": {"required_sections": legacy}},
+        )
+        assert get_required_sections("narrative") == legacy
+
+    def test_no_section_templates_modern_also_falls_back(self, monkeypatch):
+        """config 无 section_templates 时，modern 也回落到 quality_check（因 modern 不在 templates）。"""
+        legacy = ["讲事情", "讲人物", "讲背景", "讲道理", "问道悟道", "结语"]
+        monkeypatch.setattr(
+            "src.core.workflow.load_config",
+            lambda: {"quality_check": {"required_sections": legacy}},
+        )
+        # modern 不在 templates（因 templates 缺失），fallback 到 quality_check 列表
+        assert get_required_sections("modern") == legacy
+
+    def test_empty_config_falls_back_to_legacy_hardcoded(self, monkeypatch):
+        """config 完全空时，fallback 到 _LEGACY_REQUIRED_SECTIONS 硬编码。"""
+        monkeypatch.setattr("src.core.workflow.load_config", lambda: {})
+        result = get_required_sections("narrative")
+        assert result == ["讲事情", "讲人物", "讲背景", "讲道理", "问道悟道", "结语"]
+
+    def test_non_dict_config_falls_back_to_legacy(self, monkeypatch):
+        """config 返回非 dict 时，兜底 legacy。"""
+        monkeypatch.setattr("src.core.workflow.load_config", lambda: None)
+        assert get_required_sections("narrative") == [
+            "讲事情", "讲人物", "讲背景", "讲道理", "问道悟道", "结语"
+        ]
+
+
+# ---------------------------------------------------------------------------
+# 契约11：_get_stub_sections 与 get_required_sections 双真相源一致性（P1-4）
+# ---------------------------------------------------------------------------
+
+class TestStubWorkflowConsistency:
+    """main._get_stub_sections 与 workflow.get_required_sections 行为一致。
+
+    P1-4：两套代码分别手写（main 直读 config / workflow 经 load_config），
+    存在漂移风险。锁住三桶输出完全一致。
+    """
+
+    @pytest.mark.parametrize("arch", ["narrative", "modern", "knowledge"])
+    def test_stub_matches_workflow(self, arch):
+        """_get_stub_sections(arch) == get_required_sections(arch) 三桶一致。"""
+        from src.main import _get_stub_sections
+        stub_result = _get_stub_sections(arch)
+        workflow_result = get_required_sections(arch)
+        assert stub_result == workflow_result, (
+            f"{arch} 桶 stub 与 workflow 输出不一致："
+            f"stub={stub_result} workflow={workflow_result}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# 契约12：真实模式 modern/knowledge 回落 narrative 执行（P0-1 回归）
+# ---------------------------------------------------------------------------
+
+class TestRealModeArchetypeFallback:
+    """P0-1：真实模式（非 stub）下 modern/knowledge 回落 narrative 执行。
+
+    架构师发现 specialist 硬编码 narrative 段名，quality 用 modern 段名检查会全缺
+    导致不 save。修复：build_workflow 用回落的 exec_archetype=narrative，
+    initial_state.archetype 保留用户意图（供阶段4 读取）。
+    """
+
+    def _run_real_mode_capturing_workflow(self, monkeypatch, archetype):
+        """真实模式跑 main，mock build_workflow 捕获传入的 archetype 参数和 initial_state。"""
+        import sys as _sys
+        captured = {"bw_archetype": None, "state_archetype": None}
+
+        class FakeApp:
+            def invoke(self, initial_state):
+                captured["state_archetype"] = initial_state.get("archetype")
+                return {"errors": [], "output_path": "/tmp/x.md", "final_markdown": ""}
+
+        def fake_build_workflow(output_base=None, archetype="narrative"):
+            captured["bw_archetype"] = archetype
+            return FakeApp()
+
+        import types
+        fake_mod = types.ModuleType("src.core.workflow")
+        fake_mod.build_workflow = fake_build_workflow
+        monkeypatch.setitem(_sys.modules, "src.core.workflow", fake_mod)
+
+        import src.main as main_mod
+        monkeypatch.setattr(_sys, "argv", [
+            "src.main", "--book", "测试书", "--chapter", "测试章",
+            "--event", "测试事件", "--archetype", archetype,
+            "--output-dir", "/tmp/test_p0_1",
+        ])
+        rc = main_mod.main()
+        assert rc == 0, f"main 返回非 0"
+        return captured
+
+    def test_modern_real_mode_falls_back_to_narrative_exec(self, monkeypatch):
+        """modern 真实模式：build_workflow 收到 narrative（exec 回落），initial_state 保留 modern。"""
+        captured = self._run_real_mode_capturing_workflow(monkeypatch, "modern")
+        assert captured["bw_archetype"] == "narrative", (
+            f"build_workflow 应收到 narrative（exec 回落），实际 {captured['bw_archetype']!r}"
+        )
+        assert captured["state_archetype"] == "modern", (
+            f"initial_state 应保留 modern（用户意图），实际 {captured['state_archetype']!r}"
+        )
+
+    def test_knowledge_real_mode_falls_back_to_narrative_exec(self, monkeypatch):
+        """knowledge 真实模式：build_workflow 收到 narrative，initial_state 保留 knowledge。"""
+        captured = self._run_real_mode_capturing_workflow(monkeypatch, "knowledge")
+        assert captured["bw_archetype"] == "narrative"
+        assert captured["state_archetype"] == "knowledge"
+
+    def test_narrative_real_mode_no_fallback(self, monkeypatch):
+        """narrative 真实模式：不回落，build_workflow 收到 narrative，initial_state 也是 narrative。"""
+        captured = self._run_real_mode_capturing_workflow(monkeypatch, "narrative")
+        assert captured["bw_archetype"] == "narrative"
+        assert captured["state_archetype"] == "narrative"
