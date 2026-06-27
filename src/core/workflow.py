@@ -38,18 +38,64 @@ except ImportError as exc:  # 另一个 agent 尚未创建该文件时兜底
     _CHIEF_EDITOR_AVAILABLE = False
     _module_logger.warning("ChiefEditorAgent 未就绪（%s），chief_editor 节点将跳过", exc)
 
-# 仅当开关开启且两个 Agent 均可导入时，才真正接入新节点；否则走原管线。
-_USE_SOUL_INJECTION = (
-    SOUL_INJECTION_ENABLED and _TONE_SETTER_AVAILABLE and _CHIEF_EDITOR_AVAILABLE
-)
+# 阶段3：archetype 分桶——结构模板 + soul injection 按桶路由。
+# 详见 docs/archetype-design/design.md §10、§10.6
+# fiction 桶待落地，阶段3 不接入。
+_VALID_ARCHETYPES = {"narrative", "modern", "knowledge"}
+
+# 阶段1/2 已落地 AgentState.archetype；阶段3 在此消费它。
+_LEGACY_REQUIRED_SECTIONS = [
+    "讲事情", "讲人物", "讲背景", "讲道理", "问道悟道", "结语",
+]
 
 
-def build_workflow(output_base: Optional[str] = None) -> StateGraph:
+def get_required_sections(archetype: str) -> list:
+    """按 archetype 返回 required_sections（design.md §10）。
+
+    纯函数：读 config.section_templates；缺失则 fallback 到
+    quality_check.required_sections；非法 archetype 兜底 narrative。
+    """
+    if archetype not in _VALID_ARCHETYPES:
+        archetype = "narrative"
+    cfg = load_config()
+    templates = cfg.get("section_templates", {}) if isinstance(cfg, dict) else {}
+    if isinstance(templates, dict) and archetype in templates:
+        return list(templates[archetype])
+    # fallback：narrative 桶用 quality_check.required_sections（古籍零回归护栏）
+    qc = cfg.get("quality_check", {}) if isinstance(cfg, dict) else {}
+    return list(qc.get("required_sections", _LEGACY_REQUIRED_SECTIONS))
+
+
+def _soul_injection_for_archetype(archetype: str) -> bool:
+    """narrative 启用 tone_setter/chief_editor；modern/knowledge 跳过（design.md §10.6）。
+
+    阶段4 落地 modern/knowledge 版 prompt 后再开启对应桶；
+    现阶段 modern/knowledge 走原 else 分支保持 save 链路完整。
+    """
+    return (
+        archetype == "narrative"
+        and SOUL_INJECTION_ENABLED
+        and _TONE_SETTER_AVAILABLE
+        and _CHIEF_EDITOR_AVAILABLE
+    )
+
+
+def build_workflow(
+    output_base: Optional[str] = None, archetype: str = "narrative"
+) -> StateGraph:
+    if archetype not in _VALID_ARCHETYPES:
+        raise ValueError(
+            f"非法 archetype: {archetype!r}，合法值: {sorted(_VALID_ARCHETYPES)}"
+        )
     if output_base is None:
         cfg = load_config()
         output_base = cfg.get("output_dir") or cfg.get("output", {}).get("base_dir", "output")
 
     logger = get_logger("deep_reading.workflow")
+
+    # 阶段3：按 archetype 决定 soul injection 启用与否 + 结构模板段名（闭包捕获）
+    use_soul_injection = _soul_injection_for_archetype(archetype)
+    required_sections = get_required_sections(archetype)
 
     graph = StateGraph(AgentState)
 
@@ -92,13 +138,11 @@ def build_workflow(output_base: Optional[str] = None) -> StateGraph:
         return editor.run(state)
 
     def quality_node(state: AgentState) -> dict:
-        """质量检查节点：检查结构完整性、AI 味、引用等。"""
+        """质量检查节点：检查结构完整性、AI 味、引用等。
+
+        required_sections 由 build_workflow 闭包按 archetype 注入（阶段3）。
+        """
         content = state.get("final_markdown", "")
-        cfg = load_config()
-        required_sections = cfg.get("quality_check", {}).get(
-            "required_sections",
-            ["讲事情", "讲人物", "讲背景", "讲道理", "问道悟道", "结语"],
-        )
         required_frontmatter = [
             "title", "book", "chapter", "event", "created_at", "source_agents"
         ]
@@ -140,7 +184,7 @@ def build_workflow(output_base: Optional[str] = None) -> StateGraph:
         if state.get("errors"):
             logger.warning("质量检查未通过，跳过保存")
             return END
-        return "chief_editor" if _USE_SOUL_INJECTION else "save"
+        return "chief_editor" if use_soul_injection else "save"
 
     def save_node(state: AgentState) -> dict:
         # 记录日志
@@ -172,7 +216,7 @@ def build_workflow(output_base: Optional[str] = None) -> StateGraph:
         return {"output_path": str(path)}
 
     graph.add_node("orchestrator", orchestrator_node)
-    if _USE_SOUL_INJECTION:
+    if use_soul_injection:
         graph.add_node("tone_setter", tone_setter_node)
     graph.add_node("historian", historian_node)
     graph.add_node("biographer", biographer_node)
@@ -181,12 +225,12 @@ def build_workflow(output_base: Optional[str] = None) -> StateGraph:
     graph.add_node("philosopher", philosopher_node)
     graph.add_node("editor", editor_node)
     graph.add_node("quality", quality_node)
-    if _USE_SOUL_INJECTION:
+    if use_soul_injection:
         graph.add_node("chief_editor", chief_editor_node)
     graph.add_node("save", save_node)
 
     graph.add_edge(START, "orchestrator")
-    if _USE_SOUL_INJECTION:
+    if use_soul_injection:
         # orchestrator → tone_setter(串行) → 5 Specialist(并行)
         graph.add_edge("orchestrator", "tone_setter")
         graph.add_edge("tone_setter", "historian")
@@ -208,7 +252,7 @@ def build_workflow(output_base: Optional[str] = None) -> StateGraph:
     graph.add_edge("philosopher", "editor")
     graph.add_edge("editor", "quality")
     graph.add_conditional_edges("quality", quality_router)
-    if _USE_SOUL_INJECTION:
+    if use_soul_injection:
         # quality(通过) → chief_editor → save
         graph.add_edge("chief_editor", "save")
     graph.add_edge("save", END)

@@ -12,6 +12,7 @@ class AgentState(TypedDict):
     book: str
     chapter: str
     event: str
+    archetype: str
     user_input: str
     output_path: str
     sections: Annotated[Dict[str, str], dict_merge]

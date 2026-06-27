@@ -1004,3 +1004,164 @@ BUG-013 修复并部署后，PC 浏览器访问 GitHub Pages / ModelScope 均正
 3. 存量 686 篇按"总编 GO/REWORK"分级，REWORK 进重做队列
 4. 把 check_chapter_title_soul 接入 ChiefEditor Agent 终审（<3 分自动打回重写）
 5. 标题"灵魂"扩展到史记/资治通鉴（先扫描存量低分标题清单）
+
+---
+
+## Loop #N+1：archetype 分桶阶段1 - 打通数据流（2026-06-26）
+
+### 背景
+不同类型专栏（史/经/养生/财/技/职场）共用一套古籍方法论，理财课/AI课等被古籍规则误报、被 soul injection 强加"生死悲剧底色"。设计 archetype 分桶（narrative/modern/knowledge/fiction）解决一刀切，详见 `docs/archetype-design/design.md`。本 Loop 是五阶段迁移的阶段1。
+
+### 核心改动（TDD：先红测试→绿实现→重构）
+1. `src/core/state.py`：AgentState 新增 `archetype: str` 字段
+2. `src/utils/prompts.py`：新增 `resolve_archetype(category, explicit)` 函数，含 config 值合法性校验（防笔误脏值）
+3. `src/main.py`：CLI 新增 `--archetype`；新增 `_load_book_meta` 读 `_meta.yaml`；按优先级 `CLI > _meta.yaml.archetype > category 默认映射 > narrative` 解析 archetype 注入 initial_state
+4. `config.yaml`：新增 `archetype_defaults` 映射表（6 条 category→archetype）
+5. `output/易经课/_meta.yaml`：新增 `archetype: knowledge`（唯一需显式覆盖的专栏，经→knowledge）
+6. `src/core/workflow.py`：`_USE_SOUL_INJECTION` 处加 TODO 挂载点（阶段3 升级为按 archetype 路由）
+7. `tests/test_archetype.py`：42 个测试用例（契约 + 16 专栏归类 + main.py 集成验证 archetype 真透传到 initial_state）
+8. `docs/archetype-design/design.md`：§5.6 v2 修订（统一信源优先级表述，与附录A伪代码对齐；附录A伪代码补 config 值合法性校验）
+
+### 专家团打分与修复（LoopAgent 闭环）
+首轮三视角打分：架构师 5.5、测试 6.0、规则 7.5。三视角一致指出核心问题：`resolve_archetype` 是死代码，main.py 没调用它，"打通数据流"只通了一半，archetype 空串污染。
+修复 8 项：main.py 真调 resolve_archetype+读 _meta.yaml、CLI 测试改 monkeypatch 拦截 build_workflow 验真、16 专栏测试调 resolve_archetype 去 defaults 副本、config 值合法性校验、design §5.6 优先级与附录A统一、路径硬编码、workflow TODO。
+
+### 可复用资产
+- `resolve_archetype(category, explicit)` 函数可复用到阶段2质检分桶、阶段3结构模板路由、阶段4 prompt 加载
+- `_load_book_meta` 可复用到任何需读 `_meta.yaml` 的场景（展示层、质检层）
+- `sys.modules` 注入假模块的测试手法可复用到所有依赖 langgraph 但需在无 langgraph 环境跑的集成测试
+- "专家团打分→修复→重打分"闭环可复用到所有阶段验收
+
+### 教训/沉淀
+- **TDD 不能只测函数要测链路**：首轮 TDD 只测了 resolve_archetype 函数契约，没测 main.py 是否真调用它，导致"绿了测试但数据流没打通"的虚假绿灯。后续 TDD 必须包含端到端集成测试（拦截 build_workflow 验 initial_state）。
+- **专家团交叉验证的价值**：三个视角独立发现同一个核心问题（死代码），证明多视角并行评审比单视角更能发现结构性缺陷。
+- **设计文档优先级要自洽**：design §5.6 正文与附录A伪代码对优先级表述矛盾，被架构师和规则视角同时指出。设计文档的正文与伪代码必须一致，否则实现时会无所适从。
+
+### 待办（下一 Loop：阶段2质检分桶）
+1. `content_quality.py` 按 archetype 路由规则集（删除 `_is_modern_column` 关键词判定）
+2. `check_numeric_facts` 的 manual_review 误标在 content_quality.py 调用层按 archetype 过滤（不碰 quality.py 禁区）
+3. 新增 `KNOWLEDGE_TERMS_WHITELIST`（Token/Transformer/Attention/RAG 等）
+4. 理财课/AI课质检误报数对比验证（阶段2 验收指标）
+5. 落实 BUG-026 教训：灵魂类检查按桶路由、合规类全桶共享
+
+---
+
+## 跨分支沉淀：合并 EnglishTest 分支并删除（2026-06-26，分支精简）
+
+> 本条来自另一分支 AI 工作时的典型问题沉淀，与 archetype 分桶无直接关系，但其中的环境特性与依赖管理教训对本项目所有后续工作均适用，故追加归档。
+
+### 触发问题
+仓库存在 `pinglun` 与 `EnglishTest` 两条分支，用户要求合并并删除其一，核心目标是减少分支数量。经查两分支无共同祖先（pinglun 75 提交含评论系统+孔子传+全站重构，EnglishTest 2 提交为独立初始化+规则英文化），直接 merge 会触发 `--allow-unrelated-histories` + 478 个文件冲突，属灾难性方案。
+
+### 根因与修复
+1. **方案选型**：放弃双向 merge，改"保留 pinglun、把 EnglishTest 真正有价值的改动按意图重做到 pinglun、再删 EnglishTest"。EnglishTest 真正有价值的只有 1 个提交（dev-workflow.md + dev-checklist.md 英文化），且该英文版还附带 pinglun 缺失的增强（第 7 节 LoopAgent Sediment、合并前必须清零约束、BUG-019 防复发说明），属双重收益。
+2. **重做方式**：因无共同祖先，cherry-pick 也会冲突，故用 `git checkout EnglishTest -- <files>` 直接取 EnglishTest 版覆盖 pinglun 同名文件，再单独提交。
+3. **验证**：check_chapter_order.py 通过；pytest 109 项全过；build_site.py 静态站点生成成功。（注：pinglun 分支无 check_book_structure.py，该脚本仅 EnglishTest 有，故用 check_chapter_order.py 替代。）
+4. **清理**：commit `01af714` 落到 pinglun 并 push；删除 EnglishTest 本地分支 + 远程分支。最终仓库仅剩 pinglun 一条主流分支。
+
+### 架构教训（已沉淀）
+- **环境会自动切到 `trae/agent-*` 临时分支并覆盖 commit message**：本环境（Trae IDE 沙箱）在 git commit 时会自动创建 `trae/agent-<随机串>` 临时分支、把 commit 落在该分支、并用环境预设的简短 message（如"feat: 合并并删除Git分支"）覆盖 `git commit -m` 指定的规范 message。**应对：每次 commit 后必须 `git branch --show-current` 核实分支、`git log -1 --format="%s%n%n%b"` 核实 message，发现偏移立即 `git commit --amend` 修正 message，再 `git checkout <目标分支> && git cherry-pick <临时分支>` 把提交移回目标分支，最后 `git branch -D <临时分支>`。** 该行为是本环境固定特性，后续所有 git 操作都要预期并校验。
+- **`langgraph` 依赖缺失导致 pytest 全红**：pinglun 分支 `src/core/workflow.py` 在顶层 `from langgraph.graph import ...`，但 `requirements.txt` 未列 langgraph；`tests/conftest.py` 第 31 行 `monkeypatch.setattr("src.core.workflow.load_config", ...)` 触发该模块导入，导致**所有**测试（不止 workflow 相关）因 ImportError 无法 collection，全红。**应对：临时 `pip install langgraph` 绕过；根因修复应把 langgraph 加入 `requirements.txt`（含版本约束），否则 CI / 新环境 / 新 clone 都会同样踩坑。** 这也是"运行环境依赖必须在 requirements.txt 显式声明"的典型反例。当前 archetype 分支同样踩此坑（见上文 loop_log:276），属共性问题。
+- **无共同祖先的两分支合并 = 灾难**：`git merge-base A B` 返回空即说明两分支独立初始化，直接 merge 必须 `--allow-unrelated-histories` 且几乎所有文件冲突，应改用"按意图重做 + checkout 覆盖同名文件"而非 cherry-pick/merge。
+- **分支精简的标准动作**：先 diff 两分支定位"真正有价值的差异"（往往是少数几个文件），再把这些差异按意图重做到主流分支，验证通过后删非主流分支——比强行 merge 安全得多，也符合 Git 合并守护者"不覆盖已修好代码"的原则。
+
+### 测试覆盖
+check_chapter_order.py 通过；pytest 109 项全过；build_site.py 静态站点生成成功。EnglishTest 分支本地+远程均已删除，仓库仅余 pinglun 一条分支。
+
+### 无需更新规则/checklist
+本次为分支合并与清理操作，未涉及讲书笔记写作规则。dev-checklist.md 第 7 节 LoopAgent Sediment 已随 commit 合入，无需额外登记。`requirements.txt` 补 langgraph 待用户确认后单独处理。
+
+---
+
+## 阶段2 质检分桶落地（2026-06-26，archetype 路由）
+
+### 触发问题
+阶段1 打通了 archetype 数据流（`_meta.yaml` → `AgentState.archetype` → `content_reviewer`），但质检层仍是"一把菜刀"：`run_content_quality_checks` 靠 `_is_modern_column`（8 词关键词）和 `_is_philosophy_or_classic`（9 词）做"逃生阀"，漏掉财/技/养生三类，导致理财课被报"缺年份/缺名家"、AI 课被报"中英混杂"。同时 BUG-026 引入的 `check_numeric_facts`/`check_ai_cliches` 根本没接入 `run_content_quality_checks`，通用检查形同虚设。
+
+### 根因与修复
+1. **删除关键词逃生阀，改 archetype 显式路由**：`_is_modern_column`/`_is_philosophy_or_classic` 靠书名子串匹配，本质是"没接 archetype 的补丁"。阶段2 直接删除，`run_content_quality_checks(content, archetype=...)` 按 design.md §8 路由表分桶：narrative 全开古籍规则，modern/knowledge 跳过年份/名家/时间线/现代术语禁用。
+2. **禁区红线守住**：`src/utils/quality.py` 内部函数零改动，所有路由在 `content_quality.py` 调用层完成。`check_numeric_facts` 的 manual_review（N年前后/N岁）误标，在调用层用 `_filter_numeric_manual(manual, archetype)` 过滤——narrative 保留（古籍需核验），modern/knowledge 过滤（现代语境"10年前""30岁"是正常表达）。
+3. **通用检查全桶共享**（BUG-026 教训）：`check_ai_cliches`（套话黑名单）和 `check_numeric_facts` auto_errors（数字硬错误）全桶都跑。接入时注意 `strip_frontmatter`，否则 frontmatter 里的 `sort:1` 会被误标。
+4. **knowledge 桶术语白名单**：新增 `KNOWLEDGE_TERMS_WHITELIST`（27 词：Transformer/Attention/Token/SQL/ACID…）和 `check_mixed_language_knowledge()`，按长度降序替换避免短词破坏长词（Token 先替换会破坏 Tokenizer）。
+5. **fail-fast 校验**：非法 archetype（空串/拼写错误/fiction 未落地/None）直接抛 `ValueError`，不静默走混合态。
+6. **CLI 接线**：`scripts/review_content.py` 加 `--archetype` 参数 + `_meta.yaml` 读取，信源优先级 CLI > _meta.yaml > category 默认映射 > narrative（与 main.py 一致）。规则化质检报告并入 CLI 输出。
+
+### 架构教训（已沉淀）
+- **空真断言（vacuous assertion）是测试反模式**：`test_modern_skips_modern_jargon_check` 原断言 `not any("底层逻辑" in i and "禁用" in i ...)`，但 `check_modern_jargon` 的 issue 文案是"硬塞"、`check_modern_jargon_terms` 是"硬套"，都不含"禁用"——断言恒真，无论实现正确与否都过。**教训：断言里的判别词必须从实际输出文案中提取，不能凭印象写；写完测试要故意改坏实现确认测试能红。**
+- **只测反例不测正例 = 回归漏洞**：原测试只测"modern/knowledge 跳过古籍规则"，没测"narrative 必检古籍规则"。若有人把 `if archetype == 'narrative'` 拼错，narrative 桶会静默跳过年份/名家检查，测试全绿却回归。**教训：路由测试必须正反双向覆盖，加 `TestNarrativeBucketKeepsAncientRules` 正例组 + 黄金样本分数断言。**
+- **正则拆分首段陷阱**：`check_temporal_order` 用 `re.split(r"\n## ", body)`，但 `_strip_frontmatter` 后 body 以 `## ` 开头（首段前无 `\n`），导致首段 `## 讲事情` 未被拆分、`startswith("讲事情")` 失败。**教训：split by `\n## ` 时要考虑首段无前缀换行的情况，用 `(?:^|\n)## ` 兜底。**
+- **专家团评审抓真问题**：架构 8.5/测试 6/规则 7。测试视角 6 分的扣分项（空真断言、正例缺失、边界未测）全是真问题，修复后测试 34 项全绿。**教训：专家团打分低于 7 的维度必须逐条修复后重打分，不能跳过。**
+
+### 测试覆盖
+- `tests/test_content_quality_archetype.py`：34 项契约测试（签名/默认值、modern/knowledge 跳过古籍规则、knowledge 白名单、numeric auto 全桶、ai_cliches 全桶、manual 过滤、legacy helpers 删除、archetype 校验、narrative 正例、黄金样本）。
+- 质检分数对比（阶段2 验收指标）：理财课·ETF 84→100（+16，消除 5 误报）；AI课·Transformer 81→97（+16，消除 5 误报）；资治通鉴·三家分晋 100（无回归）。
+- 三件套：`check_book_structure.py --strict` 0 问题；pytest 221 passed 15 skipped；`run_regression_suite.sh` 18/18。
+- `content-quality.md` §8 从"补救条款"重构为"多桶并行规则集"，补 knowledge 桶与路由表，与 design.md §8 对齐。
+
+### 已更新规则/checklist
+- `.trae/skills/deep-reading/content-quality.md` §8 重构为多桶规则集（路由表 + narrative/modern/knowledge 三桶 + 通用规范）。
+- `tests/bug_regression_list.md` 新增 BUG-027（一刀切误报）、BUG-028（temporal_order 首段拆分）。
+- `docs/archetype-design/design.md` 阶段2 标记完成。
+
+## 阶段3 结构模板分桶 + 文风注入按桶路由落地（2026-06-27，archetype 路由）
+
+### 触发问题
+阶段2 完成质检分桶后，结构层仍是"一把尺子"：`editor.SECTION_TO_AGENT` 硬编码 6 段映射，`quality_node` 用全局 `required_sections`，理财课/AI 课被强制塞进"讲事情/讲人物/讲背景"的古籍骨架。同时 master PR #14 已落地 soul injection（tone_setter/chief_editor），但全桶无差别启用，modern/knowledge 桶还没对应版 prompt 就跑古籍向文风注入，是错配。
+
+### 根因与修复
+1. **结构模板分桶**：`config.yaml` 新增 `section_templates`（narrative 6 段 / modern 5 段 / knowledge 4 段）。`workflow.get_required_sections(archetype)` 纯函数读取，narrative 与 legacy `quality_check.required_sections` 完全一致（古籍零回归护栏）。
+2. **editor 路由**：`SECTION_TO_AGENT` → `SECTION_TEMPLATES`（三桶映射字典），`_section_to_agent_map(archetype)` 按 `state["archetype"]` 选桶。所有映射的 agent 名都在现有 5 specialist + editor 集合内，不新增 agent。
+3. **soul injection 按桶路由**：`_soul_injection_for_archetype(archetype)` 纯函数——narrative 启用 tone_setter/chief_editor（三开关缺一不可），modern/knowledge 跳走走原 else 分支（`orchestrator→specialists` + `quality→save`），save 链路完整不断链。阶段4 落地 modern/knowledge 版 prompt 后再开启对应桶。
+4. **build_workflow 闭包捕获**：`use_soul_injection` 和 `required_sections` 在 `build_workflow` 顶层按 archetype 算一次，闭包捕获给 `quality_node`/`quality_router`，避免每次节点调用重复算。
+5. **CLI 接线**：`main.py` 加 `--archetype` + `_get_stub_sections(archetype)`（stub 路径直读 config，不 import workflow 避免 langgraph 依赖）。
+6. **跨层白名单不一致修复（BUG-029）**：`prompts._VALID_ARCHETYPES` 含 fiction（预留），`workflow._VALID_ARCHETYPES` 不含（未落地），`--archetype fiction` 会崩。修复：main.py 在 resolve_archetype 后、所有分支前统一回落 fiction→narrative + stderr 警告。
+
+### 架构教训（已沉淀）
+- **跨层枚举白名单必须单一信源**：prompts 和 workflow 各持一份 `_VALID_ARCHETYPES`，一个含 fiction 一个不含，导致 CLI 透传 fiction 到 build_workflow 崩溃。**教训：预留桶要么两层都含（且都 fail-soft），要么两层都不含；不能一层含一层不含。回落逻辑要放在所有分支之前，不能放在某个分支之后。**
+- **"不断链"是测试假象**：原拓扑测试 `add_conditional_edges` 是 `pass`，quality_router 的 router_fn 完全没被调用，"save 链路完整"是断言节点存在而非断言路由正确。**教训：条件边的 router_fn 必须捕获后直接调用（`router_fn({"errors": []})` → save/chief_editor，`router_fn({"errors": ["x"]})` → END），不能只看节点注册。**
+- **间接验证无法区分"选对了"和"开关恰好关了"**：原 soul injection 测试只通过拓扑间接验证，`_TONE_SETTER_AVAILABLE=False` 时全桶跳过，无法区分"archetype 选对了"还是"开关恰好为 False"。**教训：纯函数（`_soul_injection_for_archetype`）必须有直接单测覆盖开关组合，拓扑测试只验证接线。**
+- **state 里的死字段会误导**：quality_node 测试在 state 里放了 `archetype`，但 quality_node 实际通过闭包捕获 required_sections、不读 state["archetype"]。**教训：测试 state 只放被测函数真正读取的字段，死字段会给人"state 驱动路由"的错觉。**
+
+### 测试覆盖
+- `tests/test_workflow_archetype.py`：64 项契约测试（含 P0-1 真实模式回落、P1-1 边链对称、P1-2 fallback 路径、P1-3 editor 兜底、P1-4 双真相源一致性、P1-5 router_fn 反断言、BUG-029 fiction 回归）。
+- 三件套：`check_book_structure.py --strict` 0 问题；pytest 275 passed 15 skipped（忽略 4 个 langgraph 依赖测试文件）；`run_regression_suite.sh` 18/18。
+- 专家团三视角评审（架构/测试/规则）首轮均分 7.5，修复 P0-1（真实模式回落）+ P1-1~5 后复评。
+
+### 已更新规则/checklist
+- `docs/archetype-design/design.md` 阶段3 标记完成 + 验收块。
+- `.trae/skills/deep-reading/content-quality.md` 新增 §10 结构模板分桶（与 design.md §10 对齐）。
+- `tests/bug_regression_list.md` 新增 BUG-029（跨层 archetype 白名单不一致）。
+
+### 待办（下一 Loop：阶段4 提示词分桶 + soul injection prompt 迁移）
+1. `prompts/` 新建 `modern/`、`knowledge/` 子目录，迁出对应版 prompt。
+2. modern/knowledge 版 prompt 落地后，`_soul_injection_for_archetype` 开启对应桶的 tone_setter/chief_editor。
+3. fiction 桶结构模板与 prompt 设计（design.md §5.2、§10.4）。
+
+## 阶段4 基础设施落地（2026-06-27，load_prompt 按 archetype 路由）
+
+### 触发问题
+阶段3 完成结构模板分桶 + soul injection 按桶路由后，阶段4 要让 specialist/editor 按 archetype 加载对应版 prompt。但阶段4 整体是"重内容工作"（modern/knowledge 版 prompt 编写 + specialist 改造），需多会话并行。并行前必须先有共享基础：`load_prompt(archetype)` 能力，否则各会话各自改 load_prompt 会冲突。
+
+### 根因与修复
+1. **load_prompt 签名扩展**：`load_prompt(name, variables=None, archetype="narrative")`。narrative 读原 `prompts/{name}.md`（兼容，禁区不动）；modern/knowledge 读 `prompts/{archetype}/{name}.md`。
+2. **fallback 机制**：modern/knowledge 子目录文件不存在时 fallback 到 narrative 原路径 + `UserWarning`（不静默）。这是渐进迁移的关键——阶段4 不是所有 agent 一次全迁，未迁的 agent 在 modern 桶下用 narrative 版 prompt 而非崩溃；警告防掩盖"忘迁了"。
+3. **非法 archetype 兜底**：fiction（未落地）/空串/拼写错误一律兜底 narrative 读原路径。
+4. **narrative 零回归**：narrative 桶路径逻辑完全不变（直接读原路径），现有所有 `load_prompt(name, variables)` 调用不传 archetype 默认 narrative，行为不变。
+
+### 架构教训（已沉淀）
+- **基础设施与内容工作分离**：阶段4 的"能力"（load_prompt 路由）和"内容"（modern/knowledge prompt 编写 + specialist 接入）要分开。能力是串行前置（所有并行会话依赖它），内容是可并行（文件不重叠）。先做基础设施锁定契约，并行会话才有稳定地基。**教训：多会话并行前，先抽出共享基础并测稳，否则各会话各自改共享代码会冲突且难合并。**
+- **fallback 不能静默**：渐进迁移时"未迁文件 fallback 到旧版"是必要的，但必须 `warnings.warn`。静默 fallback 会掩盖"忘迁了"的错误，让 modern 桶悄悄用 narrative prompt 而无人察觉。**教训：所有 fallback 路径都要有可观测信号（warning/log），区分"有意 fallback"和"遗漏"。**
+- **narrative 兼容是禁区红线**：narrative 桶不建 `prompts/narrative/` 子目录，直接读原 `prompts/{name}.md`。这保证 narrative 桶零回归（现有 prompt 文件不动），且现有所有调用方零改动。**教训：新增维度（archetype）时，默认值路径必须与改造前完全等价，不留任何行为差异。**
+
+### 测试覆盖
+- `tests/test_prompt_archetype.py`：17 项契约测试（archetype 路由 / 默认 narrative / fallback+警告含文案校验 / 非法 archetype 参数化 / variables 替换在路由和 fallback 下 / 文件不存在 raise）。
+- 三件套：`check_book_structure.py --strict` 0 问题；pytest 292 passed 15 skipped；`run_regression_suite.sh` 18/18。
+
+### 已更新规则/checklist
+- `docs/archetype-design/design.md` 阶段4 加"基础设施完成"验收块，明确标注未完成项留并行会话。
+
+### 待办（下一 Loop：阶段4 内容工作，可多会话并行）
+1. **会话A（modern 桶）**：建 `prompts/modern/`（7 specialist + tone_setter + chief_editor）；改 modern specialist 传 `state["archetype"]` 调 `load_prompt(name, archetype=...)`；解除 `main.py` modern 的 `exec_archetype` 回落。
+2. **会话B（knowledge 桶）**：建 `prompts/knowledge/`；改 knowledge specialist 接入；解除 knowledge 回落。
+3. **会话C（阶段5 Skill 入口）**：`.trae/skills/deep-reading/rules-modern.md`、`rules-knowledge.md`、`SKILL.md` 入口改造。
+4. 每个会话从 `origin/feature/column-archetype-design` 切新分支，最后合回 feature 分支。

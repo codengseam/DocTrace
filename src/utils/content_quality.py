@@ -14,9 +14,11 @@ from dataclasses import dataclass, field
 from typing import Dict, List
 
 from src.utils.quality import (
+    check_ai_cliches,
     check_ai_tone,
-    check_modern_jargon,
     check_mixed_language,
+    check_modern_jargon,
+    check_numeric_facts,
     check_sublimation_quota,
 )
 
@@ -71,9 +73,6 @@ PLACEHOLDER_PATTERNS = [
     r"暂无点评",
 ]
 
-# 现代职场/非史类专栏关键词（book 或 title 含这些词时，跳过司马光等古籍名家强制要求）
-MODERN_BOOK_KEYWORDS = ["职场", "沟通", "面试", "商科", "心理学", "管理", "营销", "销售"]
-
 # 现代 AI 味句式：不是X，是Y（每篇上限 3 处）
 SOFT_AI_PATTERN = re.compile(r"不是[^，。；！？\n]{1,15}[而并]{1,2}是[^，。；！？\n]{1,15}")
 
@@ -89,6 +88,16 @@ MODERN_ENGLISH_WHITELIST = [
     "offer", "bug", "BATNA", "CRIB", "PPT", "DNA", "ID",
     "APP", "API", "PDF", "MBA", "EMBA", "VIP",
     "360度",  # 360度评价
+]
+
+# knowledge 桶（技术教程/知识体系）中可接受的中英文技术术语白名单
+KNOWLEDGE_TERMS_WHITELIST = [
+    "Transformer", "Attention", "Token", "Tokenizer", "Embedding",
+    "RAG", "LLM", "GPT", "BERT", "GPU", "CPU", "TPU",
+    "API", "REST", "GraphQL", "gRPC",
+    "SQL", "NoSQL", "ACID", "BASE", "CAP",
+    "RDBMS", "BTree", "LSM",
+    "Python", "Java", "Rust",
 ]
 
 # 现代职场专栏中过于敏感、易误报的 AI 味模式（由 check_soft_ai_pattern 等专项接管）
@@ -219,13 +228,8 @@ def check_sources_section(content: str) -> List[str]:
 def check_years_present(content: str) -> List[str]:
     """启发式检查关键年份是否给出。
 
-    对哲学/经典解读类、现代职场/非史类专栏跳过此检查。
+    仅对 narrative 桶调用（modern/knowledge 在 run_content_quality_checks 中按 archetype 跳过）。
     """
-    title = _extract_title(content)
-    if _is_philosophy_or_classic(title):
-        return []
-    if _is_modern_column(title):
-        return []
     body = _strip_frontmatter(content)
     if not YEAR_PATTERN.search(body):
         return ["正文未检测到关键年份/时间标注，请确认是否需要补充"]
@@ -235,10 +239,8 @@ def check_years_present(content: str) -> List[str]:
 def check_famous_critics(content: str) -> List[str]:
     """启发式检查是否有非司马光名家。
 
-    对哲学/经典解读类内容，不强制要求历史名家点评。
+    仅对 narrative 桶调用（modern/knowledge 在 run_content_quality_checks 中按 archetype 跳过）。
     """
-    if _is_philosophy_or_classic(_extract_title(content)):
-        return []
     body = _strip_frontmatter(content)
 
     found = [name for name in FAMOUS_CRITICS if name in body]
@@ -306,21 +308,38 @@ def check_cross_chapter_jump(content: str) -> List[str]:
     """
     issues = []
     # 匹配：见/详见/参见 + 章/前文/上文/下文/后文/讲故事/讲事情
-    pattern = re.compile(r"（[^）]*(?:见|详见|参见)[^）]*(?:章|前文|上文|下文|后文|讲故事|讲事情|相关章节|此处不赘)[^）]*）")
+    pattern = re.compile(r"（[^）]*(?:见|详见|参见)[^）]*(?:章|前文|上文|下文/后文|讲故事|讲事情|相关章节|此处不赘)[^）]*）")
     for match in pattern.finditer(content):
         issues.append(f"疑似跨章跳转提示：{match.group()}")
     return issues
 
 
-def _is_philosophy_or_classic(book_or_title: str) -> bool:
-    """判断是否为哲学/经典解读类内容，不强制要求历史年份。"""
-    keywords = ["论语", "孔子传", "孟子", "大学", "中庸", "道德经", "庄子", "墨子", "荀子"]
-    return any(k in book_or_title for k in keywords)
+def check_mixed_language_knowledge(content: str) -> List[str]:
+    """knowledge 桶版中英文混杂检查，剔除技术术语白名单。"""
+    body = _strip_frontmatter(content)
+    cleaned = body
+    # 按长度降序替换，避免短词部分替换长词（如 Token 先替换会破坏 Tokenizer）
+    for word in sorted(KNOWLEDGE_TERMS_WHITELIST, key=len, reverse=True):
+        cleaned = cleaned.replace(word, "×" * len(word))
+    matches = re.findall(r"[\u4e00-\u9fff]+[a-zA-Z]{2,}", cleaned)
+    if matches:
+        return [f"检测到可能的中英文混杂：{matches[:3]}"]
+    return []
 
 
-def _is_modern_column(book_or_title: str) -> bool:
-    """判断是否为现代职场/非史类专栏，跳过司马光等古籍名家强制要求。"""
-    return any(k in book_or_title for k in MODERN_BOOK_KEYWORDS)
+def _filter_numeric_manual(manual_review: List[dict], archetype: str) -> List[dict]:
+    """按 archetype 过滤 check_numeric_facts 的 manual_review 误标。
+
+    narrative 桶：保留全部（N年前后/N岁/N品官 在古籍中需核验是否记错）
+    modern/knowledge 桶：过滤 N年前后/N岁（现代语境"10年前""30岁"是正常表达）
+    """
+    if archetype == "narrative":
+        return manual_review
+    return [
+        item for item in manual_review
+        if not re.match(r"\d+年[前后]", item["pattern"])
+        and not re.match(r"\d+岁", item["pattern"])
+    ]
 
 
 def check_soft_ai_pattern(content: str, max_count: int = 3) -> List[str]:
@@ -408,13 +427,11 @@ def check_title_hierarchy(content: str) -> List[str]:
 def check_temporal_order(content: str) -> List[str]:
     """启发式检查叙事顺序。
 
-    对历史叙事类内容，检查讲事情段落是否包含时间标注。
-    对论语、孔子传等哲学/经典解读类内容跳过此检查。
+    仅对 narrative 桶调用（modern/knowledge 在 run_content_quality_checks 中按 archetype 跳过）。
     """
-    if _is_philosophy_or_classic(_extract_title(content)):
-        return []
     body = _strip_frontmatter(content)
-    sections = re.split(r"\n## ", body)
+    # 用 (?:^|\n) 匹配首段（strip 后 body 以 ## 开头，首个 ## 前无 \n）
+    sections = re.split(r"(?:^|\n)## ", body)
     issues = []
     for section in sections:
         if section.startswith("讲事情"):
@@ -424,37 +441,63 @@ def check_temporal_order(content: str) -> List[str]:
     return issues
 
 
-def run_content_quality_checks(content: str) -> ContentQualityReport:
-    """运行完整内容质检，返回报告与分数。"""
+def run_content_quality_checks(content: str, archetype: str = "narrative") -> ContentQualityReport:
+    """运行完整内容质检，返回报告与分数。
+
+    按 archetype 路由规则集（design.md §8）：
+    - narrative：古籍专属规则全开（年份/名家/时间线/现代术语禁用）
+    - modern/knowledge：跳过古籍专属规则，放宽 AI 味检测，用对应桶白名单
+    - 通用检查（check_ai_cliches / check_numeric_facts auto）全桶都跑
+    - numeric manual_review 按 archetype 过滤误标（narrative 保留，modern/knowledge 过滤 N年前后/N岁）
+    """
     issues: List[str] = []
     details: Dict[str, List[str]] = {}
 
-    title = _extract_title(content)
-    is_modern = _is_modern_column(title)
+    # archetype 合法性校验（fail-fast 优于静默误路由）
+    if archetype not in ("narrative", "modern", "knowledge"):
+        raise ValueError(
+            f"archetype 必须是 narrative/modern/knowledge 之一，收到：{archetype!r}"
+        )
+
+    is_non_narrative = archetype in ("modern", "knowledge")
 
     # 1. 真实性
     details["truth"] = []
-    details["truth"].extend(check_years_present(content))
-    # 现代职场/非史类专栏跳过司马光等古籍名家强制要求
-    if not is_modern:
+    # narrative 桶才检查年份/名家/时间线（古籍专属，modern/knowledge 跳过）
+    if archetype == "narrative":
+        details["truth"].extend(check_years_present(content))
         details["truth"].extend(check_famous_critics(content))
     details["truth"].extend(check_placeholder_sections(content))
     details["truth"].extend(check_common_typos(content))
+
+    # check_numeric_facts（通用，全桶都跑；禁区红线：quality.py 内部零改动，调用层按 archetype 过滤 manual_review）
+    # 注意：strip frontmatter 避免 frontmatter 中的数字（如 sort:1）被误标
+    numeric_result = check_numeric_facts(_strip_frontmatter(content))
+    for err in numeric_result["auto_errors"]:
+        details["truth"].append(
+            f"数字事实硬错误：{err['pattern']}（应为 {err['expected']}，实际 {err['actual']}）"
+        )
+    for item in _filter_numeric_manual(numeric_result["manual_review"], archetype):
+        details["truth"].append(
+            f"数字事实需人工复核：{item['pattern']}（{item['reason']}）"
+        )
 
     # 2. 可读性（复用并扩展 quality.py）
     details["readability"] = []
     ai_tone_issues = check_ai_tone(content)
     ai_tone_issues = _filter_natural_expressions(ai_tone_issues, content)
-    # 现代职场专栏过滤掉过于敏感的 AI 味模式（由 check_soft_ai_pattern 等专项接管控量）
-    if is_modern:
+    # modern/knowledge 桶放宽 AI 味检测（过滤过于敏感的模式，由 check_soft_ai_pattern 等专项接管控量）
+    if is_non_narrative:
         ai_tone_issues = filter_ai_tone_for_modern(ai_tone_issues)
     details["readability"].extend(ai_tone_issues)
-    # check_modern_jargon 针对「历史叙事硬套现代术语」，现代职场专栏用「方法论/话术/模式」是正常词，跳过
-    if not is_modern:
+    # check_modern_jargon（quality.py 古籍向，禁用「底层逻辑」等词）仅 narrative 桶跑
+    if archetype == "narrative":
         details["readability"].extend(check_modern_jargon(content))
-    # 现代职场专栏用带白名单的中英文混杂检查（KPI/HR/offer/bug 等行业通用词不算混杂）
-    if is_modern:
+    # 中英文混杂检查按桶选白名单
+    if archetype == "modern":
         details["readability"].extend(check_mixed_language_modern(content))
+    elif archetype == "knowledge":
+        details["readability"].extend(check_mixed_language_knowledge(content))
     else:
         details["readability"].extend(check_mixed_language(content))
     details["readability"].extend(check_sublimation_quota(content))
@@ -463,9 +506,16 @@ def run_content_quality_checks(content: str) -> ContentQualityReport:
     details["readability"].extend(check_modern_jargon_terms(content))
     details["readability"].extend(check_title_hierarchy(content))
 
-    # 3. 顺序（现代职场专栏跳过历史时间线检查）
+    # check_ai_cliches（通用，全桶都跑；命中 ≥3 次为 warning）
+    cliches_result = check_ai_cliches(_strip_frontmatter(content))
+    if cliches_result["level"] == "warning":
+        details["readability"].append(
+            f"AI套话黑名单命中 {cliches_result['count']} 次：{cliches_result['hits']}"
+        )
+
+    # 3. 顺序（narrative 桶才检查历史时间线）
     details["sequence"] = []
-    if not is_modern:
+    if archetype == "narrative":
         details["sequence"].extend(check_temporal_order(content))
 
     # 4. 引用克制

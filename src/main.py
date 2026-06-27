@@ -37,7 +37,7 @@ def _parse_slots_from_input(user_input: str) -> tuple[str, str, str]:
 
 def _generate_stub(
     book: str, chapter: str, event: str, user_input: str, output_dir: str,
-    dry_run: bool = False,
+    dry_run: bool = False, archetype: str = "narrative",
 ) -> Path:
     """Generate a placeholder note for testing the web interface without API keys."""
     # stub 模式支持从 --input 简单解析三个槽位
@@ -72,8 +72,11 @@ def _generate_stub(
         print(f"File already exists: {output_path}")
         return output_path
 
+    # 阶段3：按 archetype 取段落模板（narrative 6 / modern 5 / knowledge 4）
+    # stub 路径直接读 config，不 import workflow（避免 langgraph 依赖）
+    sections = _get_stub_sections(archetype)
+
     created_at = datetime.now().astimezone().replace(microsecond=0).isoformat()
-    sections = ["讲事情", "讲人物", "讲背景", "讲道理", "问道悟道", "结语"]
     lines = [
         f'---',
         f'title: "{book}·{chapter}：{event}"',
@@ -95,11 +98,64 @@ def _generate_stub(
     return output_path
 
 
+def _get_stub_sections(archetype: str) -> list:
+    """stub 模式按 archetype 取段落名，直接读 config 不依赖 workflow。
+
+    与 workflow.get_required_sections 行为一致（同源 config.section_templates），
+    但避免 import src.core.workflow 触发 langgraph 依赖（stub 用于无 API 环境）。
+    """
+    valid = {"narrative", "modern", "knowledge"}
+    if archetype not in valid:
+        archetype = "narrative"
+    from src.utils.config import load_config
+    cfg = load_config()
+    templates = cfg.get("section_templates", {}) if isinstance(cfg, dict) else {}
+    if isinstance(templates, dict) and archetype in templates:
+        return list(templates[archetype])
+    qc = cfg.get("quality_check", {}) if isinstance(cfg, dict) else {}
+    return list(qc.get(
+        "required_sections",
+        ["讲事情", "讲人物", "讲背景", "讲道理", "问道悟道", "结语"],
+    ))
+
+
+def _load_book_meta(book: str, output_dir: str) -> dict:
+    """读取 output/{book}/_meta.yaml，返回解析后的 dict。
+
+    用内置简易解析器（避免依赖 PyYAML），只支持单层 key:value。
+    文件不存在或解析失败时返回空 dict。
+    """
+    if not book:
+        return {}
+    safe_book = _sanitize_filename(book)
+    meta_path = Path(output_dir) / safe_book / "_meta.yaml"
+    if not meta_path.exists():
+        return {}
+    result: dict = {}
+    for line in meta_path.read_text(encoding="utf-8").splitlines():
+        line = line.split("#", 1)[0].strip()
+        if ":" not in line:
+            continue
+        key, _, value = line.partition(":")
+        key = key.strip()
+        value = value.strip()
+        if value.startswith('"') and value.endswith('"'):
+            value = value[1:-1]
+        if key:
+            result[key] = value
+    return result
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="个人 AI 深度阅读助手")
     parser.add_argument("--book", help="书名，例如：资治通鉴")
     parser.add_argument("--chapter", help="章节，例如：周纪二")
     parser.add_argument("--event", help="事件，例如：商鞅变法")
+    parser.add_argument(
+        "--archetype",
+        help="形态范式桶（narrative/modern/knowledge），"
+        "未传则按 category 默认映射（fiction 待实现）",
+    )
     parser.add_argument("--input", dest="user_input", help="自然语言输入")
     parser.add_argument("--dry-run", action="store_true", help="只生成不保存")
     parser.add_argument("--stub", action="store_true", help="使用占位生成器（无需 API Key，用于测试 Web 界面）")
@@ -121,9 +177,30 @@ def main() -> int:
         parts = [p for p in [book, chapter, event] if p]
         user_input = " ".join(parts)
 
+    # 解析 archetype（design.md §5.6 信源优先级）：
+    #   CLI --archetype > _meta.yaml.archetype > category 默认映射 > narrative
+    # 阶段1 打通数据流：读 _meta.yaml 的 category 与 archetype，调 resolve_archetype 兜底。
+    # CLI 传非法值时视为未提供，回落到 _meta.yaml.archetype。
+    from src.utils.prompts import resolve_archetype, _VALID_ARCHETYPES
+
+    meta = _load_book_meta(book, args.output_dir)
+    cli_archetype = args.archetype or ""
+    meta_archetype = meta.get("archetype", "")
+    category = meta.get("category", "")
+    # CLI 合法时优先；CLI 非法或未传时用 _meta.yaml 的显式 archetype；都未传时走 category 默认映射
+    explicit = cli_archetype if cli_archetype in _VALID_ARCHETYPES else (meta_archetype or None)
+    archetype = resolve_archetype(category, explicit=explicit)
+
+    # fiction 桶待实现（design.md §5.2），未落地前回落 narrative 避免 build_workflow 崩溃。
+    # 放在 resolve_archetype 之后、stub/真实分支之前，统一拦截（单一信源）。
+    if archetype not in ("narrative", "modern", "knowledge"):
+        print(f"警告：archetype {archetype!r} 未落地，回落 narrative", file=sys.stderr)
+        archetype = "narrative"
+
     if args.stub:
         output_path = _generate_stub(
-            book, chapter, event, user_input, args.output_dir, dry_run=args.dry_run
+            book, chapter, event, user_input, args.output_dir,
+            dry_run=args.dry_run, archetype=archetype,
         )
         return 0
 
@@ -131,12 +208,27 @@ def main() -> int:
         print("[DRY RUN] 跳过工作流调用，不生成笔记。")
         return 0
 
+    # 阶段3：执行层（specialist/editor prompt）尚未按 archetype 分桶（阶段4 落地）。
+    # 真实模式下 modern/knowledge 会因 specialist 硬编码 narrative 段名导致 quality 失败（P0-1）。
+    # 阶段4 specialist 改造前，真实模式统一回落 narrative 执行；stub 模式已 return，保留分桶展示。
+    # 注意：initial_state['archetype'] 保留用户意图（modern/knowledge），供阶段4 specialist 读取；
+    # 仅 build_workflow 用回落的 exec_archetype，保证 quality 检查与 specialist 生成段名匹配。
+    exec_archetype = archetype
+    if archetype != "narrative":
+        print(
+            f"警告：archetype {archetype!r} 真实生成尚未落地（阶段4），"
+            f"回落 narrative 执行",
+            file=sys.stderr,
+        )
+        exec_archetype = "narrative"
+
     from src.core.workflow import build_workflow
 
     initial_state = {
         "book": book,
         "chapter": chapter,
         "event": event,
+        "archetype": archetype,
         "user_input": user_input,
         "output_path": "",
         "sections": {},
@@ -145,7 +237,7 @@ def main() -> int:
         "errors": [],
     }
 
-    app = build_workflow(output_base=args.output_dir)
+    app = build_workflow(output_base=args.output_dir, archetype=exec_archetype)
     final_state = app.invoke(initial_state)
 
     if final_state.get("errors"):

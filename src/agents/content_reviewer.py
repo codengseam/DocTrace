@@ -28,8 +28,9 @@ def run(state: AgentState) -> dict:
             "fixes": [],
         }
 
-    # 先跑规则化检测
-    report = run_content_quality_checks(content)
+    # 先跑规则化检测（按 archetype 路由规则集，阶段2质检分桶）
+    archetype = state.get("archetype", "narrative")
+    report = run_content_quality_checks(content, archetype=archetype)
     base_report = format_report(report)
 
     # 再用 LLM 做深度可读性与真实性分析

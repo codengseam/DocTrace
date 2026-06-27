@@ -26,6 +26,14 @@ def mock_env(monkeypatch):
                     "结语",
                 ],
             },
+            # 阶段3：section_templates 与 quality_check.required_sections 同步
+            "section_templates": {
+                "narrative": [
+                    "讲事情", "讲人物", "讲背景", "讲道理", "问道悟道", "结语",
+                ],
+                "modern": ["入戏", "破题", "方法论", "避坑", "践行"],
+                "knowledge": ["概念", "原理", "实践", "速查/自测"],
+            },
         }
 
     try:

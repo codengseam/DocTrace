@@ -30,14 +30,37 @@ def _has_frontmatter(text: str) -> bool:
     return text.strip().startswith("---")
 
 
-SECTION_TO_AGENT = {
-    "讲事情": "historian",
-    "讲人物": "biographer",
-    "讲背景": "context_analyst",
-    "讲道理": "critic",
-    "问道悟道": "philosopher",
-    "结语": "editor",
+SECTION_TEMPLATES: Dict[str, Dict[str, str]] = {
+    # narrative 桶：原 SECTION_TO_AGENT 映射，古籍零回归（design.md §10.5）
+    "narrative": {
+        "讲事情": "historian",
+        "讲人物": "biographer",
+        "讲背景": "context_analyst",
+        "讲道理": "critic",
+        "问道悟道": "philosopher",
+        "结语": "editor",
+    },
+    # modern 桶：5 段，复用现有 specialist 能力定位（design.md §10.5）
+    "modern": {
+        "入戏": "historian",
+        "破题": "critic",
+        "方法论": "context_analyst",
+        "避坑": "critic",
+        "践行": "editor",
+    },
+    # knowledge 桶：4 段（design.md §10.5）
+    "knowledge": {
+        "概念": "context_analyst",
+        "原理": "historian",
+        "实践": "biographer",
+        "速查/自测": "editor",
+    },
 }
+
+
+def _section_to_agent_map(archetype: str) -> Dict[str, str]:
+    """按 archetype 选段落→agent 映射，非法值兜底 narrative。"""
+    return SECTION_TEMPLATES.get(archetype, SECTION_TEMPLATES["narrative"])
 
 
 def run(state: AgentState) -> Dict[str, Any]:
@@ -45,8 +68,11 @@ def run(state: AgentState) -> Dict[str, Any]:
     book = state["book"]
     chapter = state["chapter"]
     event = state["event"]
+    archetype = state.get("archetype", "narrative")
     sections = state.get("sections", {})
     sources = state.get("sources", {})
+
+    section_to_agent = _section_to_agent_map(archetype)
 
     # 序列化输入，避免 .format() 对字典直接插值
     sections_md = _sections_to_markdown(sections)
@@ -71,9 +97,9 @@ def run(state: AgentState) -> Dict[str, Any]:
     # 若 LLM 未生成 frontmatter，则自行补齐
     if not _has_frontmatter(content):
         title = f"{book}·{chapter}·{event}"
-        # 将段落标题映射为 Specialist Agent 名称
+        # 将段落标题映射为 Specialist Agent 名称（按 archetype 选模板）
         agent_names = [
-            SECTION_TO_AGENT.get(section, section)
+            section_to_agent.get(section, section)
             for section in sections.keys()
         ] if sections else ["editor"]
         frontmatter = build_frontmatter(

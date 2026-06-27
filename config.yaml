@@ -45,6 +45,29 @@ quality_check:
     - 问道悟道
     - 结语
 
+# 结构模板分桶（archetype 分桶阶段3，design.md §10）
+# get_required_sections(archetype) 优先读此表，fallback 到 quality_check.required_sections
+# narrative 桶段名必须与 quality_check.required_sections 完全一致（古籍零回归护栏）
+section_templates:
+  narrative:
+    - 讲事情
+    - 讲人物
+    - 讲背景
+    - 讲道理
+    - 问道悟道
+    - 结语
+  modern:
+    - 入戏
+    - 破题
+    - 方法论
+    - 避坑
+    - 践行
+  knowledge:
+    - 概念
+    - 原理
+    - 实践
+    - 速查/自测
+
 # MCP 服务器名称映射
 mcp_servers:
   pdf_reader: "mcp_pdf-reader-mcp"  # 读取本地 PDF 史料
@@ -53,3 +76,14 @@ mcp_servers:
 # 可选：Google Custom Search 配置
 google_search_api_key: ""
 google_search_engine_id: ""
+
+# archetype 分桶默认映射：category -> archetype
+# resolve_archetype(category, explicit=...) 查此表；explicit 优先，未知 category 兜底 narrative
+# 详见 docs/archetype-design/design.md §5.4
+archetype_defaults:
+  史: "narrative"
+  经: "narrative"
+  养生: "modern"
+  财: "modern"
+  职场: "modern"
+  技: "knowledge"

@@ -393,3 +393,56 @@
   1. AI 写作的"低级事实错误"（字数/年份/年龄）不该靠人工 review 发现，必须有自动化拦截。
   2. 灵魂注入（活人感/史观穿透）与合规（数字事实）是两类独立问题，不能互相替代——灵魂再好，数字错了仍是 P0。
   3. superpowers 的 `verification-before-completion` 技能对此有直接指导：声称完成前必须运行验证命令并确认输出，证据先于断言。
+
+---
+
+## 质检规则一刀切误报非史类专栏（archetype 分桶修复）
+
+- **编号**：BUG-027
+- **首次出现**：2026-06-26
+- **类型**：数据 / 兼容性
+- **现象**：理财课被报"缺年份/缺名家/时间线缺失"，AI 课被报"中英文混杂"——均因质检层用古籍规则一刀切。`_is_modern_column` 关键词列表仅 8 词（职场/沟通/面试/商科/心理学/管理/营销/销售），漏掉财/技/养生三类；`_is_philosophy_or_classic` 9 词同样不全。同时 BUG-026 新增的 `check_numeric_facts`/`check_ai_cliches` 根本没接入 `run_content_quality_checks`，通用检查形同虚设。
+- **根因**：
+  1. 类型信号未进质检层：`category`/`archetype` 只在展示层和生成层用，质检层靠书名子串匹配做"逃生阀"，新增专栏必漏。
+  2. `run_content_quality_checks` 缺 archetype 参数，无法按桶路由规则集。
+  3. `check_numeric_facts` 的 manual_review（N年前后/N岁）对 modern/knowledge 误标（现代语境"10年前""30岁"是正常表达）。
+- **修复**：
+  1. `src/utils/content_quality.py`：删除 `_is_modern_column`/`_is_philosophy_or_classic`，`run_content_quality_checks(content, archetype="narrative")` 按 design.md §8 路由表分桶。narrative 全开古籍规则；modern/knowledge 跳过年份/名家/时间线/现代术语禁用。
+  2. 通用检查全桶共享：`check_ai_cliches`/`check_numeric_facts` auto_errors 全桶都跑（接入时 `_strip_frontmatter` 避免 frontmatter 数字误标）。
+  3. 新增 `_filter_numeric_manual(manual, archetype)`：narrative 保留 N年前后/N岁，modern/knowledge 过滤误标。
+  4. 新增 `KNOWLEDGE_TERMS_WHITELIST`（27 词）和 `check_mixed_language_knowledge()`，按长度降序替换避免短词破坏长词。
+  5. 非法 archetype 抛 `ValueError`（fail-fast），不静默走混合态。
+  6. `scripts/review_content.py` 加 `--archetype` CLI + `_meta.yaml` 读取，规则化质检报告并入输出。
+  7. `.trae/skills/deep-reading/content-quality.md` §8 从"补救条款"重构为"多桶并行规则集"。
+- **涉及文件**：`src/utils/content_quality.py`、`src/agents/content_reviewer.py`、`scripts/review_content.py`、`.trae/skills/deep-reading/content-quality.md`
+- **回归测试**：`tests/test_content_quality_archetype.py` 34 项契约测试。质检分数对比：理财课·ETF 84→100（+16）；AI课·Transformer 81→97（+16）；资治通鉴·三家分晋 100（无回归）。
+- **教训**：
+  1. 关键词逃生阀是"没接类型信号的补丁"，新增专栏必漏——必须用显式 archetype 字段做路由信源。
+  2. 禁区红线（quality.py 零改动）能用调用层路由守住：manual_review 过滤放 `_filter_numeric_manual`，不碰 quality.py 内部。
+  3. 通用检查（数字/套话）全桶共享是 BUG-026 教训的延续：合规类不分桶，灵魂类才分桶。
+
+---
+
+## check_temporal_order 首段拆分失败（正则未匹配行首 ##）
+
+- **编号**：BUG-028
+- **首次出现**：2026-06-26
+- **类型**：数据
+- **现象**：narrative 桶对"## 讲事情\n这里没写年份。"应报"讲事情段落缺少时间/年份标注"，但实际未报（sequence 为空）。黄金样本虽过，但缺年份的讲事情段落漏检。
+- **根因**：`check_temporal_order` 用 `re.split(r"\n## ", body)` 拆分章节，但 `_strip_frontmatter` 后 body 以 `## ` 开头（首段前无 `\n`），导致首段 `## 讲事情` 未被拆分，`section.startswith("讲事情")` 在 `"## 讲事情..."` 上失败。
+- **修复**：`src/utils/content_quality.py` 的 `check_temporal_order` 拆分正则改为 `re.split(r"(?:^|\n)## ", body)`，用 `(?:^|\n)` 兜底首段无前缀换行的情况。
+- **涉及文件**：`src/utils/content_quality.py`
+- **回归测试**：`tests/test_content_quality_archetype.py::TestNarrativeBucketKeepsAncientRules::test_narrative_reports_temporal_order` 断言首段 `## 讲事情` 无年份时必报。
+- **教训**：`re.split(r"\n## ", body)` 这类"按换行+标记拆分"的模式要考虑首段无前缀换行的情况，统一用 `(?:^|\n)` 兜底。
+
+## --archetype fiction 触发 build_workflow ValueError（跨层 archetype 白名单不一致）
+
+- **编号**：BUG-029
+- **首次出现**：2026-06-27
+- **类型**：兼容性
+- **现象**：执行 `src/main.py --archetype fiction` 时，`build_workflow(archetype="fiction")` 抛 `ValueError: 非法 archetype: 'fiction'` 崩溃，CLI 直接退出非 0。
+- **根因**：`src/utils/prompts._VALID_ARCHETYPES` 含 `"fiction"`（design.md §5.2 预留桶），但 `src/core/workflow._VALID_ARCHETYPES` 只含 `narrative/modern/knowledge`（fiction 未落地）。两层白名单不一致；`resolve_archetype` 认 `fiction` 合法并透传，`build_workflow` 却拒绝。原回落逻辑放在 stub 分支之后，stub 路径走不到。
+- **修复**：`src/main.py` 将 fiction→narrative 回落统一移到 `resolve_archetype` 之后、stub/真实分支之前（单一拦截点），未落地 archetype 一律回落 narrative 并打 stderr 警告。
+- **涉及文件**：`src/main.py`
+- **回归测试**：`tests/test_workflow_archetype.py::TestStubModeArchetype::test_fiction_falls_back_to_narrative` 断言 `--archetype fiction` 退出码 0、生成 narrative 6 段、stderr 含回落警告。
+- **教训**：跨层枚举白名单必须单一信源；预留桶在 CLI 层应 fail-soft 回退（回落 + 警告）而非透传到下游崩溃。回落逻辑要放在所有分支之前，不能放在某个分支之后。
