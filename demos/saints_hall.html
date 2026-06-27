@@ -202,9 +202,9 @@
     <h1 class="hall-title">圣 贤 堂</h1>
     <p class="hall-subtitle">诸圣列传 · 儒家五圣 · 孟子四圣 · 行业诸圣</p>
     <div class="hall-stats">
-      <span class="hall-stat">共 15 位圣人</span>
+      <span class="hall-stat">共 16 张卡片</span>
       <span class="hall-stat">儒家五圣 5</span>
-      <span class="hall-stat">孟子四圣 3</span>
+      <span class="hall-stat">孟子四圣 4</span>
       <span class="hall-stat">行业诸圣 7</span>
     </div>
   </header>
@@ -366,11 +366,40 @@
         hasLink: false
       },
 
-      // ===== 孟子四圣（孔子已在儒家五圣，此处补 3 位）=====
+      // ===== 孟子四圣（《孟子·万章下》评点的 4 位圣人，含孔子圣之时者）=====
+      {
+        // 孔子作为「圣之时者·集大成」是孟子四圣不可分割的一员，此处为孟子四圣分类下的孔子卡片
+        // 与儒家五圣的孔子卡片为同一人物的不同分类视角，数据保持一致
+        name: '孔子', courtesyName: '仲尼', title: '圣之时者·集大成',
+        faction: '圣贤堂', subFaction: '孟子四圣',
+        dynasty: '春秋', state: '鲁国', lifespan: '前551–前479', no: '006',
+        portraitPrompt: '春秋时期孔子反差形象，虎背熊腰肌肉发达的壮汉，身高九尺六寸的长人，赤裸上身露出结实肌肉和宽阔肩膀，浓眉大眼短须，面容英武刚毅，单手握缰绳驾驭战车，另一手挥斥方遒，战车上身后跟着几名弟子子路颜回等人，动态构图，水墨国风重彩插画，米白宣纸背景，史诗感历史人物画，体现孔子力士身材与御车绝技',
+        scores: [
+          { dim: '仁德', value: 98, note: '克己复礼为仁，万世楷模' },
+          { dim: '学识', value: 96, note: '删诗书定礼乐，博学多能' },
+          { dim: '教化', value: 99, note: '有教无类，弟子三千贤者七十二' },
+          { dim: '思想', value: 98, note: '仁礼中庸，吾道一以贯之' },
+          { dim: '言传', value: 95, note: '述而不作，论语传世' },
+          { dim: '影响', value: 100, note: '万世师表，至圣先师' }
+        ],
+        quotes: [
+          { text: '三人行，必有我师焉。', source: '《论语·述而》' },
+          { text: '己所不欲，勿施于人。', source: '《论语·卫灵公》' },
+          { text: '学而时习之，不亦说乎？', source: '《论语·学而》' }
+        ],
+        deeds: [
+          { title: '夹谷之会', text: '鲁定公十年任大司寇摄相事，齐鲁会盟任相礼，临危不乱诛优倡震慑齐人，逼齐归还郓汶阳龟阴之田。' },
+          { title: '周游列国', text: '五十五岁率弟子周游列国十四载，历陈蔡绝粮之厄而弦歌不辍，六十八岁返鲁。' },
+          { title: '删订六经', text: '晚年返鲁，删诗书定礼乐序易传修春秋，整理上古文献，奠中华典籍根基。' }
+        ],
+        bio: '春秋鲁国人，儒家学派创始人，孟子尊为「圣之时者·集大成」，谓其集伯夷之清、伊尹之任、柳下惠之和而大成。',
+        hasLink: true,
+        linkBook: '论语', linkChapter: '教育之道_学而时习', deedBook: '孔子传', deedChapter: '鲁国从政_夹谷之会'
+      },
       {
         name: '伯夷', courtesyName: '—', title: '圣之清者',
         faction: '圣贤堂', subFaction: '孟子四圣',
-        dynasty: '商末周初', state: '孤竹国', lifespan: '约前11世纪', no: '006',
+        dynasty: '商末周初', state: '孤竹国', lifespan: '约前11世纪', no: '007',
         portraitPrompt: '商末圣之清者伯夷反差形象，清瘦孤傲的白须老者，面容清癯颧骨高耸，眼神倔强不屈透着清介之气，身披粗麻衣脚踏草鞋，手持采薇竹篮独立于首阳山绝壁之上，脚下野薇丛生远处苍茫周原，狂风鼓荡衣袍老人昂首望天宁折不弯，水墨国风重彩卡通插画，米白宣纸背景，史诗感历史人物画',
         scores: [
           { dim: '仁德', value: 96, note: '让国高义，清廉绝俗' },
@@ -394,7 +423,7 @@
       {
         name: '伊尹', courtesyName: '—', title: '圣之任者',
         faction: '圣贤堂', subFaction: '孟子四圣',
-        dynasty: '商初', state: '有莘国', lifespan: '约前16世纪', no: '007',
+        dynasty: '商初', state: '有莘国', lifespan: '约前16世纪', no: '008',
         portraitPrompt: '商初圣之任者伊尹反差形象，身形魁梧膀阔腰圆的厨子出身宰辅，腰系粗布围裙背负一口青铜大鼎鼎耳缠布以肩承之，目光锐利如鹰隼眉宇间有经纶天下之相鬓发如戟，背景为商初宫室炊烟鼎中隐见汤羹翻滚，水墨国风重彩卡通插画，米白宣纸背景，史诗感历史人物画',
         scores: [
           { dim: '仁德', value: 88, note: '自任天下，思天下不被尧舜之泽' },
@@ -418,7 +447,7 @@
       {
         name: '柳下惠', courtesyName: '禽', title: '圣之和者',
         faction: '圣贤堂', subFaction: '孟子四圣',
-        dynasty: '春秋', state: '鲁国', lifespan: '约前7世纪', no: '008',
+        dynasty: '春秋', state: '鲁国', lifespan: '约前7世纪', no: '009',
         portraitPrompt: '春秋圣之和者柳下惠反差形象，温润如玉的中年文官，面庞丰润和厚眉眼含笑，宽袍大袖端坐于一株垂柳之下柳枝拂肩，神态从容不迫双手拢袖，气度宽和包容怀中空无一物却自有一股坐怀不乱的正定之气，水墨国风重彩卡通插画，米白宣纸背景，史诗感历史人物画',
         scores: [
           { dim: '仁德', value: 90, note: '宽和容众，遗佚不怨阨穷不悯' },
@@ -444,7 +473,7 @@
       {
         name: '孙武', courtesyName: '长卿', title: '兵圣',
         faction: '圣贤堂', subFaction: '行业圣人',
-        dynasty: '春秋', state: '齐国', lifespan: '约前545–前470', no: '009',
+        dynasty: '春秋', state: '齐国', lifespan: '约前545–前470', no: '010',
         portraitPrompt: '春秋兵圣孙武反差形象，身披青铜甲胄手持令旗的冷峻统帅，面容如铁不怒自威，身后吴军甲士阵列森严，透出斩二妃立军法的肃杀气场，动态构图，水墨国风重彩卡通插画，米白宣纸背景，史诗感历史人物画',
         scores: [
           { dim: '谋略', value: 98, note: '不战而屈人之兵，上兵伐谋' },
@@ -467,7 +496,7 @@
       {
         name: '王羲之', courtesyName: '逸少', title: '书圣',
         faction: '圣贤堂', subFaction: '行业圣人',
-        dynasty: '东晋', state: '琅琊', lifespan: '303–361', no: '010',
+        dynasty: '东晋', state: '琅琊', lifespan: '303–361', no: '011',
         portraitPrompt: '东晋书圣王羲之反差形象，风流倜傥的魏晋名士，微醺状态执笔挥毫作兰亭序，墨迹飞舞如行云流水，身侧白鹅悠然伴游，袒胸露怀任诞不羁，动态构图，水墨国风重彩卡通插画，米白宣纸背景，史诗感历史人物画',
         scores: [
           { dim: '笔法', value: 99, note: '飘若浮云，矫若惊龙' },
@@ -490,7 +519,7 @@
       {
         name: '张仲景', courtesyName: '仲景', title: '医圣',
         faction: '圣贤堂', subFaction: '行业圣人',
-        dynasty: '东汉', state: '南阳', lifespan: '约150–219', no: '011',
+        dynasty: '东汉', state: '南阳', lifespan: '约150–219', no: '012',
         portraitPrompt: '东汉医圣张仲景反差形象，悬壶济世的中年医者，长髯飘飘眉目慈悲，一手手持药葫芦一手持医书，身后药柜密布药香氤氲，神情专注而温厚，动态构图，水墨国风重彩卡通插画，米白宣纸背景，史诗感历史人物画',
         scores: [
           { dim: '医理', value: 98, note: '勤求古训，精研素问九卷' },
@@ -513,7 +542,7 @@
       {
         name: '吴道子', courtesyName: '道子', title: '画圣',
         faction: '圣贤堂', subFaction: '行业圣人',
-        dynasty: '唐代', state: '阳翟', lifespan: '约680–759', no: '012',
+        dynasty: '唐代', state: '阳翟', lifespan: '约680–759', no: '013',
         portraitPrompt: '唐代画圣吴道子反差形象，狂放不羁的画师，长发披散衣袂飘举，手持巨笔挥毫绘天王图，笔下神佛衣带当风凌空飞动，神色痴狂如有神助，动态构图，水墨国风重彩卡通插画，米白宣纸背景，史诗感历史人物画',
         scores: [
           { dim: '线条', value: 99, note: '吴带当风，圆转飘逸' },
@@ -536,7 +565,7 @@
       {
         name: '杜甫', courtesyName: '子美', title: '诗圣',
         faction: '圣贤堂', subFaction: '行业圣人',
-        dynasty: '唐代', state: '巩县', lifespan: '712–770', no: '013',
+        dynasty: '唐代', state: '巩县', lifespan: '712–770', no: '014',
         portraitPrompt: '唐代诗圣杜甫反差形象，忧国忧民的清瘦诗翁，麻衣草履登高远眺，身后秋风茅屋摇摇欲坠，面带忧色却目光坚定如炬，鬓发萧瑟而脊梁挺直，动态构图，水墨国风重彩卡通插画，米白宣纸背景，史诗感历史人物画',
         scores: [
           { dim: '炼字', value: 97, note: '语不惊人死不休' },
@@ -559,7 +588,7 @@
       {
         name: '陆羽', courtesyName: '鸿渐', title: '茶圣',
         faction: '圣贤堂', subFaction: '行业圣人',
-        dynasty: '唐代', state: '竟陵', lifespan: '733–804', no: '014',
+        dynasty: '唐代', state: '竟陵', lifespan: '733–804', no: '015',
         portraitPrompt: '唐代茶圣陆羽反差形象，隐逸清癯的茶人，布衣芒鞋手捧茶碗细细品鉴，身后茶山云雾缭绕茶香氤氲，面容清癯有茶癖之相，目光专注如鉴泉石，动态构图，水墨国风重彩卡通插画，米白宣纸背景，史诗感历史人物画',
         scores: [
           { dim: '识茶', value: 99, note: '辨茶之源，识茶之性' },
@@ -582,7 +611,7 @@
       {
         name: '司马迁', courtesyName: '子长', title: '史圣',
         faction: '圣贤堂', subFaction: '行业圣人',
-        dynasty: '西汉', state: '夏阳', lifespan: '约前145–前86', no: '015',
+        dynasty: '西汉', state: '夏阳', lifespan: '约前145–前86', no: '016',
         portraitPrompt: '西汉史圣司马迁反差形象，受宫刑后仍秉笔直书的史官，面容清癯刚毅不屈，伏案修史于烛火之下，身后竹简堆积如山，目光穿透历史长河深邃如炬，动态构图，水墨国风重彩卡通插画，米白宣纸背景，史诗感历史人物画',
         scores: [
           { dim: '考据', value: 97, note: '网罗天下放失旧闻，考之行事' },
