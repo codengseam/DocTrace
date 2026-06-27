@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026高考志愿填报前置认知 | 豪书斋</title>
+    <meta name="description" content="面向2026高考考生与家长的志愿填报前置认知科普：看清自己、选专业、选学校、定分数线、认识产业。不做分数匹配，只做认知前置，与阳光志愿错位互补。">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* 覆盖 style.css 中面向阅读器 SPA 的 body 限制，让落地页可自由滚动 */
+        html, body {
+            overflow-x: hidden;
+            overflow-y: auto;
+            height: auto;
+            min-height: 100%;
+        }
+        body {
+            display: block;
+            background: var(--bg-paper);
+            color: var(--ink-primary, var(--ink));
+            font-family: var(--font-sans);
+            line-height: 1.65;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ===== 顶栏 ===== */
+        .gk-topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 20px;
+            background: var(--bg);
+            border-bottom: 1px solid var(--divider);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+        .gk-back {
+            color: var(--accent);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        .gk-back:hover { color: var(--accent-hover); }
+        .gk-brand {
+            font-size: 13px;
+            color: var(--ink-muted, #8a8580);
+            white-space: nowrap;
+        }
+
+        /* ===== Hero ===== */
+        .gk-hero {
+            background:
+                linear-gradient(135deg, rgba(139, 90, 43, 0.06) 0%, rgba(74, 111, 165, 0.06) 100%),
+                var(--bg-paper);
+            padding: 48px 20px 56px;
+            text-align: center;
+            border-bottom: 1px solid var(--divider);
+        }
+        .gk-hero-inner {
+            max-width: 820px;
+            margin: 0 auto;
+        }
+        .gk-hero-badge {
+            display: inline-block;
+            padding: 4px 14px;
+            border-radius: 999px;
+            background: var(--accent);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            margin-bottom: 18px;
+        }
+        .gk-hero-title {
+            font-size: 30px;
+            line-height: 1.25;
+            font-weight: 700;
+            color: var(--ink-primary, var(--ink));
+            margin: 0 0 14px;
+            letter-spacing: -0.01em;
+        }
+        .gk-hero-subtitle {
+            font-size: 17px;
+            color: var(--ink-secondary, #5a5651);
+            margin: 0 0 10px;
+            font-weight: 500;
+        }
+        .gk-hero-tagline {
+            font-size: 14px;
+            color: var(--ink-muted, #8a8580);
+            margin: 0;
+        }
+
+        /* ===== 主区 ===== */
+        .gk-main {
+            max-width: 1080px;
+            margin: 0 auto;
+            padding: 40px 20px 24px;
+        }
+        .gk-module {
+            margin-bottom: 44px;
+        }
+        .gk-module-header {
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 18px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--accent);
+            border-image: linear-gradient(90deg, var(--accent) 0%, var(--accent-light) 40%, transparent 100%) 1;
+        }
+        .gk-module-num {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--accent);
+            line-height: 1;
+        }
+        .gk-module-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--ink-primary, var(--ink));
+            margin: 0;
+        }
+        .gk-module-desc {
+            font-size: 14px;
+            color: var(--ink-muted, #8a8580);
+            margin: 0;
+            flex-basis: 100%;
+        }
+
+        /* ===== 卡片网格 ===== */
+        .gk-card-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+        .gk-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px 20px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            box-shadow: 0 1px 3px var(--shadow);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+        .gk-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px var(--shadow);
+            border-color: var(--accent-light);
+        }
+        .gk-card-title {
+            font-size: 17px;
+            font-weight: 600;
+            color: var(--ink-primary, var(--ink));
+            margin: 0;
+        }
+        .gk-card-points {
+            font-size: 14px;
+            color: var(--ink-secondary, #5a5651);
+            margin: 0;
+            line-height: 1.7;
+            flex: 1;
+        }
+        .gk-card-btn {
+            align-self: flex-start;
+            display: inline-block;
+            margin-top: 4px;
+            padding: 7px 16px;
+            border-radius: 6px;
+            background: var(--accent);
+            color: #fff;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s ease;
+        }
+        .gk-card-btn:hover { background: var(--accent-hover); }
+
+        /* 模块强调色（柔和、克制） */
+        .gk-module[data-tone="self"] .gk-card-btn { background: #4a6fa5; }
+        .gk-module[data-tone="self"] .gk-card-btn:hover { background: #3a5a8a; }
+        .gk-module[data-tone="major"] .gk-card-btn { background: #2d8a6a; }
+        .gk-module[data-tone="major"] .gk-card-btn:hover { background: #236e54; }
+        .gk-module[data-tone="school"] .gk-card-btn { background: #c08552; }
+        .gk-module[data-tone="school"] .gk-card-btn:hover { background: #a06d3f; }
+        .gk-module[data-tone="score"] .gk-card-btn { background: #7a5a9a; }
+        .gk-module[data-tone="score"] .gk-card-btn:hover { background: #63477f; }
+        .gk-module[data-tone="industry"] .gk-card-btn { background: #3a7a8c; }
+        .gk-module[data-tone="industry"] .gk-card-btn:hover { background: #2c606f; }
+        .gk-module[data-tone="ref"] .gk-card-btn { background: #5a6c7d; }
+        .gk-module[data-tone="ref"] .gk-card-btn:hover { background: #465564; }
+
+        /* ===== 底部 ===== */
+        .gk-footer {
+            background: var(--bg);
+            border-top: 1px solid var(--divider);
+            padding: 36px 20px 32px;
+            text-align: center;
+        }
+        .gk-footer-link {
+            display: inline-block;
+            padding: 10px 22px;
+            border-radius: 8px;
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            text-decoration: none;
+            font-size: 15px;
+            font-weight: 500;
+            margin-bottom: 18px;
+            transition: background 0.2s ease, color 0.2s ease;
+        }
+        .gk-footer-link:hover {
+            background: var(--accent);
+            color: #fff;
+        }
+        .gk-disclaimer {
+            font-size: 13px;
+            color: var(--ink-secondary, #5a5651);
+            margin: 0 0 8px;
+            line-height: 1.7;
+        }
+        .gk-copy {
+            font-size: 12px;
+            color: var(--ink-muted, #8a8580);
+            margin: 0;
+        }
+
+        /* ===== 响应式 ===== */
+        @media (min-width: 640px) {
+            .gk-hero { padding: 64px 24px 72px; }
+            .gk-hero-title { font-size: 38px; }
+            .gk-hero-subtitle { font-size: 19px; }
+            .gk-main { padding: 52px 24px 32px; }
+        }
+        @media (min-width: 768px) {
+            .gk-card-grid { grid-template-columns: repeat(2, 1fr); }
+            .gk-hero-title { font-size: 42px; }
+        }
+        @media (min-width: 1024px) {
+            .gk-card-grid { grid-template-columns: repeat(3, 1fr); }
+            .gk-module-desc { flex-basis: auto; }
+        }
+    </style>
+</head>
+<body data-theme="day">
+    <header class="gk-topbar">
+        <a class="gk-back" href="index.html">← 返回豪书斋</a>
+        <span class="gk-brand">豪书斋 · 升学认知专栏</span>
+    </header>
+
+    <section class="gk-hero">
+        <div class="gk-hero-inner">
+            <span class="gk-hero-badge">🎓 2026 升学季</span>
+            <h1 class="gk-hero-title">2026高考志愿填报前置认知</h1>
+            <p class="gk-hero-subtitle">填志愿之前，先看清自己、看清专业、看清学校、看清产业</p>
+            <p class="gk-hero-tagline">不做分数匹配，只做认知前置，与阳光志愿错位互补</p>
+        </div>
+    </section>
+
+    <main class="gk-main">
+
+        <!-- 模块① 看清自己 -->
+        <section class="gk-module" data-tone="self">
+            <div class="gk-module-header">
+                <span class="gk-module-num">①</span>
+                <h2 class="gk-module-title">看清自己</h2>
+                <p class="gk-module-desc">先回答"我是谁"，再谈"填什么"——认知起点决定决策质量。</p>
+            </div>
+            <div class="gk-card-grid">
+                <article class="gk-card">
+                    <h3 class="gk-card-title">开篇 · 三问框架</h3>
+                    <p class="gk-card-points">用"我是谁 / 我要去哪 / 我怎么去"三问建立决策起点，避免上来就盯着分数线盲选。</p>
+                    <a class="gk-card-btn" href="index.html?book=高考志愿填报前置认知&chapter=开篇_三问框架">阅读全文 →</a>
+                </article>
+                <article class="gk-card">
+                    <h3 class="gk-card-title">MBTI 十六型解读</h3>
+                    <p class="gk-card-points">把十六型人格拆成"认知—决策—行动"三轴，对照专业适配度，而非简单贴标签。</p>
+                    <a class="gk-card-btn" href="index.html?book=高考志愿填报前置认知&chapter=看清自己_MBTI十六型解读">阅读全文 →</a>
+                </article>
+                <article class="gk-card">
+                    <h3 class="gk-card-title">霍兰德与三维度互补</h3>
+                    <p class="gk-card-points">RIASEC 六型 + 能力 / 兴趣 / 价值观三维度交叉验证，给 MBTI 兜底，减少误判。</p>
+                    <a class="gk-card-btn" href="index.html?book=高考志愿填报前置认知&chapter=看清自己_霍兰德与三维度互补">阅读全文 →</a>
+                </article>
+            </div>
+        </section>
+
+        <!-- 模块② 选专业 -->
+        <section class="gk-module" data-tone="major">
+            <div class="gk-module-header">
+                <span class="gk-module-num">②</span>
+                <h2 class="gk-module-title">选专业</h2>
+                <p class="gk-module-desc">从学科门类到就业倒推，看清专业目录背后的真实路径。</p>
+            </div>
+            <div class="gk-card-grid">
+                <article class="gk-card">
+                    <h3 class="gk-card-title">学科门类与新增专业</h3>
+                    <p class="gk-card-points">13 学科门类、883 个专业、2026 新增 38 专业——先看懂目录结构，再谈兴趣匹配。</p>
+                    <a class="gk-card-btn" href="index.html?book=高考志愿填报前置认知&chapter=选专业_学科门类与新增专业">阅读全文 →</a>
+                </article>
+                <article class="gk-card">
+                    <h3 class="gk-card-title">就业倒推与避坑心法</h3>
+                    <p class="gk-card-points">用就业出口反推专业选择，识别"名称相近、内涵迥异"的高频坑位。</p>
+                    <a class="gk-card-btn" href="index.html?book=高考志愿填报前置认知&chapter=选专业_就业倒推与避坑心法">阅读全文 →</a>
+                </article>
+            </div>
+        </section>
+
+        <!-- 模块③ 选学校 -->
+        <section class="gk-module" data-tone="school">
+            <div class="gk-module-header">
+                <span class="gk-module-num">③</span>
+                <h2 class="gk-module-title">选学校</h2>
+                <p class="gk-module-desc">冲稳保不是赌博，位次与章程才是定盘星。</p>
+            </div>
+            <div class="gk-card-grid">
+                <article class="gk-card">
+                    <h3 class="gk-card-title">冲稳保与位次定位</h3>
+                    <p class="gk-card-points">用位次而非分数定位院校区间，科学分配"冲 / 稳 / 保"三档志愿。</p>
+                    <a class="gk-card-btn" href="index.html?book=高考志愿填报前置认知&chapter=选学校_冲稳保与位次定位">阅读全文 →</a>
+                </article>
+                <article class="gk-card">
+                    <h3 class="gk-card-title">章程门槛与优先级</h3>
+                    <p class="gk-card-points">招生章程里的单科成绩、身体条件、专业级差——这些门槛比分数线更致命。</p>
+                    <a class="gk-card-btn" href="index.html?book=高考志愿填报前置认知&chapter=选学校_章程门槛与优先级">阅读全文 →</a>
+                </article>
+            </div>
+        </section>
+
+        <!-- 模块④ 定分数线 -->
+        <section class="gk-module" data-tone="score">
+            <div class="gk-module-header">
+                <span class="gk-module-num">④</span>
+                <h2 class="gk-module-title">定分数线</h2>
+                <p class="gk-module-desc">一分一段表是志愿填报的核心数据底座，会用才不踩坑。</p>
+            </div>
+            <div class="gk-card-grid">
+                <article class="gk-card">
+                    <h3 class="gk-card-title">一分一段表与数据用法</h3>
+                    <p class="gk-card-points">读懂一分一段表的位次、同分人数、累计分布，把"分数"换算成可比的"位次"。</p>
+                    <a class="gk-card-btn" href="index.html?book=高考志愿填报前置认知&chapter=定分数线_数据用法">阅读全文 →</a>
+                </article>
+            </div>
+        </section>
+
+        <!-- 模块⑤ 认识产业 -->
+        <section class="gk-module" data-tone="industry">
+            <div class="gk-module-header">
+                <span class="gk-module-num">⑤</span>
+                <h2 class="gk-module-title">认识产业</h2>
+                <p class="gk-module-desc">专业对应的是四年后的就业市场，看清产业周期再选赛道。</p>
+            </div>
+            <div class="gk-card-grid">
+                <article class="gk-card">
+                    <h3 class="gk-card-title">十五五与未来赛道</h3>
+                    <p class="gk-card-points">从"十五五"规划与未来十年产业趋势，反推哪些专业会被需要、哪些在退潮。</p>
+                    <a class="gk-card-btn" href="index.html?book=高考志愿填报前置认知&chapter=认识产业_十五五与未来赛道">阅读全文 →</a>
+                </article>
+            </div>
+        </section>
+
+        <!-- 模块⑥ 资料汇编与心法 -->
+        <section class="gk-module" data-tone="ref">
+            <div class="gk-module-header">
+                <span class="gk-module-num">⑥</span>
+                <h2 class="gk-module-title">资料汇编与心法</h2>
+                <p class="gk-module-desc">权威信源导航 + 落地心法，把认知转化为可执行的填报动作。</p>
+            </div>
+            <div class="gk-card-grid">
+                <article class="gk-card">
+                    <h3 class="gk-card-title">资料汇编 · 权威导航</h3>
+                    <p class="gk-card-points">教育部阳光高考、各省考试院、专业目录查询入口一站式汇总，认准官方信源。</p>
+                    <a class="gk-card-btn" href="index.html?book=高考志愿填报前置认知&chapter=资料汇编_权威导航">阅读全文 →</a>
+                </article>
+                <article class="gk-card">
+                    <h3 class="gk-card-title">心法与避坑 · 金句提醒</h3>
+                    <p class="gk-card-points">把全专栏底层逻辑浓缩为可背诵的金句，关键时刻一句话拉回正确决策。</p>
+                    <a class="gk-card-btn" href="index.html?book=高考志愿填报前置认知&chapter=心法与避坑_金句提醒">阅读全文 →</a>
+                </article>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="gk-footer">
+        <a class="gk-footer-link" href="index.html?book=高考志愿填报前置认知&chapter=参考资料">📖 参考资料 · 权威信源汇编</a>
+        <p class="gk-disclaimer">⚠️ 本专栏仅作认知科普，所有数据与政策最终以考生所在省份教育考试院官方信息为准。</p>
+        <p class="gk-copy">© 豪书斋 · HaloRead 编委会</p>
+    </footer>
+</body>
+</html>

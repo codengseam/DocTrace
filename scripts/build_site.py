@@ -206,6 +206,7 @@ def _copy_static_assets(site_path: Path) -> None:
 
     assets = [
         ("index.html", site_path / "index.html"),
+        ("gaokao.html", site_path / "gaokao.html"),
         ("css/style.css", site_path / "css" / "style.css"),
         ("js/app.js", site_path / "js" / "app.js"),
         ("sw.js", site_path / "sw.js"),
