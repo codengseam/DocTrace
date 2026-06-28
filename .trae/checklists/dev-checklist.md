@@ -38,6 +38,7 @@
 - [ ] Mock 模式（`DEEP_READING_MOCK=1`）下端到端流程能跑通
 - [ ] 修复了会复发的代码/数据 bug 时，已补充回归测试并按 `.trae/rules/bug-reporting.md` 更新 `tests/bug_regression_list.md`
 - [ ] 移动端阅读器改动已验收：不调用 `Fullscreen API` / `screen.orientation.lock`，代码块优先 `pre-wrap` 自动换行
+- [ ] push 前已运行 `python scripts/validate_commit_messages.py origin/master..HEAD`，提交标题与正文均为中文且准确概括当前修改
 
 ## 四、依赖与配置
 

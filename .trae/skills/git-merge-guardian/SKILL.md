@@ -47,19 +47,36 @@ version: 2.0.0
 
 **注意**：模式 B 会绕过 pre-push hook 对 master 的阻止（使用 `--no-verify`），因此必须确保本地验证已全部通过。
 
-# 提交信息规范（Conventional Commits）
+# 提交信息规范（HaloRead 中文提交规范）
 
-每次 `git commit` 必须遵循以下格式：
+本项目提交信息**必须使用中文**，标题与正文都必须是对当前修改的高度总结。
+
+## 强制要求
+
+1. **语言**：标题、正文、footer 全部使用中文。英文专有名词（如 `pytest`、`Pillow`、URL、文件名）可保留，但整体必须是中文语义。
+2. **标题（subject）**：
+   - 不超过 50 个字符；
+   - 必须包含中文；
+   - 必须准确概括本次修改，禁止用"修复了一个 bug"、"更新"、"优化"等模糊描述；
+   - 禁止使用纯序号、纯日期、无关文案（如"历史人物卡片设计方案与孔子Demo"）。
+3. **正文（body）**：
+   - 必须存在；
+   - 必须用中文说明"为什么改"和"改了什么"；
+   - 可按模块/文件分段，每段不超过 72 个字符；
+   - 涉及多个独立改动时，用 bullet list 分点说明。
+4. **footer**：可选，用于关联 issue / bug 编号，如 `Closes #123`、`关联 BUG-033`。
+
+## 推荐格式
 
 ```
-<type>(<scope>): <subject>
+<type>(<scope>): <中文标题>
 
-<body>
+<中文正文，说明修改原因与内容>
 
 <footer>
 ```
 
-## type 必须小写
+type / scope 仍建议遵循 Conventional Commits，但**标题本身必须是中文**，且能独立表达本次修改：
 
 | type | 含义 | 使用场景 |
 |---|---|---|
@@ -72,51 +89,68 @@ version: 2.0.0
 | chore | 杂项 | 构建脚本、依赖更新、hook 安装等 |
 | ci | 持续集成 | GitHub Actions、CI 配置 |
 
-## scope 可选但建议填写
+常见 scope：`sorting`、`book-structure`、`output`、`skill`、`hook`、`tests`、`build`、`reader`。
 
-常见 scope：
-- `sorting`：排序相关
-- `book-structure`：书籍结构与校验
-- `output`：output/ 下专栏内容
-- `skill`：Trae Skill 文件
-- `hook`：Git hook
-- `tests`：测试文件
-- `build`：站点构建脚本
+## 示例
 
-## subject 规则
+✅ 好示例：
+```
+fix(reader): 修复首页“阅读”按钮文案与行为不匹配
 
-- 不超过 50 个字符
-- 使用祈使句，描述"做了什么"
-- 首字母小写，末尾不加句号
-- 示例：
-  - ✅ `fix(sorting): 修复易经课按模块排序失效`
-  - ✅ `feat(book-structure): 增加通用书籍结构校验脚本`
-  - ❌ `fix: 修复了一个 bug。`
-  - ❌ `feat: Added new feature`
+newNoteBtn 原绑定 openModal()，但按钮文案已改为“开始阅读/阅读”，
+点击后弹出“本地生成命令”模态框，与阅读入口语义不符。
 
-## body 规则
+改为点击后平滑滚动到书架区；toolbar 的“生成新笔记”保留原行为。
+同步升级 Service Worker 缓存名到 halo-read-v6，避免手机端旧缓存。
 
-- 每行不超过 72 个字符
-- 说明"为什么做"和"做了什么"
-- 多主题用空行分隔
-- 示例：
-  ```
-  之前 sort_notes_tree 按文件名字符串排序，导致上经/下经顺序混乱。
-  改为优先读取 frontmatter 中的 chapter_sort/sort，确保模块内顺序正确。
-  ```
+关联 BUG-033
+```
 
-## footer 规则
+✅ 好示例：
+```
+fix(saints-hall): 修复圣贤堂头像加载慢与标题链接 404
 
-- 关联 issue：`Closes #123`
-- Breaking change：`BREAKING CHANGE: 旧接口已废弃`
+头像虽已本地化，但单张 912×1216 约 200KB，无懒加载，首屏 5 张同时解码。
+生成 400px 缩略图并启用 lazy/async/占位骨架，体积从 ~3.4MB 降到 ~700KB。
 
-## 生成提交信息的步骤
+build_site.py 复制 saints_hall.html 到 site/demos/ 时，
+原 ../site/index.html 会被错解析为 site/site/index.html，导致 404。
+复制时自动重写为 ../index.html，并同步生成/复制 thumbs/。
 
-1. 用 `git status --short` 和 `git diff --stat` 查看改动范围
-2. 根据改动类型确定 type 和 scope
-3. 用一句话概括 subject
-4. 用 bullet list 或简短段落写 body
-5. 生成后先展示给用户确认，再执行 `git commit`
+关联 BUG-034
+```
+
+❌ 差示例：
+```
+feat: 历史人物卡片设计方案与孔子Demo
+```
+（标题与本次实际修改无关，无正文，无法从提交历史判断改了什么。）
+
+## 生成与确认步骤
+
+1. 用 `git status --short` 和 `git diff --stat` 查看改动范围；
+2. 按功能拆分提交，**一个提交只做一个主题**；
+3. 用中文一句话概括 subject；
+4. 用 bullet list 或段落写 body，说明原因和内容；
+5. **执行 `git commit` 前把拟好的标题+正文展示给用户确认**；
+6. 用户确认后再执行 commit。
+
+## push 前校验
+
+push/merge 前必须运行：
+
+```bash
+python scripts/validate_commit_messages.py origin/master..HEAD
+```
+
+校验规则：
+- 标题不能为空；
+- 标题必须含中文；
+- 标题不超过 50 字符；
+- 必须存在中文正文；
+- 拒绝默认合并提交信息。
+
+**未通过校验不得 push/merge。**
 
 # 工作流
 
@@ -138,7 +172,7 @@ git log --oneline -5
 
 ## 第 1 步：整理未提交改动
 
-如果工作区有未提交改动，按功能拆成多个小提交。每个提交信息必须符合 Conventional Commits 规范。
+如果工作区有未提交改动，按功能拆成多个小提交。每个提交信息必须符合**HaloRead 中文提交规范**：标题与正文均为中文，标题准确概括本次修改，正文说明原因与内容。
 
 操作流程：
 1. `git status --short` 查看改动
@@ -146,11 +180,11 @@ git log --oneline -5
 3. 对每组依次执行：
    ```bash
    git add <相关文件>
-   git commit -m "<type>(<scope>): <subject>
+   git commit -m "<type>(<scope>): <中文标题>
 
-   <body>"
+   <中文正文>"
    ```
-4. 生成 commit message 前先展示给用户确认
+4. **生成 commit message 前必须把拟好的标题+正文展示给用户确认**，确认符合中文规范后再执行 commit
 
 禁止一次性 `git add -A` 提交无关改动。
 
@@ -177,9 +211,15 @@ git rebase master
 python scripts/check_book_structure.py --output output --strict
 python -m pytest tests/test_sorting.py tests/test_check_chapter_order.py tests/test_book_structure.py -q
 python scripts/build_site.py
+python scripts/validate_commit_messages.py origin/master..HEAD
 ```
 
 **全部通过后再继续。任何失败都不得 push/merge。**
+
+提交信息校验失败时：
+1. 列出不合格的提交标题/正文；
+2. 对本地未推送提交使用 `git commit --amend` 或 `git rebase -i origin/master` 修改信息；
+3. 重新运行 `python scripts/validate_commit_messages.py origin/master..HEAD` 直到通过。
 
 如果 `check_book_structure.py --strict` 失败：
 1. 立即停止，不要 push/merge。
@@ -206,11 +246,17 @@ git push origin <功能分支名> --force-with-lease
 git push origin <功能分支名> --force
 ```
 
+push 前再次确认提交信息已通过：
+
+```bash
+python scripts/validate_commit_messages.py origin/master..HEAD
+```
+
 然后生成 PR 信息并展示给用户：
 
 ```markdown
-## PR 标题
-<type>(<scope>): <subject>
+## PR 标题（中文）
+<type>(<scope>): <中文标题>
 
 ## 改动说明
 - 做了什么
@@ -221,9 +267,10 @@ git push origin <功能分支名> --force
 - `python scripts/check_book_structure.py --output output --strict`：0 问题
 - `pytest`：全部 passed
 - `python scripts/build_site.py`：成功
+- `python scripts/validate_commit_messages.py origin/master..HEAD`：通过
 
 ## 合并方式
-推荐 Squash Merge
+推荐 Squash Merge（合并信息同样需用中文说明本次修改）
 ```
 
 PR 链接格式：
@@ -310,6 +357,7 @@ git push origin --delete <功能分支名>
 ```bash
 python scripts/check_book_structure.py --output output --strict
 python -m pytest tests/test_sorting.py tests/test_check_chapter_order.py tests/test_book_structure.py -q
+python scripts/validate_commit_messages.py origin/master~5..origin/master
 ```
 
 若最终验证失败，必须立即修复并再次 push master（同样走 `--no-verify` 但问题必须解决）。
