@@ -1355,6 +1355,13 @@
         elements.modalOverlay.setAttribute('aria-hidden', 'true');
     }
 
+    function scrollToBookshelf() {
+        const bookshelf = document.getElementById('bookshelf');
+        if (bookshelf) {
+            bookshelf.scrollIntoView({ behavior: 'smooth' });
+        }
+    }
+
     /* ============ 树内搜索 ============ */
     function handleTreeSearch(event) {
         state.searchQuery = event.target.value.trim().toLowerCase();
@@ -1573,12 +1580,12 @@
             elements.searchInput.addEventListener('keydown', handleTreeSearchEnter);
         }
         if (elements.newNoteBtn) {
-            elements.newNoteBtn.addEventListener('click', openModal);
+            elements.newNoteBtn.addEventListener('click', scrollToBookshelf);
         }
         if (elements.newNoteLink) {
             elements.newNoteLink.addEventListener('click', (event) => {
                 event.preventDefault();
-                openModal();
+                scrollToBookshelf();
             });
         }
         if (elements.newNoteBtnToolbar) {

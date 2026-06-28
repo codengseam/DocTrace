@@ -583,6 +583,28 @@ async function runTest() {
         dom.window.close();
     }
 
+    console.log('\n=== 测试18：首页“阅读”按钮跳转书架区（回归测试） ===');
+    {
+        const { dom, window, document } = await buildDom();
+        await waitFor(() => document.querySelectorAll('.bookshelf-grid .book-card').length > 0, 2000);
+
+        const newNoteBtn = document.getElementById('newNoteBtn');
+        const bookshelf = document.getElementById('bookshelf');
+        assert(newNoteBtn !== null, '首页存在 newNoteBtn（开始阅读/阅读）按钮');
+        assert(bookshelf !== null, '首页存在 #bookshelf 锚点');
+
+        let scrollIntoViewCalled = false;
+        bookshelf.scrollIntoView = (opts) => {
+            scrollIntoViewCalled = true;
+        };
+
+        newNoteBtn.click();
+        await new Promise((r) => setTimeout(r, 10));
+        assert(scrollIntoViewCalled, '点击“阅读”按钮后滚动到书架区');
+
+        dom.window.close();
+    }
+
     console.log(`\n=== 测试结果：通过 ${passCount}，失败 ${failCount} ===`);
     if (failCount > 0) {
         process.exit(1);

@@ -515,3 +515,29 @@
   - `check_book_structure.py --strict` 通过
   - `pytest` 通过
 - **教训**：C 端专栏的引用溯源不能照搬学术论文的编号体系——编号适合内部审稿，不适合面向读者。信源应以作者/书名/机构名内联说明或集中放章末，让读者一眼知道出处。`_` 前缀文件被 build_site 跳过的机制要纳入引用体系设计考虑。
+
+## 书架首页“阅读”按钮文案与行为不匹配
+
+- **编号**：BUG-033
+- **首次出现**：2026-06-28
+- **类型**：UI / 交互
+- **环境**：豪书斋静态站点首页，移动端与桌面端
+- **现象**：顶部 header 的“开始阅读”（移动端显示为“阅读”）按钮点击后弹出模态框，提示“静态站点不支持在线生成。请在本地运行以下命令生成笔记后，重新构建站点……”，而非进入阅读流程；按钮文案像阅读入口，实际行为却是“生成新笔记”命令。
+- **复现步骤**：
+  1. 打开豪书斋首页
+  2. 点击顶部“开始阅读”或“阅读”按钮
+  3. 观察到弹出模态框，内容是本地生成命令
+- **根因**：`newNoteBtn` 最初是“生成新笔记”按钮，事件处理器绑定 `openModal()`；后续 commit `14fbe69` 把按钮文案改为“开始阅读/阅读”，但 `src/web/static-site/js/app.js` 中的 `addEventListener('click', openModal)` 未同步替换为跳转行为，导致文案与行为脱节。
+- **修复**：
+  1. 新增 `scrollToBookshelf()` 函数，平滑滚动到 `#bookshelf` 区域。
+  2. 将 header 中 `newNoteBtn` 与 `newNoteLink` 的点击处理器从 `openModal()` 改为 `scrollToBookshelf()`。
+  3. 保留 toolbar 中“生成新笔记”按钮（`newNoteBtnToolbar`）的 `openModal()` 行为，避免误改。
+  4. 同步更新 `src/web/static/js/app.js`、`site/js/app.js` 与 `site/sw.js`、`src/web/static-site/sw.js` 缓存版本号（`halo-read-v6`），确保移动端旧缓存失效。
+- **涉及文件**：`src/web/static-site/js/app.js`、`site/js/app.js`、`src/web/static/js/app.js`、`src/web/static-site/sw.js`、`site/sw.js`
+- **回归测试**：
+  - `tests/test_reader_features.js` 测试18：点击首页 `newNoteBtn` 后，`#bookshelf` 的 `scrollIntoView` 被调用
+  - `tests/run_regression_suite.sh` 第2步：`site/js/app.js` 语法检查
+  - `tests/run_regression_suite.sh` 第4步：构建静态站点后校验关键资源
+  - `python scripts/check_book_structure.py --output output --strict` 通过
+  - `pytest -q` 通过
+- **教训**：按钮文案变更必须同步审视其事件处理器；静态站点/PWA 的前端行为修复必须同步升级 Service Worker 缓存名，否则 PC 端正常、手机端仍旧的“幽灵版本”会反复出现。

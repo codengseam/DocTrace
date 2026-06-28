@@ -1206,6 +1206,13 @@
         elements.modalOverlay.setAttribute('aria-hidden', 'true');
     }
 
+    function scrollToBookshelf() {
+        const bookshelf = document.getElementById('bookshelf');
+        if (bookshelf) {
+            bookshelf.scrollIntoView({ behavior: 'smooth' });
+        }
+    }
+
     function resetForm() {
         if (elements.generateForm) elements.generateForm.reset();
     }
@@ -1389,7 +1396,7 @@
             elements.searchInput.addEventListener('keydown', handleTreeSearchEnter);
         }
         if (elements.newNoteBtn) {
-            elements.newNoteBtn.addEventListener('click', openModal);
+            elements.newNoteBtn.addEventListener('click', scrollToBookshelf);
         }
         if (elements.newNoteLink) {
             elements.newNoteLink.addEventListener('click', (event) => {
