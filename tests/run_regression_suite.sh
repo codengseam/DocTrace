@@ -141,8 +141,37 @@ for url in "/" "/js/app.js" "/css/style.css" "/data/index.json"; do
         echo "      $url -> $code"
     fi
 done
+# BUG-035：SSG 全局索引页 HTTP 200
+SSG_INDEX_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:8092/reader/index.html" 2>/dev/null)
+if [ "$SSG_INDEX_CODE" != "200" ]; then
+    ALL_200=0
+    echo "      /reader/index.html -> $SSG_INDEX_CODE"
+fi
 kill $SERVER_PID 2>/dev/null || true
 step "关键资源全部 200" "$ALL_200"
+
+# BUG-035：SSG 章节静态页（夸克阅读模式入口）冒烟
+echo "  -> SSG 章节静态页冒烟 (BUG-035)"
+step "site/reader/index.html 存在（全局索引）" "$([ -f site/reader/index.html ] && echo 1 || echo 0)"
+# 取第一篇 SSG 章节页做语义结构断言
+SSG_SAMPLE=$(find site/reader -mindepth 2 -name '*.html' -type f 2>/dev/null | head -1)
+step "site/reader/{书}/{章节}_{事件}.html 至少 1 个" "$([ -n "$SSG_SAMPLE" ] && echo 1 || echo 0)"
+if [ -n "$SSG_SAMPLE" ]; then
+    SSG_HTML=$(cat "$SSG_SAMPLE")
+    # 夸克阅读模式触发条件：必须含 <article> + <h1> + <p>
+    step "SSG HTML 含 <article> 包裹（夸克硬性条件）" \
+        "$(echo "$SSG_HTML" | grep -q '<article' && echo 1 || echo 0)"
+    step "SSG HTML 含 <h1> 主标题" \
+        "$(echo "$SSG_HTML" | grep -qE '<h1[ >]' && echo 1 || echo 0)"
+    step "SSG HTML 含 <p> 段落" \
+        "$(echo "$SSG_HTML" | grep -q '<p>' && echo 1 || echo 0)"
+    # 反向断言：不引 app.js，避免 SPA 双渲染路径分叉
+    step "SSG HTML 不引用 app.js" \
+        "$(echo "$SSG_HTML" | grep -q 'app.js' && echo 0 || echo 1)"
+    # 反向断言：不依赖 fetch / marked.parse
+    step "SSG HTML 不依赖 fetch/marked.parse" \
+        "$(echo "$SSG_HTML" | grep -qE 'fetch\(|marked\.parse' && echo 0 || echo 1)"
+fi
 
 # ---------- 10. 分支治理脚本冒烟（BUG-023） ----------
 echo "[10/12] 分支治理脚本冒烟 (BUG-023)"

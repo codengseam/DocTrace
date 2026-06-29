@@ -2,7 +2,7 @@
  * 豪书斋 Service Worker
  * 缓存策略：核心资源预缓存 + 数据/笔记运行时缓存
  */
-const CACHE_NAME = 'halo-read-v6'; // 2026-06-28 修复首页“阅读”按钮跳转行为后升级缓存名
+const CACHE_NAME = 'halo-read-v7'; // 2026-06-29 SSG 章节页上线，bump 规避 BUG-018 幽灵旧版
 const PRECACHE_ASSETS = [
     './',
     './index.html',
@@ -49,6 +49,12 @@ function isDataRequest(url) {
 
 function isNoteRequest(url) {
     return url.pathname.includes('/notes/') && url.pathname.endsWith('.md');
+}
+
+// BUG-035：SSG 章节静态页（site/reader/*.html），夸克/搜索引擎/无 JS 降级入口
+// cacheFirst 策略与 notes 一致：HTML 不可变，构建期已固化
+function isReaderHtmlRequest(url) {
+    return url.pathname.includes('/reader/') && url.pathname.endsWith('.html');
 }
 
 function isCoreAsset(url) {
@@ -124,6 +130,9 @@ self.addEventListener('fetch', (event) => {
                 return staleWhileRevalidate(request, cache);
             }
             if (isNoteRequest(url)) {
+                return cacheFirst(request, cache);
+            }
+            if (isReaderHtmlRequest(url)) {
                 return cacheFirst(request, cache);
             }
             if (isCoreAsset(url) || isCdnAsset(url)) {

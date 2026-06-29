@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import argparse
+import html as html_module
 import json
 import re
 import shutil
@@ -18,6 +19,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 # 把项目根加入 sys.path，使 scripts/ 独立运行时也能 import src.utils.sorting
 _ROOT = Path(__file__).resolve().parent.parent
@@ -30,6 +32,18 @@ try:
     import yaml  # type: ignore
 except ImportError:
     yaml = None  # type: ignore
+
+# BUG-035：SSG 章节静态页依赖（构建期把 Markdown 渲染为 HTML 并净化）
+# 与 yaml 同样的 try-except 容错，缺失时打印告警并跳过 SSG 步骤
+try:
+    import markdown as md_lib  # type: ignore
+except ImportError:
+    md_lib = None  # type: ignore
+
+try:
+    import bleach  # type: ignore
+except ImportError:
+    bleach = None  # type: ignore
 
 VERSION = "1.1.0"
 FRONTMATTER_PATTERN = r"^---\s*\n(.*?)\n---\s*\n?"
@@ -275,6 +289,365 @@ def _copy_static_assets(site_path: Path) -> None:
         shutil.copy2(src, dest)
 
 
+# ============ BUG-035: SSG 章节静态页 ============
+# 夸克浏览器阅读模式不执行 JS，无法看到 SPA 通过 fetch + marked.parse 动态渲染的正文。
+# 必须在构建期把每篇笔记渲染为独立静态 HTML，原始 HTML 直接含 <article> + 正文。
+# SSG 模板不引 app.js，避免双渲染路径分叉；bleach 净化避免 XSS。
+
+_SSG_ALLOWED_TAGS = [
+    "article", "section", "header", "nav", "main", "footer",
+    "h1", "h2", "h3", "h4", "h5", "h6",
+    "p", "br", "hr",
+    "ul", "ol", "li",
+    "blockquote", "pre", "code",
+    "em", "strong", "del", "sup", "sub",
+    "a", "img",
+    "table", "thead", "tbody", "tr", "th", "td",
+    "div", "span",
+]
+
+_SSG_ALLOWED_ATTRS = {
+    "a": ["href", "title", "rel"],
+    "img": ["src", "alt", "title", "width", "height"],
+    "code": ["class"],
+    "pre": ["class"],
+    "div": ["class"],
+    "span": ["class"],
+    "th": ["colspan", "rowspan"],
+    "td": ["colspan", "rowspan"],
+}
+
+_SSG_ALLOWED_PROTOCOLS = ["http", "https", "mailto"]
+
+_SSG_CHAPTER_TEMPLATE = """<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{TITLE}} - {{BOOK_TITLE}} | 豪书斋</title>
+    <meta name="description" content="{{DESCRIPTION}}">
+    <link rel="stylesheet" href="{{CSS_PATH}}">
+</head>
+<body class="ssg-reader" data-theme="day" data-font="serif">
+    <header class="ssg-topbar">
+        <a class="ssg-back" href="{{HOME_PATH}}">← 返回书架</a>
+        <a class="ssg-toc" href="{{BOOK_INDEX_PATH}}">{{BOOK_TITLE}} · 目录</a>
+    </header>
+    <main class="page-main">
+        <article class="markdown-body reader-content">
+            <h1 class="ssg-chapter-title">{{TITLE}}</h1>
+            <p class="ssg-meta">出处：{{BOOK_TITLE}} / {{CHAPTER}}{{EVENT_SEP}}{{EVENT}}</p>
+            {{CONTENT_HTML}}
+        </article>
+    </main>
+    <nav class="chapter-nav">
+        <a class="chapter-btn prev" href="{{PREV_HREF}}" rel="prev">{{PREV_LABEL}}</a>
+        <a class="chapter-btn next" href="{{NEXT_HREF}}" rel="next">{{NEXT_LABEL}}</a>
+    </nav>
+</body>
+</html>"""
+
+_SSG_BOOK_INDEX_TEMPLATE = """<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{BOOK_TITLE}} · 目录 | 豪书斋</title>
+    <link rel="stylesheet" href="{{CSS_PATH}}">
+</head>
+<body class="ssg-index">
+    <header class="ssg-topbar">
+        <a class="ssg-back" href="{{HOME_PATH}}">← 返回书架</a>
+        <a class="ssg-toc" href="{{GLOBAL_INDEX_PATH}}">全部书目</a>
+    </header>
+    <main class="page-main">
+        <article class="ssg-book-index">
+            <h1>{{BOOK_TITLE}}</h1>
+            {{DESCRIPTION_HTML}}
+            <ul class="ssg-chapter-list">
+                {{CHAPTER_LIST_HTML}}
+            </ul>
+        </article>
+    </main>
+</body>
+</html>"""
+
+_SSG_GLOBAL_INDEX_TEMPLATE = """<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>豪书斋 · 全章节索引</title>
+    <link rel="stylesheet" href="{{CSS_PATH}}">
+</head>
+<body class="ssg-index">
+    <header class="ssg-topbar">
+        <a class="ssg-back" href="{{HOME_PATH}}">← 返回书架</a>
+    </header>
+    <main class="page-main">
+        <article class="ssg-global-index">
+            <h1>豪书斋 · 全章节索引</h1>
+            <p class="ssg-intro">本页为静态生成，供搜索引擎与无 JS 浏览器（如夸克阅读模式）使用。</p>
+            <ul class="ssg-book-list">
+                {{BOOKS_LIST_HTML}}
+            </ul>
+        </article>
+    </main>
+</body>
+</html>"""
+
+
+def _render_markdown_safe(md_text: str) -> str:
+    """把 Markdown 渲染为 HTML 并用 bleach 净化，避免 XSS。
+
+    依赖缺失时退化为 HTML escape，保证不抛错（与 yaml 同样的容错策略）。
+    """
+    if md_lib is None or bleach is None:
+        return html_module.escape(md_text)
+    raw_html = md_lib.markdown(
+        md_text,
+        extensions=["extra", "toc"],
+        output_format="html5",
+    )
+    return bleach.clean(
+        raw_html,
+        tags=_SSG_ALLOWED_TAGS,
+        attributes=_SSG_ALLOWED_ATTRS,
+        protocols=_SSG_ALLOWED_PROTOCOLS,
+        strip=True,
+    )
+
+
+def _ssg_html_filename(note_entry: dict[str, Any]) -> str:
+    """根据 note 生成 SSG HTML 文件名（不含路径，含 .html 后缀）。
+
+    与 site/notes/*.md 镜像：{chapter}_{event}.html。
+    """
+    chapter = str(note_entry.get("chapter") or "")
+    event = str(note_entry.get("event") or "")
+    stem = f"{chapter}_{event}" if event else chapter
+    return stem + ".html"
+
+
+def _flatten_book_tree(tree: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """把 book 的 tree (chapter -> event) 扁平化为 event 线性列表（已排序）。"""
+    flat: list[dict[str, Any]] = []
+    for chapter_node in tree:
+        for event_node in (chapter_node.get("children") or []):
+            flat.append(event_node)
+    return flat
+
+
+def _render_chapter_html(
+    note_entry: dict[str, Any],
+    book_meta: dict[str, Any],
+    prev_entry: dict[str, Any] | None,
+    next_entry: dict[str, Any] | None,
+) -> str:
+    """渲染单篇笔记的 SSG HTML。"""
+    title = str(note_entry.get("title") or "")
+    book_title = str(book_meta.get("title") or "")
+    chapter = str(note_entry.get("chapter") or "")
+    event = str(note_entry.get("event") or "")
+
+    content_html = _render_markdown_safe(note_entry.get("content") or "")
+
+    # 路径相对 site/reader/{book}/{chapter}_{event}.html
+    css_path = "../../css/style.css"
+    home_path = "../../index.html"
+    book_index_path = "index.html"
+
+    prev_href = ""
+    prev_label = "已是第一章"
+    if prev_entry:
+        prev_href = _ssg_html_filename(prev_entry)
+        prev_label = f"上一章 · {prev_entry.get('title') or ''}"
+    next_href = ""
+    next_label = "已是最后一章"
+    if next_entry:
+        next_href = _ssg_html_filename(next_entry)
+        next_label = f"下一章 · {next_entry.get('title') or ''}"
+
+    event_sep = " · " if event else ""
+    raw_content = note_entry.get("content") or ""
+    description = raw_content[:160].replace("\n", " ").strip()
+    if len(raw_content) > 160:
+        description += "…"
+
+    html = _SSG_CHAPTER_TEMPLATE
+    html = html.replace("{{TITLE}}", html_module.escape(title))
+    html = html.replace("{{BOOK_TITLE}}", html_module.escape(book_title))
+    html = html.replace("{{CHAPTER}}", html_module.escape(chapter))
+    html = html.replace("{{EVENT}}", html_module.escape(event))
+    html = html.replace("{{EVENT_SEP}}", event_sep)
+    html = html.replace("{{DESCRIPTION}}", html_module.escape(description))
+    html = html.replace("{{CSS_PATH}}", css_path)
+    html = html.replace("{{HOME_PATH}}", home_path)
+    html = html.replace("{{BOOK_INDEX_PATH}}", book_index_path)
+    html = html.replace("{{CONTENT_HTML}}", content_html)
+    html = html.replace("{{PREV_HREF}}", html_module.escape(prev_href))
+    html = html.replace("{{PREV_LABEL}}", html_module.escape(prev_label))
+    html = html.replace("{{NEXT_HREF}}", html_module.escape(next_href))
+    html = html.replace("{{NEXT_LABEL}}", html_module.escape(next_label))
+    return html
+
+
+def _render_book_index_html(
+    book_meta: dict[str, Any],
+    book_notes: list[dict[str, Any]],
+) -> str:
+    """渲染某本书的目录索引页 site/reader/{book}/index.html。"""
+    book_title = str(book_meta.get("title") or "")
+    description = str(book_meta.get("description") or "")
+
+    # 按 chapter 分组，保留首次出现顺序（book_notes 已排序）
+    chapters: dict[str, list[dict[str, Any]]] = {}
+    chapter_order: list[str] = []
+    for note in book_notes:
+        ch = str(note.get("chapter") or "")
+        if ch not in chapters:
+            chapters[ch] = []
+            chapter_order.append(ch)
+        chapters[ch].append(note)
+
+    parts: list[str] = []
+    for ch_name in chapter_order:
+        events = chapters[ch_name]
+        parts.append(
+            f'<li class="ssg-chapter-group"><h2>{html_module.escape(ch_name)}</h2><ul>'
+        )
+        for ev in events:
+            ev_title = str(ev.get("title") or "")
+            ev_href = _ssg_html_filename(ev)
+            parts.append(
+                f'<li><a href="{html_module.escape(ev_href)}">{html_module.escape(ev_title)}</a></li>'
+            )
+        parts.append("</ul></li>")
+    chapter_list_html = "\n".join(parts)
+
+    description_html = (
+        f"<p>{html_module.escape(description)}</p>" if description else ""
+    )
+
+    html = _SSG_BOOK_INDEX_TEMPLATE
+    html = html.replace("{{BOOK_TITLE}}", html_module.escape(book_title))
+    html = html.replace("{{DESCRIPTION_HTML}}", description_html)
+    html = html.replace("{{CHAPTER_LIST_HTML}}", chapter_list_html)
+    html = html.replace("{{CSS_PATH}}", "../css/style.css")
+    html = html.replace("{{HOME_PATH}}", "../../index.html")
+    html = html.replace("{{GLOBAL_INDEX_PATH}}", "../index.html")
+    return html
+
+
+def _render_global_index_html(books_array: list[dict[str, Any]]) -> str:
+    """渲染全章节总索引页 site/reader/index.html。"""
+    parts: list[str] = []
+    for book in books_array:
+        book_id = str(book.get("id") or "")
+        book_title = str(book.get("title") or "")
+        book_desc = str(book.get("description") or "")
+        # URL 中文路径需 quote；文件系统层不 quote（mkdir 直接支持中文）
+        book_href = f"{quote(book_id)}/index.html"
+        chapter_count = book.get("chapter_count", 0)
+        note_count = book.get("note_count", 0)
+        parts.append(
+            f'<li class="ssg-book-card">'
+            f'<h2><a href="{html_module.escape(book_href)}">{html_module.escape(book_title)}</a></h2>'
+            f'<p class="ssg-book-meta">章节 {chapter_count} · 笔记 {note_count}</p>'
+            f'<p>{html_module.escape(book_desc)}</p>'
+            f'</li>'
+        )
+    books_list_html = "\n".join(parts)
+
+    html = _SSG_GLOBAL_INDEX_TEMPLATE
+    html = html.replace("{{BOOKS_LIST_HTML}}", books_list_html)
+    html = html.replace("{{CSS_PATH}}", "../css/style.css")
+    html = html.replace("{{HOME_PATH}}", "../index.html")
+    return html
+
+
+def _build_ssg_pages(
+    site_path: Path,
+    books_array: list[dict[str, Any]],
+    notes: dict[str, dict[str, Any]],
+) -> None:
+    """为每篇笔记生成 SSG 静态 HTML，并生成书索引页与全章节索引页。
+
+    产物路径：site/reader/{书}/{章节}_{事件}.html
+    夸克浏览器阅读模式不执行 JS，必须由原始 HTML 直接含正文。
+    """
+    if md_lib is None or bleach is None:
+        print(
+            "[build_site] markdown/bleach 未安装，跳过 SSG 章节页生成。"
+            "请运行 pip install markdown bleach 启用夸克阅读模式兼容。",
+            file=sys.stderr,
+        )
+        return
+
+    reader_dir = site_path / "reader"
+    # 幂等：清空旧 SSG 产物（处理笔记删除场景）
+    if reader_dir.exists():
+        for child in reader_dir.iterdir():
+            if child.is_dir():
+                shutil.rmtree(child)
+            else:
+                child.unlink()
+    else:
+        reader_dir.mkdir(parents=True, exist_ok=True)
+
+    total_html = 0
+    for book in books_array:
+        book_id = str(book.get("id") or "")
+        book_title = str(book.get("title") or "")
+        book_meta = {
+            "title": book_title,
+            "description": book.get("description") or "",
+        }
+        book_dir = reader_dir / book_id
+        book_dir.mkdir(parents=True, exist_ok=True)
+
+        # book["tree"] 已经过 sort_notes_tree 排序，扁平化得到 event 线性列表
+        flat_notes = _flatten_book_tree(book.get("tree") or [])
+
+        # 取每篇 note_entry（含 content），并保留 ev_node 用于 prev/next
+        ev_entries: list[tuple[dict[str, Any], dict[str, Any]]] = []
+        for ev_node in flat_notes:
+            ev_path = str(ev_node.get("path") or "")
+            note_entry = notes.get(ev_path)
+            if not note_entry:
+                continue
+            ev_entries.append((ev_node, note_entry))
+
+        # 生成每篇笔记的 HTML
+        for idx, (_ev_node, note_entry) in enumerate(ev_entries):
+            prev_entry = ev_entries[idx - 1][1] if idx > 0 else None
+            next_entry = ev_entries[idx + 1][1] if idx < len(ev_entries) - 1 else None
+
+            chapter_html = _render_chapter_html(
+                note_entry, book_meta, prev_entry, next_entry
+            )
+
+            html_filename = _ssg_html_filename(note_entry)
+            html_path = book_dir / html_filename
+            html_path.write_text(chapter_html, encoding="utf-8")
+            total_html += 1
+
+        # 生成书索引页 site/reader/{书}/index.html
+        book_notes_list = [entry for _, entry in ev_entries]
+        book_index_html = _render_book_index_html(book_meta, book_notes_list)
+        (book_dir / "index.html").write_text(book_index_html, encoding="utf-8")
+        total_html += 1
+
+    # 生成全章节总索引页 site/reader/index.html
+    global_index_html = _render_global_index_html(books_array)
+    (reader_dir / "index.html").write_text(global_index_html, encoding="utf-8")
+    total_html += 1
+
+    print(
+        f"[build_site] SSG 章节页已生成：{total_html} 个 HTML 文件 -> {reader_dir}"
+    )
+
+
 def build_site(output_dir: str = "output", site_dir: str = "site") -> Path:
     """扫描 output/ 下的 Markdown 笔记，生成静态站点到 site/。
 
@@ -487,6 +860,9 @@ def build_site(output_dir: str = "output", site_dir: str = "site") -> Path:
 
     # 写入 .nojekyll 标记，让 GitHub Pages 跳过 Jekyll 构建，直接部署静态文件
     (site_path / ".nojekyll").write_text("", encoding="utf-8")
+
+    # BUG-035：为每篇笔记生成 SSG 静态 HTML，让夸克阅读模式能识别章节正文
+    _build_ssg_pages(site_path, books_array, notes)
 
     return site_path
 

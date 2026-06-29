@@ -580,3 +580,43 @@
   1. 独立演示页被复制到 `site/` 下部署时，必须处理相对路径变化；源文件路径与部署路径不一致时，应通过构建脚本重写而非要求源文件同时适配两种路径。
   2. 图片本地化不等于性能合格：还需匹配显示尺寸的缩略图、懒加载、占位骨架，才能避免首屏同时下载多张高清图。
   3. 新依赖（Pillow）必须落到 `requirements.txt`，否则 CI/新环境构建时会跳过缩略图生成。
+
+## 夸克浏览器阅读模式无法识别 SPA 动态正文
+
+- **编号**：BUG-035
+- **首次出现**：2026-06-29
+- **类型**：兼容性 / 架构
+- **环境**：夸克浏览器（移动端为主）、所有不执行 JS 的浏览器/搜索引擎爬虫
+- **现象**：用户用夸克浏览器打开章节阅读页，夸克阅读模式不识别正文，提示"暂不支持"或书本图标不出现；手动切换也失败。但 PC Chrome / 微信内置浏览器均正常。
+- **复现步骤**：
+  1. 夸克浏览器打开任意章节页（如 `/site/index.html?book=明纪&path=明纪/永乐盛世与仁宣之治_永乐盛世.md`）。
+  2. 观察地址栏：无书本图标。
+  3. 菜单强制启用"阅读模式"：提示"暂不支持此页面"。
+  4. 查看原始 HTML 源码：`<body>` 中正文区为空 div，仅 `<script src="js/app.js">`。
+- **根因**（第一性原理分析）：
+  1. **SPA 动态渲染**：`src/web/static-site/index.html` 的正文区是空 `<div id="readerView">`；正文由 `src/web/static-site/js/app.js` 的 `loadNote()` 通过 `fetch + marked.parse` 异步注入。原始 HTML 不含正文文本。
+  2. **夸克阅读模式不执行 JS**：夸克阅读模式基于原始 HTML 的语义识别（要求 `<article>` 包裹、`<h1>` 标题层级、`<p>` 段落、正文占比 ≥70%、连续段落 ≥800 字符），不渲染 JS 动态内容。SPA 模式下夸克看到的"正文区"为空，故判定"无有效正文"。
+  3. 仅优化现有 `<article>` 标签或加 `og:` 元数据无法解决——根因是正文根本不在原始 HTML 里。
+- **修复**（SSG 静态生成方案）：
+  1. **新增构建期 SSG**：`scripts/build_site.py` 新增 `_build_ssg_pages()`，为每篇笔记渲染独立静态 HTML 到 `site/reader/{书}/{章节}_{事件}.html`，原始 HTML 直接含 `<article>` + `<h1>` + `<p>` + 正文（构建期由 Python `markdown` 库渲染 + `bleach` 净化）。873 篇笔记全部生成。
+  2. **SSG 模板不引 app.js**：避免与 SPA 形成双渲染路径分叉；SSG 页面是"无 JS 降级入口"，浏览器/搜索引擎/夸克可直接消费。
+  3. **CSS 复用**：SSG 模板引用现有 `css/style.css`（相对路径 `../../css/style.css`），与 SPA 共享视觉风格。
+  4. **SW 缓存策略**：`src/web/static-site/sw.js` bump `CACHE_NAME` v6→v7（避免幽灵旧版，BUG-018 教训），新增 `isReaderHtmlRequest()` 对 `/reader/*.html` 走 cacheFirst。
+  5. **依赖**：`requirements.txt` 新增 `markdown>=3.6` + `bleach>=6.1`；CI 安装后自动启用 SSG。
+  6. **index 页**：每本书生成 `site/reader/{书}/index.html` 目录页；全站生成 `site/reader/index.html` 全章节总索引页。
+- **涉及文件**：
+  - `scripts/build_site.py`（新增 SSG 模块 + build_site 调用）
+  - `src/web/static-site/sw.js`（CACHE_NAME v7 + isReaderHtmlRequest cacheFirst）
+  - `requirements.txt`（markdown + bleach）
+  - `.gitignore`（排除 site/reader/）
+- **回归测试**：
+  - `tests/test_ssg_chapter_pages.py`：20 项断言，覆盖生成性/语义结构/不引 app.js/正文内联/SSG vs marked.js 一致性/bleach 净化/索引页/幂等性/prev-next 导航
+  - `tests/run_regression_suite.sh` 第9步：新增 `/reader/index.html` HTTP 200 + SSG HTML `<article>`/`<h1>`/`<p>` grep 断言 + 反向断言"不引 app.js / 不依赖 fetch"
+  - `python scripts/check_book_structure.py --output output --strict` 通过
+  - `pytest -q` 通过
+- **教训**：
+  1. **第一性原理**：兼容性问题的根因若在架构层（SPA vs SSG），仅做表面优化（加 `<article>` 标签、加 meta）无效；必须从"原始 HTML 是否含正文"这个根本问题入手。
+  2. **不引 app.js 是关键决策**：SSG 模板若引 app.js，会产生"SSG 也走 SPA 动态渲染"的双渲染路径分叉，违背 SSG 的存在意义；模板必须独立、静态、可被无 JS 浏览器消费。
+  3. **MD 是唯一真源**：SSG HTML 不需要单独维护，跑 `build_site.py` 自动从 `output/` 的 MD 重新渲染；MD 改了 SSG 自动同步。
+  4. **缓存必须 bump**：SW cacheFirst 资源变更时必须升级 `CACHE_NAME`，否则手机端会持续看到旧 SSG（BUG-018 教训的延续）。
+  5. **bleach 净化是底线**：构建期把 MD 渲染成 HTML 时必须经过 bleach 白名单净化，避免历史 MD 中可能藏的 `<script>` 注入到 SSG 页面。

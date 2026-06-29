@@ -11,6 +11,7 @@
 ### 最近 20 条沉淀（按日期倒序）
 
 - [2026-06-29 中国礼仪课专栏深度质检二轮闭环 95.6→97.5](loop_log/2026-06.md#loop-20260629-2670c0)
+- [2026-06-29 夸克阅读模式不识别 SPA 动态正文（SSG 静态生成）](loop_log/2026-06.md#loop-20260629-909ab9)
 - [2026-06-28 高考志愿填报前置认知 Phase 2 升级 - 精准100/质量98/落地99三终审闭环](loop_log/2026-06.md#loop-20260628-cd76f7)
 - [2026-06-28 财务自由课专栏 40 篇道术器行四层生成](loop_log/2026-06.md#loop-20260628-a5caff)
 - [2026-06-28 现代人富贵病防治手册专栏生成 - 多 subagent 并行 + 医学术语中文化策略](loop_log/2026-06.md#loop-20260628-4b2494)
@@ -29,7 +30,6 @@
 - [2026-06-26 灵魂注入专项 - 明纪·海瑞上疏 AB 盲测](loop_log/2026-06.md#loop-20260626-735fb0)
 - [2026-06-26 superpowers 原生技能化 + 明纪阶段校验 + 章回体灵魂标题自动化](loop_log/2026-06.md#loop-20260626-8cb5f6)
 - [2026-06-25 现代职场专栏质检规则适配与内容修复](loop_log/2026-06.md#loop-20260625-babbcb)
-- [2026-06-24 阅读器 UI/交互修复与浏览器验收](loop_log/2026-06.md#loop-20260624-f001fb)
 
 ### 主题锚点
 
@@ -46,14 +46,14 @@
 | #lesson slug | 出现次数 | 说明 |
 |---|---|---|
 | `#git_hygiene`（推送/合并/冲突/分支治理/commit 覆盖） | 6 | — |
-| `#reader_interaction`（阅读器/沉浸/翻页/吸底栏/SW 缓存） | 11 | — |
+| `#reader_interaction`（阅读器/沉浸/翻页/吸底栏/SW 缓存） | 12 | — |
 | `#content_quality`（质检规则/灵魂注入/标题评分） | 15 | — |
 | `#book_structure`（排序/校验/命名/去重/双源同步） | 20 | — |
-| `#deployment`（GitHub Pages/魔搭/.nojekyll/SW） | 4 | — |
+| `#deployment`（GitHub Pages/魔搭/.nojekyll/SW） | 5 | — |
 | `#soul_injection`（灵魂注入/章回体/总编Agent） | 3 | — |
 | `#ai_course`（专栏批量生成 / subagent 结果丢失） | 9 | — |
 
-> 共 40 条沉淀，按月份分片存储于 `docs/loop_log/`。
+> 共 41 条沉淀，按月份分片存储于 `docs/loop_log/`。
 
 <!-- AUTOGEN END: loop_log index -->
 

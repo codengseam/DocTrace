@@ -17,6 +17,7 @@ node_modules/
 # 静态站点构建产物（由 CI 生成，不提交）
 site/data/
 site/notes/
+site/reader/
 site/.nojekyll
 
 .DS_Store

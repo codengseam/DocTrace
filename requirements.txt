@@ -24,5 +24,9 @@ pdfplumber>=0.11
 # 图片处理（生成圣贤堂头像缩略图）
 Pillow>=10.0
 
+# Markdown → HTML 渲染 + 净化（构建期为每篇笔记生成 SSG 静态页，BUG-035）
+markdown>=3.6
+bleach>=6.1
+
 # 开发 / 测试
 pytest>=8.0
