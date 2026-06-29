@@ -205,12 +205,13 @@
 <body>
   <header class="hall-header">
     <h1 class="hall-title">圣 贤 堂</h1>
-    <p class="hall-subtitle">诸圣列传 · 儒家五圣 · 孟子四圣 · 行业诸圣</p>
+    <p class="hall-subtitle">诸圣列传 · 儒家五圣 · 孟子四圣 · 行业诸圣 · 财神诸尊</p>
     <div class="hall-stats">
-      <span class="hall-stat">共 16 张卡片</span>
+      <span class="hall-stat">共 26 张卡片</span>
       <span class="hall-stat">儒家五圣 5</span>
       <span class="hall-stat">孟子四圣 4</span>
       <span class="hall-stat">行业诸圣 7</span>
+      <span class="hall-stat">财神诸尊 10</span>
     </div>
   </header>
 
@@ -218,6 +219,7 @@
     <button class="filter-btn active" data-filter="儒家五圣">儒家五圣</button>
     <button class="filter-btn" data-filter="孟子四圣">孟子四圣</button>
     <button class="filter-btn" data-filter="行业圣人">行业诸圣</button>
+    <button class="filter-btn" data-filter="财神诸尊">财神诸尊</button>
   </nav>
 
   <div class="hall-grid" id="hallGrid"></div>
@@ -248,7 +250,17 @@
       '013': 'images/thumbs/013_wudaozi.jpg',
       '014': 'images/thumbs/014_dufu.jpg',
       '015': 'images/thumbs/015_luyu.jpg',
-      '016': 'images/thumbs/016_simaqian.jpg'
+      '016': 'images/thumbs/016_simaqian.jpg',
+      '017': 'images/thumbs/017_zhaogongming.jpg',
+      '018': 'images/thumbs/018_bigan.jpg',
+      '019': 'images/thumbs/019_fanli.jpg',
+      '020': 'images/thumbs/020_guanyu.jpg',
+      '021': 'images/thumbs/021_liguizu.jpg',
+      '022': 'images/thumbs/022_yaoshaosi.jpg',
+      '023': 'images/thumbs/023_shenwansan.jpg',
+      '024': 'images/thumbs/024_liuhai.jpg',
+      '025': 'images/thumbs/025_fudezhengshen.jpg',
+      '026': 'images/thumbs/026_duamugong.jpg'
     };
     const PORTRAIT_FULL_MAP = {
       '001': 'images/001_kongzi.jpg',
@@ -266,7 +278,17 @@
       '013': 'images/013_wudaozi.jpg',
       '014': 'images/014_dufu.jpg',
       '015': 'images/015_luyu.jpg',
-      '016': 'images/016_simaqian.jpg'
+      '016': 'images/016_simaqian.jpg',
+      '017': 'images/017_zhaogongming.jpg',
+      '018': 'images/018_bigan.jpg',
+      '019': 'images/019_fanli.jpg',
+      '020': 'images/020_guanyu.jpg',
+      '021': 'images/021_liguizu.jpg',
+      '022': 'images/022_yaoshaosi.jpg',
+      '023': 'images/023_shenwansan.jpg',
+      '024': 'images/024_liuhai.jpg',
+      '025': 'images/025_fudezhengshen.jpg',
+      '026': 'images/026_duamugong.jpg'
     };
     function portraitUrl(no) {
       return PORTRAIT_MAP[no] || '';
@@ -674,6 +696,238 @@
           { title: '李陵之祸', text: '天汉二年李陵兵败降匈奴，司马迁为之辩护触怒汉武帝受宫刑，忍辱负重发愤著书，终成史记。' }
         ],
         bio: '司马迁（约前145–前86），字子长，西汉夏阳人，任太史令因李陵之祸受宫刑，发愤著史记一百三十篇开纪传体之先，尊为史圣。',
+        hasLink: false
+      },
+
+      // ===== 财神诸尊 =====
+      {
+        name: '赵公明', courtesyName: '玄坛真君', title: '正财神·武财神',
+        faction: '圣贤堂', subFaction: '财神诸尊',
+        dynasty: '殷商', state: '终南山', lifespan: '神话时代', no: '017',
+        portraitPrompt: '殷商赵公明财神反差形象，黑面浓须头戴铁冠身披金甲外罩皂袍，胯下黑虎威风凛凛，右手高举金鞭左手托聚宝盆，目光炯炯如电，周身金光紫气缭绕，背景为终南山云雾与道观，水墨国风重彩卡通插画，米白宣纸背景，史诗感神仙人物画，体现武财神震慑邪祟招财进宝之气',
+        scores: [
+          { dim: '财运', value: 100, note: '玄坛真君，统管天下财源' },
+          { dim: '威严', value: 98, note: '黑虎玄坛，驱邪镇煞' },
+          { dim: '公正', value: 95, note: '主公平买卖，利路亨通' },
+          { dim: '法力', value: 96, note: '金鞭铁索，役雷驭电' },
+          { dim: '信仰', value: 98, note: '道教正财神，庙宇遍华夏' },
+          { dim: '影响', value: 99, note: '华夏财神信仰核心' }
+        ],
+        quotes: [
+          { text: '公平买卖，求财利宜，和合通达。', source: '民间财神诰语' }
+        ],
+        deeds: [
+          { title: '封神受命', text: '《封神演义》中赵公明应闻仲之邀下山助商，以定海珠连败阐教金仙，后被陆压以钉头七箭书咒杀；姜子牙封神时封为金龙如意正一龙虎玄坛真君，掌迎祥纳福、追逃捕亡，民间奉为武财神。' },
+          { title: '骑黑虎镇财', text: '传说赵公明跨黑虎、执金鞭，能驱雷役电、呼风唤雨，主公平买卖、和合利市，商贾多供奉其像于店铺，祈求招财进宝、辟邪保安。' }
+        ],
+        bio: '赵公明，道教玄坛真君，封神演义中骑黑虎持金鞭的威猛正财神，主公正买卖、招财纳福，为华夏武财神之首。',
+        hasLink: false
+      },
+      {
+        name: '比干', courtesyName: '子干', title: '文财神·无心财神',
+        faction: '圣贤堂', subFaction: '财神诸尊',
+        dynasty: '商代', state: '朝歌', lifespan: '约前11世纪', no: '018',
+        portraitPrompt: '商代比干文财神反差形象，面容方正清癯的殷商王叔，头戴进贤冠身着宽袖深衣，双手托一颗晶莹剔透的七窍玲珑心，目光坦荡无私无欲，身后商代宗庙肃穆庄严，水墨国风重彩卡通插画，米白宣纸背景，史诗感历史人物画，体现无心则公、公正财神的清廉形象',
+        scores: [
+          { dim: '仁德', value: 98, note: '忠心剖心，七窍玲珑' },
+          { dim: '公正', value: 100, note: '无心则公，不偏不倚' },
+          { dim: '学识', value: 90, note: '商代贤臣，博学辅政' },
+          { dim: '清廉', value: 99, note: '不谋私利，以公理财' },
+          { dim: '信仰', value: 88, note: '文财神代表，主正财' },
+          { dim: '影响', value: 90, note: '无心财神，商贾仰之' }
+        ],
+        quotes: [
+          { text: '为人臣者，不得不以死争。', source: '《史记·殷本纪》' }
+        ],
+        deeds: [
+          { title: '剖心谏纣', text: '商末纣王志乱，比干以死强谏三日不去，纣怒曰圣人之心有七窍，遂剖其心；比干以忠谏殉国，后世尊为文财神，象征公平交易、童叟无欺。' },
+          { title: '无心财神', text: '民间传说比干被挖心后无心，故分配钱财公正无私，商人供奉比干以求买卖公平、账目清白，成为文财神中最重清廉的一位。' }
+        ],
+        bio: '商代王叔比干，因直谏纣王被剖心殉国，民间尊为文财神，以无心则公象征公平交易、清正廉洁。',
+        hasLink: false
+      },
+      {
+        name: '范蠡', courtesyName: '少伯', title: '文财神·商圣',
+        faction: '圣贤堂', subFaction: '财神诸尊',
+        dynasty: '春秋', state: '越国/陶', lifespan: '约前536–前448', no: '019',
+        portraitPrompt: '春秋范蠡文财神反差形象，智珠在握的中年商圣，头戴纶巾手持算筹，身前堆满陶朱钱贝却神色淡泊，身后一叶扁舟浮于五湖烟水之间，水墨国风重彩卡通插画，米白宣纸背景，史诗感历史人物画，体现三聚三散、以义取利的财神风范',
+        scores: [
+          { dim: '谋略', value: 98, note: '兴越灭吴，功成身退' },
+          { dim: '经营', value: 100, note: '商圣陶朱，三聚三散' },
+          { dim: '仁德', value: 94, note: '仗义疏财，富好行德' },
+          { dim: '清廉', value: 90, note: '弃官从商，不恋权财' },
+          { dim: '创新', value: 96, note: '农商兼顾，货殖之祖' },
+          { dim: '影响', value: 97, note: '儒商始祖，后世楷模' }
+        ],
+        quotes: [
+          { text: '财币欲其行如流水。', source: '《史记·货殖列传》' }
+        ],
+        deeds: [
+          { title: '功成身退', text: '范蠡佐越王勾践卧薪尝胆二十载，灭吴雪耻后深知勾践可共患难不可共安乐，遂乘扁舟浮于五湖，更名鸱夷子皮，开始经商生涯。' },
+          { title: '三聚三散', text: '范蠡至陶，操计然之术治产，十九年中三致千金，再分散与贫交疏昆弟，人称陶朱公；后世商人奉其为财神，取其生财有道、以义取利之意。' }
+        ],
+        bio: '范蠡，春秋越国谋臣，佐勾践灭吴后归隐经商，三聚三散千金，被尊为商圣陶朱公、文财神。',
+        hasLink: false
+      },
+      {
+        name: '关羽', courtesyName: '云长', title: '武财神·义财神',
+        faction: '圣贤堂', subFaction: '财神诸尊',
+        dynasty: '东汉', state: '河东解良', lifespan: '?–220', no: '020',
+        portraitPrompt: '东汉关羽武财神反差形象，面如重枣长髯飘胸，头戴绿巾身披绿袍金甲，左手抚长须右手持青龙偃月刀，丹凤眼微睁威仪凛凛，身后众商贾执账册顶礼膜拜，水墨国风重彩卡通插画，米白宣纸背景，史诗感历史人物画，体现义中取财、忠义生财的武财神形象',
+        scores: [
+          { dim: '忠义', value: 100, note: '义薄云天，武圣之尊' },
+          { dim: '威严', value: 96, note: '青龙偃月，威震华夏' },
+          { dim: '信用', value: 99, note: '以义为利，童叟无欺' },
+          { dim: '守护', value: 95, note: '护佑商贾，镇宅辟邪' },
+          { dim: '信仰', value: 98, note: '关帝庙遍布华人世界' },
+          { dim: '影响', value: 99, note: '武财神与武圣双重信仰' }
+        ],
+        quotes: [
+          { text: '玉可碎而不可改其白，竹可焚而不可毁其节。', source: '《三国演义》' }
+        ],
+        deeds: [
+          { title: '秉烛达旦', text: '关羽被困曹营，曹操厚待之，关羽却始终心系刘备，夜读春秋、秉烛达旦，彰显忠义不二；后世商人最重信用，遂奉其为义财神。' },
+          { title: '威震华夏', text: '关羽率军北伐，擒于禁、斩庞德、水淹七军，威震华夏；明清晋商崛起，以关帝为守护神与信用象征，关帝庙随商路遍布天下。' }
+        ],
+        bio: '关羽，东汉名将，以忠义传世被尊为武圣；明清商帮奉其为武财神、义财神，象征以义取财、信义为本。',
+        hasLink: false
+      },
+      {
+        name: '李诡祖', courtesyName: '—', title: '增福财神·财帛星君',
+        faction: '圣贤堂', subFaction: '财神诸尊',
+        dynasty: '北魏', state: '曲梁', lifespan: '约6世纪', no: '021',
+        portraitPrompt: '北魏李诡祖增福财神反差形象，面容慈祥端正的文官形象，头戴乌纱身着绯袍玉带，左手执如意右手捧金元宝，身后展开一卷增福文书，周身祥云缭绕，水墨国风重彩卡通插画，米白宣纸背景，史诗感神仙人物画，体现增福增寿、招财进宝的财神气质',
+        scores: [
+          { dim: '仁政', value: 96, note: '清廉县令，爱民如子' },
+          { dim: '赐福', value: 98, note: '增福增寿，财禄双全' },
+          { dim: '公正', value: 93, note: '明察秋毫，赏罚分明' },
+          { dim: '信仰', value: 95, note: '财帛星君，民间广泛供奉' },
+          { dim: '德化', value: 94, note: '以清正之心司人间财禄' },
+          { dim: '影响', value: 93, note: '北方财神信仰核心' }
+        ],
+        quotes: [
+          { text: '增福财神，福禄寿喜财同至。', source: '民间财神经咒' }
+        ],
+        deeds: [
+          { title: '清廉治县', text: '李诡祖为北魏曲梁县令，清廉爱民、赈贫恤孤，治绩卓著；唐明宗时追封为增福相公，元文宗时加封增福神君，民间奉为财神。' },
+          { title: '掌财帛福禄', text: '民间画像中李诡祖身着一品朝服、头戴宰相纱帽，手执如意、身带聚宝盆，为文财神代表之一，主增福增寿、财禄亨通。' }
+        ],
+        bio: '李诡祖，北魏曲梁县令，清廉爱民，后世追封为增福相公、财帛星君，民间奉为文财神，主增福增财。',
+        hasLink: false
+      },
+      {
+        name: '姚少司', courtesyName: '—', title: '利市仙官',
+        faction: '圣贤堂', subFaction: '财神诸尊',
+        dynasty: '殷商', state: '神话时代', lifespan: '神话时代', no: '022',
+        portraitPrompt: '殷商姚少司利市仙官反差形象，面白无须的少年仙官，身着锦绣道袍头戴逍遥巾，手捧一卷展开的利市文书，文书上书利市大吉，身旁环绕铜钱元宝与祥瑞云气，笑容可掬神态亲和，水墨国风重彩卡通插画，米白宣纸背景，史诗感神仙人物画，体现利市三倍、商贾欢喜的吉庆形象',
+        scores: [
+          { dim: '利市', value: 99, note: '利市三倍，大吉大利' },
+          { dim: '亲和', value: 96, note: '笑容可掬，商贾喜爱' },
+          { dim: '机敏', value: 92, note: '招财使者，反应灵活' },
+          { dim: '辅弼', value: 94, note: '赵公明座下招财仙官' },
+          { dim: '信仰', value: 90, note: '常与财神同祀' },
+          { dim: '影响', value: 91, note: '利市信仰深入市井' }
+        ],
+        quotes: [
+          { text: '利市仙官到，生意兴隆达三江。', source: '民间商谚' }
+        ],
+        deeds: [
+          { title: '封神招财', text: '《封神演义》中姚少司为赵公明门下弟子，随师下山助商；赵公明死后，姜子牙封神时封其为利市仙官，主招宝纳珍、利市亨通。' },
+          { title: '护市利商', text: '民间多与招财童子、财神同祀，商号开市常祭拜利市仙官，祈求日进斗金、买卖顺遂、利润丰厚。' }
+        ],
+        bio: '姚少司，封神演义中赵公明门下弟子，被封为利市仙官，主招宝利市、商贾亨通，是财神信仰中吉祥喜庆的辅神。',
+        hasLink: false
+      },
+      {
+        name: '沈万三', courtesyName: '富', title: '民间财神·聚宝盆',
+        faction: '圣贤堂', subFaction: '财神诸尊',
+        dynasty: '元末明初', state: '江浙', lifespan: '约1330–1390', no: '023',
+        portraitPrompt: '元末明初沈万三民间财神反差形象，体态富态衣着华丽的江南巨贾，手捧一只光芒四射的聚宝盆，盆中金银珠宝 overflowing，身后是繁华的苏州水陆码头与商船云集，面容精明而和善，水墨国风重彩卡通插画，米白宣纸背景，史诗感历史人物画，体现富可敌国、聚宝生财的民间财神形象',
+        scores: [
+          { dim: '聚财', value: 100, note: '富可敌国，聚宝盆传说' },
+          { dim: '经营', value: 96, note: '海外贸易，货殖巨万' },
+          { dim: '散财', value: 88, note: '筑城犒军，豪掷千金' },
+          { dim: '传奇', value: 98, note: '聚宝盆故事家喻户晓' },
+          { dim: '风险', value: 75, note: '功高震主，最终败落' },
+          { dim: '影响', value: 95, note: '江南财神符号' }
+        ],
+        quotes: [
+          { text: '家有聚宝盆，财源滚滚来。', source: '民间传说' }
+        ],
+        deeds: [
+          { title: '聚宝盆传说', text: '传说沈万三得一聚宝盆，投一银而满盆皆银，由此富甲天下；明太祖筑南京城时，沈万三独资筑东南城并犒军，其富可敌国。' },
+          { title: '江南巨贾', text: '沈万三以海外贸易起家，田产遍布江浙，家中银两动辄以万计，成为元末明初江南首富，民间奉为财神，聚宝盆遂成招财符号。' }
+        ],
+        bio: '沈万三，元末明初江南首富，传说拥有聚宝盆，富可敌国，民间奉为财神，是江南地区最具代表性的财富符号。',
+        hasLink: false
+      },
+      {
+        name: '刘海蟾', courtesyName: '操', title: '民间财神·戏金蟾',
+        faction: '圣贤堂', subFaction: '财神诸尊',
+        dynasty: '五代', state: '燕山', lifespan: '约10世纪', no: '024',
+        portraitPrompt: '五代刘海蟾民间财神反差形象，蓬头跣足的顽皮少年道士，身穿破道袍腰系钱串，正用一串铜钱逗弄一只三足金蟾，金蟾口吐金光元宝，神态活泼诙谐，背景为道观与市井街巷，水墨国风重彩卡通插画，米白宣纸背景，史诗感神仙人物画，体现撒钱济贫、戏金蟾招财的民间喜神形象',
+        scores: [
+          { dim: '传奇', value: 97, note: '戏金蟾，撒钱济贫' },
+          { dim: '亲和', value: 98, note: '蓬头少年，喜闻乐见' },
+          { dim: '道法', value: 92, note: '五代高道，北五祖之一' },
+          { dim: '济世', value: 93, note: '撒钱救济，造福百姓' },
+          { dim: '招财', value: 95, note: '金蟾吐宝，口衔铜钱' },
+          { dim: '影响', value: 94, note: '民间年画常见题材' }
+        ],
+        quotes: [
+          { text: '刘海戏金蟾，步步钓金钱。', source: '民间谚语' }
+        ],
+        deeds: [
+          { title: '戏金蟾得道', text: '传说刘海蟾为五代道士，曾以一串铜钱钓得三足金蟾，金蟾每吐一宝便有一钱落入民间，象征财源广进、口吐金钱。' },
+          { title: '撒钱济贫', text: '民间年画中刘海蟾蓬头跣足、手持钱串戏金蟾，寓意招财进宝、济贫扶困，是普通百姓最喜闻乐见的民间财神形象之一。' }
+        ],
+        bio: '刘海蟾，五代道士，北五祖之一，民间以刘海戏金蟾为招财符号，象征撒钱济贫、步步钓金钱。',
+        hasLink: false
+      },
+      {
+        name: '张福德', courtesyName: '—', title: '福德正神·土地财神',
+        faction: '圣贤堂', subFaction: '财神诸尊',
+        dynasty: '周代', state: '句容', lifespan: '传说时代', no: '025',
+        portraitPrompt: '周代福德正神土地财神反差形象，慈眉善目的白须老者，头戴员外巾身着赭色长袍，左手捧金元宝右手拄蟠龙杖，身旁土地庙香烟袅袅，脚下祥土瑞草滋生，神态安详亲切，水墨国风重彩卡通插画，米白宣纸背景，史诗感神仙人物画，体现守土安民、生财有地的福德正神形象',
+        scores: [
+          { dim: '守土', value: 98, note: '守土安民，庇佑一方' },
+          { dim: '仁厚', value: 97, note: '慈祥老者，广施福德' },
+          { dim: '生财', value: 90, note: '土载万物，地生财宝' },
+          { dim: '亲和', value: 99, note: '民间最亲近的神明' },
+          { dim: '信仰', value: 96, note: '土地庙遍布城乡' },
+          { dim: '影响', value: 95, note: '乡土财神信仰根基' }
+        ],
+        quotes: [
+          { text: '土地公公保平安，五谷丰登财源广。', source: '民间祭土地谣' }
+        ],
+        deeds: [
+          { title: '舍身为民', text: '传说张福德为周代官吏，清廉爱民、造福乡里，死后被尊为土地神；百姓感念其德，建庙祭祀，奉为福德正神，护佑一方平安与五谷丰登。' },
+          { title: '守土生财', text: '民间认为土地公不仅保家宅平安，也掌管一方地财，商家常在店铺后设土地龛，初一十五祭拜，祈求地基主与土地公庇佑生意兴隆。' }
+        ],
+        bio: '张福德，民间传说中的土地公原型，被尊为福德正神，守土安民、庇佑一方，也被视为乡土财神。',
+        hasLink: false
+      },
+      {
+        name: '端木赐', courtesyName: '子贡', title: '儒商鼻祖·文财神',
+        faction: '圣贤堂', subFaction: '财神诸尊',
+        dynasty: '春秋', state: '卫国', lifespan: '前520–前456', no: '026',
+        portraitPrompt: '春秋端木赐儒商鼻祖反差形象，器宇轩昂的青年儒商，头戴儒巾身着深衣却腰挂钱囊，一手持竹简一手托盘金玉，身后有货栈车马与书院弟子，面容智慧而诚信，水墨国风重彩卡通插画，米白宣纸背景，史诗感历史人物画，体现孔门高徒、货殖致富、以义为利的儒商精神',
+        scores: [
+          { dim: '诚信', value: 99, note: '言必信，行必果' },
+          { dim: '经营', value: 97, note: '亿则屡中，货殖名家' },
+          { dim: '学识', value: 94, note: '孔门十哲，言语科首' },
+          { dim: '仁德', value: 93, note: '博施济众，推财助道' },
+          { dim: '外交', value: 96, note: '存鲁乱齐，纵横捭阖' },
+          { dim: '影响', value: 96, note: '儒商文化始祖' }
+        ],
+        quotes: [
+          { text: '夫子之门何其杂也？', source: '《史记·仲尼弟子列传》' }
+        ],
+        deeds: [
+          { title: '货殖致富', text: '端木赐师从孔子，善于经商，能料货殖之贵贱，家累千金，常驾驷马高车聘问诸侯，孔子周游列国多赖其资助，是儒商文化的开创者。' },
+          { title: '存鲁乱齐', text: '子贡出使齐吴越晋四国，以纵横之术存鲁、乱齐、破吴、强晋、霸越，一使而五国变，展现高超外交与谋略才能。' }
+        ],
+        bio: '端木赐，字子贡，孔子高徒，孔门十哲之一，善于货殖致富，被尊为儒商鼻祖、文财神，代表以义为利的商业精神。',
         hasLink: false
       }
     ];

@@ -26,6 +26,9 @@ PINYIN = {
     "孟子": "mengzi", "伯夷": "boyi", "伊尹": "yiyin", "柳下惠": "liuxiahui",
     "孙武": "sunwu", "王羲之": "wangxizhi", "张仲景": "zhangzhongjing",
     "吴道子": "wudaozi", "杜甫": "dufu", "陆羽": "luyu", "司马迁": "simaqian",
+    "赵公明": "zhaogongming", "比干": "bigan", "范蠡": "fanli", "关羽": "guanyu",
+    "李诡祖": "liguizu", "姚少司": "yaoshaosi", "沈万三": "shenwansan",
+    "刘海蟾": "liuhai", "张福德": "fudezhengshen", "端木赐": "duamugong",
 }
 
 
