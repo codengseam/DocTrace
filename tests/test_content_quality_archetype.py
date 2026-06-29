@@ -196,37 +196,6 @@ class TestKnowledgeTermsWhitelist:
             f"knowledge 桶应检测非白名单中英混杂，但未报：{readability_issues}"
         )
 
-    def test_knowledge_whitelist_mysql_terms(self):
-        """knowledge 桶 MySQL 术语（BUG-033）不算中英混杂。
-
-        MySQL 专栏正文高频出现 MVCC / B+树 / InnoDB / GapLock / NextKeyLock /
-        BufferPool / Explain 等术语，必须与中文紧邻时不报中英混杂。
-        """
-        from src.utils.content_quality import KNOWLEDGE_TERMS_WHITELIST
-        # 白名单已扩展 MySQL 术语
-        for term in ["MVCC", "B+Tree", "B+树", "InnoDB", "MyISAM",
-                     "GapLock", "NextKeyLock", "BufferPool", "ChangeBuffer",
-                     "DoubleWrite", "Explain", "ICP", "MRR", "BKA", "NLJ",
-                     "Redo", "Undo", "Binlog", "WAL", "GTID", "MDL", "FTWRL",
-                     "RR", "RC", "RU"]:
-            assert term in KNOWLEDGE_TERMS_WHITELIST, (
-                f"MySQL 核心术语 {term} 应在 KNOWLEDGE_TERMS_WHITELIST 内（BUG-033）"
-            )
-        # 模拟 MySQL 专栏正文，中文紧邻英文术语不应报中英混杂
-        # 注：Explain 输出值（如 Using index condition）应放代码块，不与中文紧邻
-        body = (
-            "InnoDB使用MVCC实现快照读，B+树叶子节点用NextKeyLock防幻读。"
-            "BufferPool命中率低时，GapLock与RecordLock可能加剧锁冲突。"
-            "通过Explain看到 `Using index condition` 即ICP生效，MRR与BKA优化NLJ。"
-            "Redo/Undo/Binlog构成两阶段提交，GTID简化主备一致性。"
-        )
-        content = _make_content("MySQL实战45讲", body)
-        report = run_content_quality_checks(content, archetype="knowledge")
-        readability_issues = report.details.get("readability", [])
-        assert not any("中英文混杂" in i or "中英混杂" in i for i in readability_issues), (
-            f"MySQL 术语在白名单内，不应报中英混杂，却报：{readability_issues}"
-        )
-
 
 # ---------------------------------------------------------------------------
 # 契约5：check_numeric_facts auto_errors 全桶都跑

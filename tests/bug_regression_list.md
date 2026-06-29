@@ -580,29 +580,3 @@
   1. 独立演示页被复制到 `site/` 下部署时，必须处理相对路径变化；源文件路径与部署路径不一致时，应通过构建脚本重写而非要求源文件同时适配两种路径。
   2. 图片本地化不等于性能合格：还需匹配显示尺寸的缩略图、懒加载、占位骨架，才能避免首屏同时下载多张高清图。
   3. 新依赖（Pillow）必须落到 `requirements.txt`，否则 CI/新环境构建时会跳过缩略图生成。
-
-## knowledge 桶术语白名单未覆盖 MySQL 核心术语
-
-- **编号**：BUG-035
-- **首次出现**：2026-06-28
-- **类型**：兼容性 / 内容质检
-- **环境**：knowledge 桶质检引擎 `src/utils/content_quality.py::check_mixed_language_knowledge`
-- **现象**：新增 MySQL 实战专栏（`output/MySQL实战45讲/`，archetype=knowledge）后，正文高频出现 MVCC / B+树 / InnoDB / GapLock / NextKeyLock / BufferPool / Explain / ICP / Redo / Undo / Binlog / GTID 等术语，与中文紧邻时（如「InnoDB使用MVCC」「这套B+树」）批量触发 `check_mixed_language_knowledge` 中英混杂误报，导致内容质检反复扣分。
-- **复现步骤**：
-  1. 在 knowledge 桶正文中写入 `body = "InnoDB使用MVCC实现快照读，B+树叶子节点用NextKeyLock防幻读。"`
-  2. 调用 `run_content_quality_checks(content, archetype="knowledge")`
-  3. readability 维度报「检测到可能的中英文混杂」
-- **根因**：`KNOWLEDGE_TERMS_WHITELIST`（content_quality.py:95）原仅含 24 个术语（Transformer/Attention/Token/SQL/ACID/BTree/LSM 等），主要面向 AI 大模型学习专栏。MySQL 专栏的核心术语（存储引擎/索引/事务/锁/内存结构/复制/优化器七大类）全部缺失。质检引擎按「中文+英文紧邻无空格」模式（正则 `[\u4e00-\u9fff]+[a-zA-Z]{2,}`）检测，白名单词会被替换为等长 `×` 后再匹配，但未在白名单的术语无法豁免。
-- **修复**：
-  1. 在 `src/utils/content_quality.py:95` 的 `KNOWLEDGE_TERMS_WHITELIST` 追加 MySQL 七大类共 30+ 术语：存储引擎（InnoDB/MyISAM/Memory）、索引（B+Tree/B+树/B-Tree/HashIndex/R-Tree/Fulltext）、事务与隔离（MVCC/WAL/2PL/Redo/Undo/Binlog/RelayLog/ReadView/SnapshotIsolation/RR/RC/RU）、锁（GapLock/NextKeyLock/RecordLock/IntentLock/MDL/FTWRL/Deadlock）、内存结构（BufferPool/ChangeBuffer/DoubleWrite/DoubleWriteBuffer/LogBuffer/AdaptiveHashIndex/DictionaryCache）、复制与高可用（GTID/MTS/SemiSync/Relay）、优化器与执行计划（Explain/ICP/MRR/BKA/NLJ/BNL/HashJoin/IndexMerge）。
-  2. 在 `tests/test_content_quality_archetype.py::TestKnowledgeTermsWhitelist` 新增 `test_knowledge_whitelist_mysql_terms`，断言 MySQL 核心术语在白名单内、模拟正文不报中英混杂。
-  3. 测试用例同时验证一个写作规范：Explain 输出值（如 `Using index condition`）应放代码块（反引号包裹），避免「中文+英文短语紧邻」触发误报——这是 subagent 写作规范的一部分。
-- **涉及文件**：`src/utils/content_quality.py`、`tests/test_content_quality_archetype.py`
-- **回归测试**：
-  - `tests/test_content_quality_archetype.py::TestKnowledgeTermsWhitelist::test_knowledge_whitelist_mysql_terms` 锁定 MySQL 术语白名单
-  - `tests/test_content_quality_archetype.py` 全部 35 项契约测试通过（白名单扩展未破坏现有 AI 术语测试）
-  - `pytest -q` 通过
-- **教训**：
-  1. knowledge 桶术语白名单是「按专栏类型渐进扩展」的活清单，每新增一类技术专栏（如 Redis/PostgreSQL/Kafka）都需评估是否补术语。设计上可考虑「按 category 维度分桶白名单」（如 AI 类/数据库类/中间件类），但当前规模下统一清单 + 注释分组即可，不过度工程化。
-  2. 中文+英文术语紧邻是技术写作的常态，质检规则需匹配实际写作习惯。Explain/Show 等命令的输出值（`Using filesort`、`Using temporary`）应作为写作规范要求放代码块，而非简单加入白名单——这是「写作规范」与「质检白名单」的边界。
-  3. 修改 `content_quality.py` 的白名单不属于 `dev-workflow.md §四` 禁区（禁区是 `quality.py` 函数内部 + `.trae/skills/deep-reading/` + `prompts/`），白名单是调用层路由配置，可按需扩展。

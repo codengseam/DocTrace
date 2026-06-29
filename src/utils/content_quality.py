@@ -99,26 +99,6 @@ KNOWLEDGE_TERMS_WHITELIST = [
     "SQL", "NoSQL", "ACID", "BASE", "CAP",
     "RDBMS", "BTree", "LSM",
     "Python", "Java", "Rust",
-    # MySQL 专栏扩展（与 AI 术语平级，2026-06-28 BUG-033）
-    # 存储引擎
-    "InnoDB", "MyISAM", "Memory",
-    # 索引结构
-    "B+Tree", "B+树", "B-Tree", "HashIndex", "R-Tree", "Fulltext",
-    # 事务与隔离
-    "MVCC", "WAL", "2PL",
-    "Redo", "Undo", "Binlog", "RelayLog",
-    "ReadView", "SnapshotIsolation",
-    "RR", "RC", "RU",
-    # 锁
-    "GapLock", "NextKeyLock", "RecordLock", "IntentLock",
-    "MDL", "FTWRL", "Deadlock",
-    # 内存结构
-    "BufferPool", "ChangeBuffer", "DoubleWrite", "DoubleWriteBuffer",
-    "LogBuffer", "AdaptiveHashIndex", "DictionaryCache",
-    # 复制与高可用
-    "GTID", "MTS", "SemiSync", "Relay",
-    # 优化器与执行计划
-    "Explain", "ICP", "MRR", "BKA", "NLJ", "BNL", "HashJoin", "IndexMerge",
 ]
 
 # 现代职场专栏中过于敏感、易误报的 AI 味模式（由 check_soft_ai_pattern 等专项接管）
