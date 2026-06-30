@@ -676,6 +676,52 @@
 
 ---
 
+## 专栏字数声称前后不一致（大模型 token 统计误差）
+
+- **编号**：BUG-038
+- **首次出现**：2026-06-30
+- **类型**：内容数据 / 质量
+- **现象**：专栏中存在大量"某某某"四个字、"某某某某"这五个字、"五个字：某某某" 这类字数声称，但大模型生成时是按 token 统计而非按字符统计，导致声称字数与实际字数频繁对不上（多 1 个/少 1 个/完全错位）。这种低价数数错误让专栏显得 AI 味浓、质量差。
+- **复现规律**：扫描全专栏 1112 个 Markdown 文件，发现 90 处字数声称与实际字符数不一致，覆盖模式 A（`N 个字：X`）、模式 B（`「X」这 N 个字`）、模式 C（`N 个字：「X」`）三种写法。
+- **根因**（从第一性原理出发）：
+  1. **字数是确定性事实**——任何中文文本的实际字数都可用 `len()` 精确算出，本不该交给会数错 token 的 LLM 来"声称"。
+  2. **原 `check_numeric_facts`（BUG-026 引入）只覆盖一种写法**：`N 个字：X`，且 `N` 只匹配阿拉伯数字（`(\d+)`），对"这八个字"等中文数字完全失效；对引号引文（`「X」这 N 个字`、`N 个字："X"`）也完全漏检。
+  3. **质检 skill 此前没有"字数核对"前置步骤**——内容质检直接走 LLM 三视角并行，LLM 同样会数错 token，等于让"嫌疑人审嫌疑人"。
+- **修复**（从第一性原理：字数用 Python `len()` 数，不交给 LLM）：
+  1. **新增独立脚本 `scripts/check_char_count.py`**：
+     - 三种模式正则：A=`N 个字：X`、B=`「X」这 N 个字`、C=`N 个字：「X」`
+     - `strip_punct` 移除中英文标点、空白、Markdown 符号，**字数不含标点**
+     - `cn_to_int` 支持中文数字（"八/十二/二十三/一百二十"等）
+     - `(?<!第)` 负向后看排除"第 N 个字"序号
+     - `actual == 0` 跳过空引文或纯 Markdown 符号引文
+     - CLI：`--file` / `--dir` / `--glob` / `--strict` / `--verbose`
+  2. **增强 `src/utils/quality.py` 的 `check_numeric_facts`**：
+     - 新增 `_strip_punct_for_char_count`、`_cn_to_int`、`_NUM_RE`（与脚本单一信源）
+     - 三种模式自动检测（去重 + cn_to_int 解析 + actual==0 跳过）
+     - 保留 BUG-026 的 "5个字：你好世" 契约（模式A正则不变）
+     - manual_review 路径（N 年前/N 岁/N 品官）保持不变，仍由 Agent 复核
+  3. **更新 `.trae/skills/deep-reading/content-quality.md` §9.3**：扩展"N 个字"项为三种写法 + 脚本引用子列表
+  4. **更新 `.trae/skills/content-review/SKILL.md`**：在「调用 Python 引擎」前新增「前置：字数核对（确定性，无需 LLM）」子节
+  5. **修复全专栏 90 处字数错误**：用脚本输出清单逐个 Edit 修正字数声称（优先改声称以匹配实际，避免改动原文引文）
+- **涉及文件**：
+  - `scripts/check_char_count.py`（新增）
+  - `src/utils/quality.py`（增强 check_numeric_facts）
+  - `tests/test_char_count.py`（新增，23 用例）
+  - `tests/run_regression_suite.sh`（新增第 13 步冒烟）
+  - `.trae/skills/deep-reading/content-quality.md`（§9.3 扩展）
+  - `.trae/skills/content-review/SKILL.md`（新增字数核对前置步骤）
+  - `output/**/*.md`（90 处字数声称修正）
+- **回归测试**：
+  - `tests/test_char_count.py`：覆盖 strip_punct / cn_to_int / 三种模式 / frontmatter 跳过 / 序号排除 / 空引文跳过 / check_file / check_dir / quality.py 联动（共 23 用例）
+  - `tests/run_regression_suite.sh` 第 13 步：脚本 `--help` 退出码 0 + 三种模式 self-test 检出已知错误
+  - `python scripts/check_char_count.py --dir output/ --strict` 全专栏扫描退出码 0
+- **教训**：
+  1. **第一性原理：确定性事实不交给概率模型**。字数、行数、文件数这类可精确计算的事实，应当用 Python `len()` 等确定性工具核对，不该让 LLM 用 token 统计来"声称"——这是低价错误的高发区。
+  2. **质检前置分层**：能确定的事实先跑脚本核对（秒级、零成本、零误判），再让 LLM 跑主观维度（史实/可读性/引用克制）。本次在 content-review skill 增加"字数核对前置"子节，把字数从 LLM 质检中剥离。
+  3. **正则覆盖要全模式**：BUG-026 只覆盖模式 A 一种写法，本次扩展到 A/B/C 三种。中文数字（"八个字"）和阿拉伯数字（"8 个字"）必须同时支持，否则会漏检一半。
+  4. **单一信源**：`scripts/check_char_count.py` 与 `src/utils/quality.py` 共用同一套 `strip_punct`/`cn_to_int` 逻辑（手抄一份并注释"保持一致"），避免脚本说没错、quality.py 报有错的尴尬。后续可考虑抽公共模块。
+  5. **BUG-026 的延续**：BUG-026 引入 `check_numeric_facts` 是对的，但只覆盖一种写法且只支持阿拉伯数字，是"半成品"。本次 BUG-038 是它的完整化，不是新造轮子。
+
 ## check_internal_repetition 误报 knowledge/modern 桶的「」中英对照与章节引用
 
 - **编号**：BUG-039
