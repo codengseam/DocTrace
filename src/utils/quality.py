@@ -348,11 +348,71 @@ def check_ai_cliches_v2(text: str) -> dict:
     return {"count": count, "hits": hits, "level": level}
 
 
+def _strip_punct_for_char_count(s: str) -> str:
+    """移除中英文标点、空白与 Markdown 符号，返回纯字符序列。
+
+    字数不含标点——与 scripts/check_char_count.py 的 strip_punct 保持一致（单一信源）。
+    """
+    _PUNCT = (
+        "，。！？；：""''「」『』（）—…《》、·"
+        ",.!?;:'\"()<>[]{}"
+        "\u2014\u2013\u2026\u00b7"
+        " \t\r\n\u3000"
+        "#*- >`|"
+    )
+    return "".join(ch for ch in s if ch not in _PUNCT)
+
+
+_CN_DIGITS_MAP = {
+    "零": 0, "一": 1, "二": 2, "三": 3, "四": 4, "五": 5,
+    "六": 6, "七": 7, "八": 8, "九": 9, "十": 10, "百": 100,
+    "千": 1000, "万": 10000, "两": 2,
+}
+
+# 中文/阿拉伯数字（"第"字开头的是序号，排除）
+_NUM_RE = r"(?<!第)([一二三四五六七八九十百千万两\d]+)"
+
+
+def _cn_to_int(s: str) -> int:
+    """中文数字转 int。无法解析返回 -1。与 scripts/check_char_count.py 一致。"""
+    if not s:
+        return -1
+    if s.isdigit():
+        return int(s)
+    total = 0
+    if "百" in s:
+        parts = s.split("百")
+        left = _CN_DIGITS_MAP.get(parts[0], 1) if parts[0] else 1
+        total += left * 100
+        rest = parts[1] if len(parts) > 1 else ""
+        if rest:
+            if "十" in rest:
+                sp = rest.split("十")
+                tens = _CN_DIGITS_MAP.get(sp[0], 1) if sp[0] else 1
+                total += tens * 10
+                if len(sp) > 1 and sp[1]:
+                    total += _CN_DIGITS_MAP.get(sp[1], 0)
+            elif rest in _CN_DIGITS_MAP:
+                total += _CN_DIGITS_MAP[rest]
+        return total
+    if "十" in s:
+        parts = s.split("十")
+        left = _CN_DIGITS_MAP.get(parts[0], 1) if parts[0] else 1
+        total += left * 10
+        if len(parts) > 1 and parts[1]:
+            total += _CN_DIGITS_MAP.get(parts[1], 0)
+        return total
+    return _CN_DIGITS_MAP.get(s, -1)
+
+
 def check_numeric_facts(text: str) -> dict:
     """检测数字事实硬错误。
 
-    目前能自动检测的：
-    - "N 个字：X" 或 "N 个字，X" 但 len(X) != N
+    自动检测（字数核对，三种模式，字数不含标点）：
+    - 模式A：N 个字：X（无引号，X 到逗号/句号停；保留 BUG-026 的 "5个字：你好世" 契约）
+    - 模式B：「X」这 N 个字 / "X"。这 N 个字（引号在前，"这"字必选，强指代）
+    - 模式C：N 个字："X" / N 个字，「X」（N个字+分隔符+引号引文，引文可含逗号）
+    - N 支持中文数字（"八个字"）和阿拉伯数字（"8个字"）；"第N个字"序号排除
 
     需要人工/Agent 复核的（本函数只标记，不判定）：
     - "N 年前/N 年后" 模式
@@ -361,20 +421,95 @@ def check_numeric_facts(text: str) -> dict:
 
     Returns:
         {
-            "auto_errors": [{"pattern": "...", "expected": N, "actual": M}, ...],
+            "auto_errors": [{"pattern": "...", "expected": N, "actual": M, "pattern_type": "A"|"B"|"C"}, ...],
             "manual_review": [{"pattern": "...", "snippet": "...", "reason": "..."}, ...],
         }
     """
     errors: List[dict] = []
     manual: List[dict] = []
 
-    # 1. 自动检测："N 个字：X" 或 "N 个字，X"
-    for m in re.finditer("(\\d+)个字[：:，,]\\s*[\"'\u201c\u201d]?([^\"'\u201c\u201d，。！？\\n]{1,20})", text):
-        n = int(m.group(1))
-        x = m.group(2).strip().strip('"\'""')
-        actual = len(x)
-        if actual != n:
-            errors.append({"pattern": m.group(0), "expected": n, "actual": actual})
+    _QUOTE_OPEN = "「『\"'\u201c"
+    _QUOTE_CLOSE = "」』\"'\u201d"
+    _QUOTE_ANY = _QUOTE_OPEN + _QUOTE_CLOSE
+    _qo = re.escape(_QUOTE_OPEN)
+    _qc = re.escape(_QUOTE_CLOSE)
+    _qa = re.escape(_QUOTE_ANY)
+
+    # 1. 自动检测：三种字数模式
+    seen_spans: set = set()
+
+    # 多引号并列结构检测（与 scripts/check_char_count.py 单一信源）
+    _PARALLEL_RE = re.compile(
+        rf"[{_qc}][^{_qa}\n]{{0,15}}[{_qo}][^{_qa}\n]{{1,15}}[{_qc}]"
+    )
+
+    def _has_parallel(m_start: int, m_end: int) -> bool:
+        """检查匹配前后是否有并列的引号引文（多引号并列结构）。
+
+        如 "X"和「Y」两字 / "X"，也讲"Y"两字 / "X""Y"两字 等并列结构。
+        启发式五条规则：
+        1. m.start() 前一个字符是闭引号
+        2. m.end() 后 8 字符内含 开引号+引文+闭引号
+        3. head 含 闭引号+短词+开引号+引文+闭引号 模式
+        4. head 末尾 5 字符内含 闭引号+短词+并列连词
+        5. head 末尾 20 字符内含 闭引号+，+短词+也+动词
+        """
+        if m_start > 0 and text[m_start - 1] in _QUOTE_CLOSE:
+            return True
+        tail = text[m_end:m_end + 8]
+        if re.search(rf"[{_qo}][^{_qa}\n]{{1,10}}[{_qc}]", tail):
+            return True
+        head = text[max(0, m_start - 50):m_start]
+        if _PARALLEL_RE.search(head):
+            return True
+        if re.search(rf"[{_qc}][^{_qa}\n]{{0,3}}[和与或、]", head[-5:]):
+            return True
+        if re.search(rf"[{_qc}]，[^{_qa}\n]{{0,3}}也[讲说道]", head[-20:]):
+            return True
+        return False
+
+    def _add(span, snippet, expected_raw, x, ptype):
+        if span in seen_spans:
+            return
+        seen_spans.add(span)
+        expected = _cn_to_int(expected_raw)
+        if expected < 0:
+            return
+        actual = len(_strip_punct_for_char_count(x))
+        if actual == 0:
+            return  # 引文为空或纯标点，无法核对
+        if actual != expected:
+            errors.append({
+                "pattern": snippet,
+                "expected": expected,
+                "actual": actual,
+                "pattern_type": ptype,
+            })
+
+    # 模式A：N 个字：X（无引号，X 不含中文标点）
+    for m in re.finditer(
+        _NUM_RE + r"\s*个字[：:]\s*([^" + _qa + r"\n，。！？；：]{1,30})", text
+    ):
+        x = m.group(2).strip().strip(_QUOTE_ANY)
+        _add((m.start(), m.end()), m.group(0).strip(), m.group(1), x, "A")
+
+    # 模式B：「X」这 N 个字（引号在前，"这"字必选，允许引号与"这"之间少量标点）
+    for m in re.finditer(
+        r"[" + _qo + r"]([^" + _qa + r"\n]{1,30})[" + _qc + r"][\s。，；—…、\-]{0,5}这\s*" + _NUM_RE + r"\s*个字",
+        text,
+    ):
+        if _has_parallel(m.start(), m.end()):
+            continue  # 多引号并列结构跳过
+        _add((m.start(), m.end()), m.group(0).strip(), m.group(2), m.group(1), "B")
+
+    # 模式C：N 个字："X" / N 个字，「X」（N个字+分隔符+引号引文，引文可含逗号）
+    for m in re.finditer(
+        _NUM_RE + r"\s*个字[：:，,]\s*[" + _qo + r"]([^" + _qc + r"\n]{1,60})[" + _qc + r"]",
+        text,
+    ):
+        if _has_parallel(m.start(), m.end()):
+            continue  # 多引号并列结构跳过
+        _add((m.start(), m.end()), m.group(0).strip(), m.group(1), m.group(2), "C")
 
     # 2. 标记需人工复核："N 年前/N 年后"
     for m in re.finditer(r'(\d+)年[前后]', text):
