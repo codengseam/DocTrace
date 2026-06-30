@@ -31,7 +31,7 @@ _FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
 _ARCHETYPE_DEFAULTS = {
     "史": "narrative", "经": "narrative",
     "技": "knowledge", "职场": "modern",
-    "养生": "modern", "财": "modern",
+    "养生": "modern", "财": "modern", "心": "modern",
 }
 
 
