@@ -1,4 +1,4 @@
-from src.utils.quality import run_quality_check, check_chapter_title_soul
+from src.utils.quality import run_quality_check, check_chapter_title_soul, check_ai_cliches_v2
 
 
 def test_quality_check_detects_missing_section():
@@ -118,3 +118,72 @@ def test_chapter_title_soul_mixed_good_title_not_flagged():
     for title in good_titles:
         result = check_chapter_title_soul(title)
         assert result["score"] >= 3, f"好标题 '{title}' 不应被误判，实际 {result['score']}: {result['reasons']}"
+
+
+# ===== check_ai_cliches_v2 知识桶 AI 感词检测 =====
+# 沉淀自 2026-06-29 算法专栏去AI感重构 + 全章并行生成。
+# v1 (check_ai_cliches) 阈值≥3次，适合历史类专栏；v2 命中1次即 warning，适合 knowledge 桶。
+
+
+def test_ai_cliches_v2_detects_precise_buzzwords():
+    """精确词组命中即报 warning（神和根本/妙处在于/拉满/吊打）。"""
+    precise_words = ["神和根本", "妙处在于", "拉满", "吊打"]
+    for word in precise_words:
+        text = f"这是一段测试文字，包含 {word} 这个 AI 感词。"
+        result = check_ai_cliches_v2(text)
+        assert result["level"] == "warning", f"精确词 '{word}' 命中应报 warning"
+        assert word in result["hits"], f"hits 应包含 '{word}'"
+        assert result["count"] >= 1
+
+
+def test_ai_cliches_v2_detects_pattern_buzzwords():
+    """正则模式命中即报 warning（第一性原理作定语/本能地/瞬间完成/瞬间分成/瞬间变成）。"""
+    pattern_cases = [
+        "这种第一性原理的思维方式让我们看透本质",
+        "人类本能地想到折半查找",
+        "排序后瞬间分成两堆",
+        "数据量一大瞬间变成 O(n²)",
+        "代码瞬间完成优化",
+    ]
+    for text in pattern_cases:
+        result = check_ai_cliches_v2(text)
+        assert result["level"] == "warning", f"模式句应报 warning：{text}"
+        assert result["count"] >= 1
+
+
+def test_ai_cliches_v2_passes_clean_content():
+    """干净文本不报 warning。"""
+    clean_text = """
+## 一、问题与思路
+
+二分查找的本质是利用单调性折半。人类直觉会想到翻字典的方式：从中间开始，
+每次排除一半可能性。
+
+## 二、原理与实现
+
+核心思想是区间定义。快速分成两堆后，递归处理。
+"""
+    result = check_ai_cliches_v2(clean_text)
+    assert result["level"] == "ok", f"干净文本不应报 warning，命中：{result['hits']}"
+    assert result["count"] == 0
+
+
+def test_ai_cliches_v2_does_not_false_positive_legal_usage():
+    """合法用法不误伤：'本能反应'/'瞬间变化'/'第一性原理作名词' 等合法场景。"""
+    legal_cases = [
+        "这是人类的本能反应，不是后天学习。",
+        "光线变化瞬间，瞳孔会收缩。",
+        "从第一性原理出发推导，可以得到结论。",  # 作名词 + 出发，非定语
+        "投入实际生产前需要做压力测试。",  # 作动词
+    ]
+    for text in legal_cases:
+        result = check_ai_cliches_v2(text)
+        assert result["level"] == "ok", f"合法用法不应误伤：{text}，命中：{result['hits']}"
+
+
+def test_ai_cliches_v2_count_accumulates():
+    """count 累加多次命中。"""
+    text = "神和根本是妙处在于拉满吊打"  # 4 个精确词
+    result = check_ai_cliches_v2(text)
+    assert result["count"] == 4
+    assert len(result["hits"]) == 4

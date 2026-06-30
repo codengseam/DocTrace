@@ -27,6 +27,7 @@
 - [ ] 若修改了 `.trae/skills/deep-reading/rules.md`，已运行 `python scripts/sync_rules.py` 同步到 `RULES.md`
 - [ ] 提交前已运行 `python scripts/check_duplicates.py`，`output/` 目录无重复 Markdown 文件
 - [ ] `output/` 下章节名与文件名无「模块N」前缀（由 `check_book_structure.py --strict` 自动拦截，历史问题 BUG-019）
+- [ ] 算法专栏新增章节已按 [plan.md §九 章型分化模板](../../docs/algorithm-column/plan.md) 选型（算法/数据结构/方法论/迁移四型 6 要素变体 + §9.4 AI 感词禁用清单）
 
 ## 三、测试
 

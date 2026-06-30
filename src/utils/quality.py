@@ -240,6 +240,13 @@ def run_quality_checks(
             f"AI 套话黑名单命中 {cliche_report['count']} 次：{', '.join(cliche_report['hits'])}"
         )
 
+    # v2: 知识桶 AI 感词（命中 1 次即 warning），沉淀自 2026-06-29 算法专栏去AI感重构
+    buzzword_report = check_ai_cliches_v2(content)
+    if buzzword_report["level"] == "warning":
+        issues.append(
+            f"知识桶 AI 感词命中 {buzzword_report['count']} 次：{', '.join(buzzword_report['hits'])}"
+        )
+
     numeric_report = check_numeric_facts(content)
     for e in numeric_report["auto_errors"]:
         issues.append(
@@ -279,6 +286,65 @@ def check_ai_cliches(text: str) -> dict:
             count += occurrences
             hits.append(phrase)
     level = "warning" if count >= 3 else "ok"
+    return {"count": count, "hits": hits, "level": level}
+
+
+# 知识桶 AI 感词黑名单（沉淀自 2026-06-29 算法专栏去AI感重构 + 全章并行生成）
+# 与 AI_CLICHES_BLACKLIST 区别：
+# - v1 (AI_CLICHES_BLACKLIST) 历史类专栏用，阈值 ≥3 次为 warning
+# - v2 (AI_BUZZWORDS_*) knowledge 桶用，命中 1 次即 warning
+# 精确词组：低误伤风险，直接全词匹配
+AI_BUZZWORDS_PRECISE = [
+    "神和根本",
+    "妙处在于",
+    "拉满",
+    "吊打",
+]
+
+# 正则模式：高误伤风险词，只匹配特定修饰用法
+# - "第一性原理的" 匹配作定语（"第一性原理的思维"），不匹配作名词（"从第一性原理出发"）
+# - "本能地" 匹配修饰用法（"本能地想到"），不匹配"本能反应"
+# - "瞬间完成/分成/变成" 匹配夸张用法，不匹配"瞬间变化"等合法场景
+AI_BUZZWORDS_PATTERNS = [
+    r"第一性原理的",
+    r"本能地",
+    r"瞬间完成",
+    r"瞬间分成",
+    r"瞬间变成",
+]
+
+
+def check_ai_cliches_v2(text: str) -> dict:
+    """检查知识桶 AI 感词。命中 1 次即返回 warning。
+
+    覆盖 AI_BUZZWORDS_PRECISE（精确词组）+ AI_BUZZWORDS_PATTERNS（正则模式）。
+    精确词组直接 count，正则模式用 re.findall 计数。
+
+    Returns:
+        {"count": int, "hits": [str], "level": "ok"|"warning"}
+        hits 元素：精确词组原样返回，正则模式返回匹配到的字符串。
+    """
+    hits: List[str] = []
+    count = 0
+
+    for phrase in AI_BUZZWORDS_PRECISE:
+        occurrences = text.count(phrase)
+        if occurrences > 0:
+            count += occurrences
+            hits.append(phrase)
+
+    for pattern in AI_BUZZWORDS_PATTERNS:
+        matches = re.findall(pattern, text)
+        if matches:
+            count += len(matches)
+            # 去重保留首次匹配形态，避免 hits 列表过长
+            seen: set = set()
+            for m in matches:
+                if m not in seen:
+                    seen.add(m)
+                    hits.append(m)
+
+    level = "warning" if count >= 1 else "ok"
     return {"count": count, "hits": hits, "level": level}
 
 

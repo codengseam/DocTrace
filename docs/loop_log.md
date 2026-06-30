@@ -10,6 +10,8 @@
 
 ### 最近 20 条沉淀（按日期倒序）
 
+- [2026-06-29 算法专栏待办落地（2026-06-29，章型模板入文档 + AI 感词质检引擎 v2）](loop_log/2026-06.md#loop-20260629-8032f4)
+- [2026-06-29 算法专栏全章并行生成（2026-06-29，专家团评审 + 26 subagent 一次性全并行）](loop_log/2026-06.md#loop-20260629-f2d7b0)
 - [2026-06-29 中国礼仪课专栏深度质检二轮闭环 95.6→97.5](loop_log/2026-06.md#loop-20260629-2670c0)
 - [2026-06-29 心之力与强者思维双专栏并行生成](loop_log/2026-06.md#loop-20260629-e68bdf)
 - [2026-06-29 夸克阅读模式不识别 SPA 动态正文（SSG 静态生成）](loop_log/2026-06.md#loop-20260629-909ab9)
@@ -28,8 +30,6 @@
 - [2026-06-27 阶段4 边链裁剪完成（2026-06-27，解除 modern/knowledge soul injection 架构债）](loop_log/2026-06.md#loop-20260627-2f800a)
 - [2026-06-27 资治通鉴续写至 77 章 + 提示词/引用沉淀（2026-06-27，覆盖完整 1362 年通鉴）](loop_log/2026-06.md#loop-20260627-182485)
 - [2026-06-27 plan-review skill 硬阻塞修复 + dispatching-parallel-agents 原生化（2026-06-27，BUG-031）](loop_log/2026-06.md#loop-20260627-f6a702)
-- [2026-06-26 灵魂注入专项 - 明纪·海瑞上疏 AB 盲测](loop_log/2026-06.md#loop-20260626-735fb0)
-- [2026-06-26 superpowers 原生技能化 + 明纪阶段校验 + 章回体灵魂标题自动化](loop_log/2026-06.md#loop-20260626-8cb5f6)
 
 ### 主题锚点
 
@@ -47,13 +47,13 @@
 |---|---|---|
 | `#git_hygiene`（推送/合并/冲突/分支治理/commit 覆盖） | 6 | — |
 | `#reader_interaction`（阅读器/沉浸/翻页/吸底栏/SW 缓存） | 12 | — |
-| `#content_quality`（质检规则/灵魂注入/标题评分） | 16 | — |
+| `#content_quality`（质检规则/灵魂注入/标题评分） | 17 | — |
 | `#book_structure`（排序/校验/命名/去重/双源同步） | 20 | — |
 | `#deployment`（GitHub Pages/魔搭/.nojekyll/SW） | 5 | — |
 | `#soul_injection`（灵魂注入/章回体/总编Agent） | 3 | — |
-| `#ai_course`（专栏批量生成 / subagent 结果丢失） | 9 | — |
+| `#ai_course`（专栏批量生成 / subagent 结果丢失） | 11 | — |
 
-> 共 42 条沉淀，按月份分片存储于 `docs/loop_log/`。
+> 共 44 条沉淀，按月份分片存储于 `docs/loop_log/`。
 
 <!-- AUTOGEN END: loop_log index -->
 
