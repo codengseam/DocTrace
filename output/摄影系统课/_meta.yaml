@@ -1,0 +1,50 @@
+title: 摄影系统课
+category: 技
+author: 编委会
+description: 面向佳能 90D 用户（APS-C 画幅/EF 与 EF-S 卡口）的摄影系统学习专栏。从第一性原理出发，覆盖器材操作、曝光三要素、对焦测光、构图原理、光影运用、色彩管理、人像引导、人像实拍、风光旅游、后期处理、毕业创作、商业变现。新手走到可收费水平，任何环境下都能引导人物拍出好看的人像与风景。
+cover: 📷
+sort: 110
+archetype: modern
+chapters:
+  - chapter: 开篇
+    chapter_sort: 1
+    range: 1-2
+  - chapter: 器材操作
+    chapter_sort: 2
+    range: 1-4
+  - chapter: 曝光三要素
+    chapter_sort: 3
+    range: 1-4
+  - chapter: 对焦与测光
+    chapter_sort: 4
+    range: 1-4
+  - chapter: 构图原理
+    chapter_sort: 5
+    range: 1-6
+  - chapter: 光影运用
+    chapter_sort: 6
+    range: 1-6
+  - chapter: 色彩管理
+    chapter_sort: 7
+    range: 1-4
+  - chapter: 人像引导
+    chapter_sort: 8
+    range: 1-7
+  - chapter: 人像实拍
+    chapter_sort: 9
+    range: 1-5
+  - chapter: 风光旅游
+    chapter_sort: 10
+    range: 1-6
+  - chapter: 后期处理
+    chapter_sort: 11
+    range: 1-5
+  - chapter: 毕业创作
+    chapter_sort: 12
+    range: 1-1
+  - chapter: 商业变现
+    chapter_sort: 13
+    range: 1-5
+  - chapter: 结语
+    chapter_sort: 14
+    range: 1-1
