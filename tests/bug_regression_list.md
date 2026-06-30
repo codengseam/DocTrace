@@ -674,6 +674,8 @@
   2. **新增功能依赖必须同步更新所有 workflow 的依赖安装步骤**：BUG-035 在 `requirements.txt` 加了 `markdown`/`bleach`，但只更新了 `regression.yml`，遗漏了 `pages.yml` 和 `deploy-modelscope.yml`。`build_site.py` 的"静默跳过 + 打印告警"容错策略反而掩盖了这个问题（不报错但功能缺失）。新增构建依赖时，应 grep 所有 workflow 的 `pip install` 并统一更新。
   3. **"偶现失败"要查触发事件差异**：用户报"偶现"时，第一步应对比成功/失败两次的触发事件类型（push vs workflow_dispatch vs schedule），事件类型差异往往就是根因。
 
+---
+
 ## 专栏字数声称前后不一致（大模型 token 统计误差）
 
 - **编号**：BUG-038
@@ -719,3 +721,22 @@
   3. **正则覆盖要全模式**：BUG-026 只覆盖模式 A 一种写法，本次扩展到 A/B/C 三种。中文数字（"八个字"）和阿拉伯数字（"8 个字"）必须同时支持，否则会漏检一半。
   4. **单一信源**：`scripts/check_char_count.py` 与 `src/utils/quality.py` 共用同一套 `strip_punct`/`cn_to_int` 逻辑（手抄一份并注释"保持一致"），避免脚本说没错、quality.py 报有错的尴尬。后续可考虑抽公共模块。
   5. **BUG-026 的延续**：BUG-026 引入 `check_numeric_facts` 是对的，但只覆盖一种写法且只支持阿拉伯数字，是"半成品"。本次 BUG-038 是它的完整化，不是新造轮子。
+
+## check_internal_repetition 误报 knowledge/modern 桶的「」中英对照与章节引用
+
+- **编号**：BUG-039
+- **首次出现**：2026-06-30
+- **类型**：数据 / 兼容性
+- **现象**：AI 时代全栈知识边界专栏首轮流式质检中，`开篇_怎么用这份专栏.md` 80 分 passed=False，含 7 条「单章内重复古文/金句」误报。被误报的内容包括「GIL(Global Interpreter Lock,全局解释器锁)」「Python必须掌握的内核」「概念 → 原理 → 实践 → 速查/自测」等——这些在 knowledge 桶中是中英对照术语与章节标题引用的常态用法，不是古文金句重复。
+- **根因**：`check_internal_repetition` 在 `run_content_quality_checks` 中对所有 archetype 都跑，但该函数设计初衷是检测 narrative 桶的「古文/金句重复」（如「天下兴亡,匹夫有责」出现 2 次）。knowledge 桶用「」做中英对照（「GIL(...)」）和章节标题引用（「Python必须掌握的内核」）是常态，modern 桶用「」引书名（「代码整洁之道」）也是常态，不应被报为"古文/金句重复"。这是 BUG-027 archetype 分桶修复的遗漏：路由了年份/名家/时间线/中英混杂，但漏了 check_internal_repetition。
+- **修复**：`src/utils/content_quality.py` 的 `run_content_quality_checks` 中，把 `check_internal_repetition` 调用限定为 `if archetype == "narrative":` 才跑。knowledge/modern 桶跳过。
+- **涉及文件**：`src/utils/content_quality.py`（`run_content_quality_checks` 内 `check_internal_repetition` 路由）
+- **回归测试**：`tests/test_content_quality_archetype.py` 新增 `TestCheckInternalRepetitionArchetypeRouting` 类，4 个测试用例：
+  1. narrative 桶：同一「...」金句出现 2 次应被报重复
+  2. knowledge 桶：同一「中英对照术语」出现 2 次不应报重复
+  3. knowledge 桶：同一「章节标题」出现 2 次不应报重复
+  4. modern 桶：同一「书名」出现 2 次不应报重复
+- **教训**：
+  1. **archetype 分桶修复要遍历所有 archetype 专属检查函数**。BUG-027 路由了 4 类检查（年份/名家/时间线/中英混杂），但 check_internal_repetition 也是古籍专属（用「」做古文引用是 narrative 桶特征），漏了它。**教训：archetype 路由审查要列全所有"仅 narrative 合理"的检查项，不能只看 design.md §8 路由表是否显式列出。**
+  2. **「」书名号在三个桶里语义不同**：narrative 桶引古文金句、knowledge 桶做中英对照/章节引用、modern 桶引书名。检测规则不能跨桶一刀切。
+  3. 与 BUG-027 教训延续：每开新 knowledge 桶专栏不仅要扩展 `KNOWLEDGE_TERMS_WHITELIST`，还要复查所有 archetype 专属检查函数的路由是否齐全。

@@ -92,13 +92,63 @@ MODERN_ENGLISH_WHITELIST = [
 ]
 
 # knowledge 桶（技术教程/知识体系）中可接受的中英文技术术语白名单
+# 扩展历史:初版 27 词(AI 大模型学习专栏);2026-06 全栈知识边界专栏扩展 ~60 词;
+# 2026-06 全栈专栏质检阶段补 AI/ID/CI/CD/Zookeeper(BUG-027 教训延续:每开新 knowledge 桶专栏必须先扩展白名单)
 KNOWLEDGE_TERMS_WHITELIST = [
+    # 模型/算法类
     "Transformer", "Attention", "Token", "Tokenizer", "Embedding",
     "RAG", "LLM", "GPT", "BERT", "GPU", "CPU", "TPU",
+    # AI 时代核心术语(全栈专栏质检阶段补,2026-06)
+    "AI",
+    # 接口/协议类
     "API", "REST", "GraphQL", "gRPC",
+    # 存储/数据库类
     "SQL", "NoSQL", "ACID", "BASE", "CAP",
-    "RDBMS", "BTree", "LSM",
+    "RDBMS", "BTree", "LSM", "MVCC",
+    # 具体数据库产品(全栈专栏质检阶段补,2026-06:书名《高性能MySQL》/正文 MongoDB/PostgreSQL)
+    "MySQL", "PostgreSQL", "MongoDB", "MariaDB",
+    # Python 术语(全栈专栏质检阶段补,2026-06:模块 docstring 是 PEP 257 常态术语)
+    "docstring",
+    # 职务/角色名(全栈专栏质检阶段补,2026-06:后端 Lead 是行业通用职务)
+    "Lead",
+    # 编程语言类
     "Python", "Java", "Rust",
+    # 容器与编排(全栈专栏扩展,2026-06)
+    "Docker", "Kubernetes", "K8s",
+    # Web 服务器与中间件
+    "Nginx", "Kafka", "RabbitMQ", "Redis",
+    # 中间件-分布式协调(全栈专栏质检阶段补,2026-06)
+    "Zookeeper",
+    # 网络协议
+    "HTTP", "HTTPS", "TCP", "UDP", "TLS", "DNS", "CDN", "WebSocket",
+    # 安全
+    "JWT", "OAuth", "XSS", "CSRF",
+    # 分布式
+    "Raft", "Paxos",
+    # DevOps
+    "Jenkins", "GitLab", "GitHub",
+    # DevOps 核心缩写(全栈专栏质检阶段补,2026-06)
+    "CI", "CD",
+    # AI 工程化
+    "MCP",
+    # 运行时
+    "JVM", "GC", "GIL",
+    # 框架
+    "Spring", "Django", "Flask", "FastAPI", "Vue", "React", "Webpack", "Babel",
+    # 架构方法
+    "DDD", "TDD", "BDD", "ORM", "DAO",
+    # 缓存
+    "LRU", "LFU",
+    # 渲染
+    "SSR", "CSR", "SSG", "SPA",
+    # 云服务
+    "SaaS", "PaaS", "IaaS", "FaaS",
+    # 监控
+    "SLA", "SLO",
+    # Python web 与前端基础
+    "WSGI", "ASGI", "HTML", "CSS", "JSON", "XML", "DOM", "URL",
+    # 通用标识/业务术语(全栈专栏质检阶段补,2026-06)
+    "ID",
 ]
 
 # 现代职场专栏中过于敏感、易误报的 AI 味模式（由 check_soft_ai_pattern 等专项接管）
@@ -604,7 +654,11 @@ def run_content_quality_checks(content: str, archetype: str = "narrative") -> Co
     else:
         details["readability"].extend(check_mixed_language(content))
     details["readability"].extend(check_sublimation_quota(content))
-    details["readability"].extend(check_internal_repetition(content))
+    # check_internal_repetition 仅 narrative 桶跑(BUG-027 教训延续):
+    # knowledge 桶用「」做中英对照/章节标题引用是常态,会被误报为"古文/金句重复";
+    # modern 桶同理(职场课可能引用书名「XXX」)。古文金句重复只针对历史叙事。
+    if archetype == "narrative":
+        details["readability"].extend(check_internal_repetition(content))
     details["readability"].extend(check_soft_ai_pattern(content))
     details["readability"].extend(check_modern_jargon_terms(content))
     details["readability"].extend(check_title_hierarchy(content))

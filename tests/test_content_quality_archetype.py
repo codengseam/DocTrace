@@ -198,6 +198,187 @@ class TestKnowledgeTermsWhitelist:
 
 
 # ---------------------------------------------------------------------------
+# 契约4.1:knowledge 桶白名单扩展(全栈知识边界专栏,2026-06)
+# 对应 BUG-027 archetype 分桶教训:每开新 knowledge 桶专栏必须先扩展白名单
+# ---------------------------------------------------------------------------
+
+class TestKnowledgeTermsWhitelistExpansion:
+    """全栈知识边界专栏扩展的白名单术语(去重 + 命中 + 跨专栏一致性)。"""
+
+    def test_whitelist_has_no_duplicates(self):
+        """白名单不允许重复元素(防止 CAP/RAG/Embedding 等被重复添加)。"""
+        from src.utils.content_quality import KNOWLEDGE_TERMS_WHITELIST
+        assert len(KNOWLEDGE_TERMS_WHITELIST) == len(set(KNOWLEDGE_TERMS_WHITELIST)), (
+            f"白名单存在重复元素:{[t for t in KNOWLEDGE_TERMS_WHITELIST if KNOWLEDGE_TERMS_WHITELIST.count(t) > 1]}"
+        )
+
+    def test_existing_terms_preserved(self):
+        """扩展后原有 27 个术语仍在(AI 大模型/MySQL 专栏依赖)。"""
+        from src.utils.content_quality import KNOWLEDGE_TERMS_WHITELIST
+        required_existing = [
+            "Transformer", "Attention", "Token", "Tokenizer", "Embedding",
+            "RAG", "LLM", "GPT", "BERT", "GPU", "CPU", "TPU",
+            "API", "REST", "GraphQL", "gRPC",
+            "SQL", "NoSQL", "ACID", "BASE", "CAP",
+            "RDBMS", "BTree", "LSM",
+            "Python", "Java", "Rust",
+        ]
+        for term in required_existing:
+            assert term in KNOWLEDGE_TERMS_WHITELIST, f"原有术语 {term} 丢失"
+
+    @pytest.mark.parametrize("term", [
+        # 容器与编排
+        "Docker", "Kubernetes", "K8s",
+        # Web 服务器与中间件
+        "Nginx", "Kafka", "RabbitMQ", "Redis",
+        # 网络协议
+        "HTTP", "HTTPS", "TCP", "UDP", "TLS", "DNS", "CDN", "WebSocket",
+        # 安全
+        "JWT", "OAuth", "XSS", "CSRF",
+        # 分布式
+        "Raft", "Paxos", "MVCC",
+        # DevOps
+        "Jenkins", "GitLab", "GitHub",
+        # 运行时
+        "JVM", "GC", "GIL",
+        # 框架
+        "Spring", "Django", "Flask", "FastAPI", "Vue", "React",
+        # 架构方法
+        "DDD", "TDD", "BDD", "ORM", "DAO",
+        # 渲染
+        "SSR", "CSR", "SSG", "SPA",
+        # 云服务
+        "SaaS", "PaaS", "IaaS", "FaaS",
+        # 前端基础
+        "HTML", "CSS", "JSON", "DOM", "URL",
+    ])
+    def test_new_terms_in_whitelist(self, term):
+        """新增全栈术语必须在白名单内(参数化遍历每一个)。"""
+        from src.utils.content_quality import KNOWLEDGE_TERMS_WHITELIST
+        assert term in KNOWLEDGE_TERMS_WHITELIST, (
+            f"全栈专栏新增术语 {term} 未在白名单,会触发 check_mixed_language_knowledge 误报"
+        )
+
+    @pytest.mark.parametrize("term", [
+        "Docker", "Kubernetes", "HTTP", "TCP", "JWT", "Redis", "Kafka",
+        "Nginx", "Vue", "React", "Spring", "Django", "GIL", "JVM",
+        "DDD", "TDD", "LRU", "SSR", "SaaS", "HTML", "CSS", "JSON",
+    ])
+    def test_new_terms_not_flagged_as_mixed(self, term):
+        """新增术语与中文紧邻时不报中英混杂(参数化验证每一个)。"""
+        body = f"用{term}部署服务,这是全栈开发常见做法。"
+        content = _make_content("AI时代全栈知识边界", body)
+        report = run_content_quality_checks(content, archetype="knowledge")
+        readability_issues = report.details.get("readability", [])
+        assert not any("中英文混杂" in i or "中英混杂" in i for i in readability_issues), (
+            f"白名单术语 {term} 不应报中英混杂,却报:{readability_issues}"
+        )
+
+    @pytest.mark.parametrize("term", [
+        # 全栈专栏质检阶段补(2026-06):AI 时代核心术语 + DevOps 缩写 + 中间件 + 业务标识
+        "AI", "CI", "CD", "Zookeeper", "ID",
+        # 全栈专栏质检阶段二次补(2026-06):具体数据库产品 + Python 术语 + 职务名
+        "MySQL", "PostgreSQL", "MongoDB", "docstring", "Lead",
+    ])
+    def test_qc_stage_terms_in_whitelist(self, term):
+        """质检阶段补的术语必须在白名单内(参数化验证)。"""
+        from src.utils.content_quality import KNOWLEDGE_TERMS_WHITELIST
+        assert term in KNOWLEDGE_TERMS_WHITELIST, (
+            f"质检阶段补的术语 {term} 未在白名单,会触发 check_mixed_language_knowledge 误报"
+        )
+
+    @pytest.mark.parametrize("term", [
+        "AI", "CI", "CD", "Zookeeper", "ID",
+        "MySQL", "PostgreSQL", "MongoDB", "docstring", "Lead",
+    ])
+    def test_qc_stage_terms_not_flagged_as_mixed(self, term):
+        """质检阶段补的术语与中文紧邻时不报中英混杂(参数化验证)。"""
+        body = f"用{term}做全栈开发,这是 AI 时代常态。"
+        content = _make_content("AI时代全栈知识边界", body)
+        report = run_content_quality_checks(content, archetype="knowledge")
+        readability_issues = report.details.get("readability", [])
+        assert not any("中英文混杂" in i or "中英混杂" in i for i in readability_issues), (
+            f"质检阶段补的术语 {term} 不应报中英混杂,却报:{readability_issues}"
+        )
+
+    def test_existing_knowledge_columns_not_degraded(self):
+        """扩展白名单后,原有 knowledge 专栏样本不应出现新的失败(回归保险)。"""
+        # 用 AI 大模型学习的典型术语构造样本,扩展前已通过,扩展后仍应通过
+        body = (
+            "Transformer 用了 Attention 机制,每个 Token 都会被 Embedding 编码。"
+            "这是 RAG 系统的核心,GPT 和 BERT 都基于此。"
+        )
+        content = _make_content("AI大模型学习", body)
+        report = run_content_quality_checks(content, archetype="knowledge")
+        readability_issues = report.details.get("readability", [])
+        assert not any("中英文混杂" in i or "中英混杂" in i for i in readability_issues), (
+            f"原有 AI 大模型专栏样本不应因白名单扩展而失败:{readability_issues}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# 契约4.2:check_internal_repetition 仅 narrative 桶跑
+# (BUG-027 教训延续:knowledge 桶用「」做中英对照/章节标题引用是常态)
+# ---------------------------------------------------------------------------
+
+class TestCheckInternalRepetitionArchetypeRouting:
+    """check_internal_repetition 只对 narrative 桶跑,knowledge/modern 跳过。
+
+    knowledge 桶中「GIL(Global Interpreter Lock,全局解释器锁)」「Python必须掌握的内核」
+    是中英对照与章节引用的常态用法,不应被误报为"古文/金句重复"。
+    """
+
+    def test_narrative_flags_repeated_bracketed_quote(self):
+        """narrative 桶:同一「...」金句出现 2 次应被报重复。"""
+        body = "他常说「天下兴亡,匹夫有责」。后来又有人写「天下兴亡,匹夫有责」于墙上。"
+        content = _make_content("测试书", body)
+        report = run_content_quality_checks(content, archetype="narrative")
+        readability_issues = report.details.get("readability", [])
+        assert any("单章内重复古文/金句" in i for i in readability_issues), (
+            f"narrative 桶应报「天下兴亡」金句重复,却未报:{readability_issues}"
+        )
+
+    def test_knowledge_skips_repeated_bracketed_term(self):
+        """knowledge 桶:同一「中英对照术语」出现 2 次不应报重复。"""
+        body = (
+            "「GIL(Global Interpreter Lock,全局解释器锁)」是 CPython 的核心机制。"
+            "在讲并发时,「GIL(Global Interpreter Lock,全局解释器锁)」会再次出现。"
+        )
+        content = _make_content("AI时代全栈知识边界", body)
+        report = run_content_quality_checks(content, archetype="knowledge")
+        readability_issues = report.details.get("readability", [])
+        assert not any("单章内重复古文/金句" in i for i in readability_issues), (
+            f"knowledge 桶不应报中英对照术语重复,却报:{readability_issues}"
+        )
+
+    def test_knowledge_skips_repeated_chapter_title(self):
+        """knowledge 桶:同一「章节标题」出现 2 次不应报重复。"""
+        body = (
+            "本专栏第 04 章「Python必须掌握的内核」讲 GIL。"
+            "学完后回头看「Python必须掌握的内核」会有新理解。"
+        )
+        content = _make_content("AI时代全栈知识边界", body)
+        report = run_content_quality_checks(content, archetype="knowledge")
+        readability_issues = report.details.get("readability", [])
+        assert not any("单章内重复古文/金句" in i for i in readability_issues), (
+            f"knowledge 桶不应报章节标题重复,却报:{readability_issues}"
+        )
+
+    def test_modern_skips_repeated_bracketed_title(self):
+        """modern 桶:同一「书名」出现 2 次不应报重复。"""
+        body = (
+            "「代码整洁之道」是程序员必读。"
+            "团队 Lead 应把「代码整洁之道」列为新人必修。"
+        )
+        content = _make_content("职场课", body)
+        report = run_content_quality_checks(content, archetype="modern")
+        readability_issues = report.details.get("readability", [])
+        assert not any("单章内重复古文/金句" in i for i in readability_issues), (
+            f"modern 桶不应报书名重复,却报:{readability_issues}"
+        )
+
+
+# ---------------------------------------------------------------------------
 # 契约5：check_numeric_facts auto_errors 全桶都跑
 # ---------------------------------------------------------------------------
 
