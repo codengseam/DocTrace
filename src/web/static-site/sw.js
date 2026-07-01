@@ -2,7 +2,7 @@
  * 豪书斋 Service Worker
  * 缓存策略：核心资源预缓存 + 数据/笔记运行时缓存
  */
-const CACHE_NAME = 'halo-read-v9'; // 2026-07-01 补全离线导出 DOM 骨架，bump 规避旧版缓存
+const CACHE_NAME = 'halo-read-v10'; // 2026-07-01 修复自动阅读速度调节无效（BUG-042 亚像素 scrollBy），bump 规避旧版缓存
 const PRECACHE_ASSETS = [
     './',
     './index.html',

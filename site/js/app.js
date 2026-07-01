@@ -1204,6 +1204,7 @@
     /* ============ 番茄式自动阅读 ============ */
     let autoScrollRafId = null;
     let autoScrollLastTs = 0;
+    let autoScrollPxAccumulator = 0;
 
     function getReaderLineHeightPx() {
         // 取 .markdown-body 的计算行高（像素值），避免取 .reader 本身的继承值
@@ -1252,8 +1253,13 @@
         const lineHeightPx = getReaderLineHeightPx();
         const pxPerMs = (speed * lineHeightPx) / 60000;
         const dy = pxPerMs * dt;
-        if (dy > 0) {
-            reader.scrollBy(0, dy);
+        // 整数累积：亚像素 dy 累积到 >= 1px 时才 scrollBy，避免部分浏览器
+        // 对 scrollBy(0, 0.xx) 取整为 0 导致速度无差异（BUG-042）
+        autoScrollPxAccumulator += dy;
+        if (autoScrollPxAccumulator >= 1) {
+            const pxToScroll = Math.floor(autoScrollPxAccumulator);
+            reader.scrollBy(0, pxToScroll);
+            autoScrollPxAccumulator -= pxToScroll;
         }
 
         autoScrollRafId = window.requestAnimationFrame(autoScrollLoop);
@@ -1264,6 +1270,7 @@
         if (!elements.reader) return;
         if (state.currentView !== 'reader') return;
         autoScrollLastTs = 0;
+        autoScrollPxAccumulator = 0;
         autoScrollRafId = window.requestAnimationFrame(autoScrollLoop);
         const s = loadSettings();
         if (!s.autoScroll) {
@@ -1281,6 +1288,7 @@
             autoScrollRafId = null;
         }
         autoScrollLastTs = 0;
+        autoScrollPxAccumulator = 0;
         const s = loadSettings();
         if (s.autoScroll) {
             s.autoScroll = false;

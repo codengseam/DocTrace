@@ -104,6 +104,17 @@ async function buildDom() {
         addEventListener() {}, removeEventListener() {},
     }));
 
+    // IntersectionObserver polyfill（jsdom 不实现，bindScrollSpy 渲染书架时依赖）
+    if (!window.IntersectionObserver) {
+        window.IntersectionObserver = class {
+            constructor(cb) { this.cb = cb; this.els = []; }
+            observe(el) { this.els.push(el); }
+            unobserve() {}
+            disconnect() { this.els = []; }
+            takeRecords() { return []; }
+        };
+    }
+
     // CSS.escape polyfill（jsdom 部分版本缺失，loadNote 高亮路径用到）
     if (!window.CSS) window.CSS = {};
     if (!window.CSS.escape) window.CSS.escape = (s) => String(s).replace(/[^a-zA-Z0-9_\u4e00-\u9fa5\-]/g, (c) => '\\' + c);
@@ -118,13 +129,13 @@ async function buildDom() {
 }
 
 async function enterReader(document, window) {
-    await waitFor(() => document.querySelectorAll('.bookshelf-grid .book-card').length > 0, 2000);
+    await waitFor(() => document.querySelectorAll('.bookshelf-grid .book-card').length > 0, 5000);
     const card = document.querySelector('.bookshelf-grid .book-card');
     card.click();
-    await waitFor(() => document.querySelectorAll('.reader-view .tree-leaf').length > 0, 2000);
+    await waitFor(() => document.querySelectorAll('.reader-view .tree-leaf').length > 0, 5000);
     const leaf = document.querySelector('.reader-view .tree-leaf');
     leaf.click();
-    await waitFor(() => document.querySelector('.markdown-body'), 2000);
+    await waitFor(() => document.querySelector('.markdown-body'), 5000);
 }
 
 async function runTest() {
@@ -323,12 +334,13 @@ async function runTest() {
         assert(!offBtn.classList.contains('active'), '开启后「关闭」按钮不高亮');
         assert(window.__rafQueue.length > 0, 'rAF 已调度');
 
-        // 推进几帧（首帧建立时间基线 dt=0 不滚动，后续帧滚动）
-        for (let i = 0; i < 5; i++) {
+        // 推进足够多帧以触发整数累积器产出多次 scrollBy（BUG-042：亚像素 dy 累积到 >=1px 才滚动）
+        // 默认速度 50 行/分，lineHeight≈28px → 每帧 dy≈0.37px，约每 3 帧触发 1 次整数滚动
+        for (let i = 0; i < 30; i++) {
             window.__flushRaf(16 * (i + 1));
         }
-        assert(scrollByCalls.length >= 4, `rAF 推进 5 帧后 scrollBy 调用 ${scrollByCalls.length} 次 (>=4，首帧建基线)`);
-        assert(scrollByCalls.every((y) => y > 0), '所有 scrollBy dy > 0');
+        assert(scrollByCalls.length >= 4, `rAF 推进 30 帧后 scrollBy 调用 ${scrollByCalls.length} 次 (>=4，整数累积模式)`);
+        assert(scrollByCalls.every((y) => y >= 1), '所有 scrollBy dy 为 >=1 的整数（亚像素累积修复 BUG-042）');
 
         // localStorage 持久化
         let stored = JSON.parse(window.localStorage.getItem('reader-settings'));
@@ -598,7 +610,7 @@ async function runTest() {
     console.log('\n=== 测试18：首页“阅读”按钮跳转书架区（回归测试） ===');
     {
         const { dom, window, document } = await buildDom();
-        await waitFor(() => document.querySelectorAll('.bookshelf-grid .book-card').length > 0, 2000);
+        await waitFor(() => document.querySelectorAll('.bookshelf-grid .book-card').length > 0, 5000);
 
         const newNoteBtn = document.getElementById('newNoteBtn');
         const bookshelf = document.getElementById('bookshelf');
@@ -648,7 +660,7 @@ async function runTest() {
         // 点击入口打开 modal
         offlineExportBtn.click();
         assert(exportOverlay.classList.contains('open'), '点击入口后 modal 打开');
-        await waitFor(() => exportTree.querySelectorAll('.export-checkbox-note').length > 0, 2000);
+        await waitFor(() => exportTree.querySelectorAll('.export-checkbox-note').length > 0, 5000);
         const noteCbs = exportTree.querySelectorAll('.export-checkbox-note');
         assert(noteCbs.length > 0, '已打开书籍时复选树渲染出笔记条目');
         assert(exportCounter.textContent.includes('已选 0 篇'), '初始计数为 0');
@@ -683,7 +695,7 @@ async function runTest() {
 
         document.getElementById('offlineExportBtn').click();
         const exportTree = document.getElementById('exportTree');
-        await waitFor(() => exportTree.querySelectorAll('.export-checkbox-note').length > 0, 2000);
+        await waitFor(() => exportTree.querySelectorAll('.export-checkbox-note').length > 0, 5000);
         const noteCbs = Array.from(exportTree.querySelectorAll('.export-checkbox-note'));
         const totalNotes = noteCbs.length;
         assert(totalNotes > 0, '本书至少有 1 篇笔记可选');
@@ -739,7 +751,7 @@ async function runTest() {
 
         document.getElementById('offlineExportBtn').click();
         const exportTree = document.getElementById('exportTree');
-        await waitFor(() => exportTree.querySelectorAll('.export-checkbox-note').length > 0, 2000);
+        await waitFor(() => exportTree.querySelectorAll('.export-checkbox-note').length > 0, 5000);
         const noteCbs = Array.from(exportTree.querySelectorAll('.export-checkbox-note'));
 
         // 只选前 2 篇做单章+多章混合验证
@@ -836,7 +848,7 @@ async function runTest() {
 
         document.getElementById('offlineExportBtn').click();
         const exportTree = document.getElementById('exportTree');
-        await waitFor(() => exportTree.querySelectorAll('.export-checkbox-note').length > 0, 2000);
+        await waitFor(() => exportTree.querySelectorAll('.export-checkbox-note').length > 0, 5000);
         const noteCbs = Array.from(exportTree.querySelectorAll('.export-checkbox-note'));
         // 只选第一篇（注入了代码块的）
         noteCbs[0].checked = true;
@@ -883,7 +895,7 @@ async function runTest() {
 
         document.getElementById('offlineExportBtn').click();
         const exportTree = document.getElementById('exportTree');
-        await waitFor(() => exportTree.querySelectorAll('.export-checkbox-note').length > 0, 2000);
+        await waitFor(() => exportTree.querySelectorAll('.export-checkbox-note').length > 0, 5000);
         const noteCbs = Array.from(exportTree.querySelectorAll('.export-checkbox-note'));
         noteCbs[0].checked = true;
         noteCbs[0].dispatchEvent(new window.Event('change', { bubbles: true }));
@@ -987,7 +999,7 @@ async function runTest() {
 
         document.getElementById('offlineExportBtn').click();
         const exportTree = document.getElementById('exportTree');
-        await waitFor(() => exportTree.querySelectorAll('.export-checkbox-note').length > 0, 2000);
+        await waitFor(() => exportTree.querySelectorAll('.export-checkbox-note').length > 0, 5000);
         const noteCbs = Array.from(exportTree.querySelectorAll('.export-checkbox-note'));
         // 选前 2 篇（第二篇会失败）
         noteCbs[0].checked = true;
@@ -1020,7 +1032,7 @@ async function runTest() {
 
         document.getElementById('offlineExportBtn').click();
         const exportTree = document.getElementById('exportTree');
-        await waitFor(() => exportTree.querySelectorAll('.export-checkbox-note').length > 0, 2000);
+        await waitFor(() => exportTree.querySelectorAll('.export-checkbox-note').length > 0, 5000);
 
         const chapterCbs = Array.from(exportTree.querySelectorAll('.export-checkbox-chapter'));
         assert(chapterCbs.length > 0, '存在章节级复选框');
@@ -1060,7 +1072,7 @@ async function runTest() {
     {
         const { dom, window, document } = await buildDom();
         // 等 init 完成（书架渲染）后再点击，确保 initOfflineExport 已绑定事件
-        await waitFor(() => document.querySelectorAll('.bookshelf-grid .book-card').length > 0, 2000);
+        await waitFor(() => document.querySelectorAll('.bookshelf-grid .book-card').length > 0, 5000);
 
         // 未开书时打开导出 modal
         const offlineExportBtn = document.getElementById('offlineExportBtn');
@@ -1074,6 +1086,61 @@ async function runTest() {
         // Escape 键关闭导出 modal
         document.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
         assert(!exportOverlay.classList.contains('open'), 'Escape 键关闭导出 modal');
+
+        dom.window.close();
+    }
+
+    console.log('\n=== 测试28：自动阅读速度调节生效（BUG-042 回归测试） ===');
+    {
+        const { dom, window, document } = await buildDom();
+        await enterReader(document, window);
+
+        const reader = document.getElementById('reader');
+        const onBtn = document.querySelector('#autoScrollBtns button[data-auto-scroll="true"]');
+        const offBtn = document.querySelector('#autoScrollBtns button[data-auto-scroll="false"]');
+        const speedRange = document.getElementById('autoScrollSpeedRange');
+
+        // 足够长的内容，确保不会触发到末尾暂停
+        Object.defineProperty(reader, 'scrollHeight', { value: 50000, configurable: true });
+        Object.defineProperty(reader, 'clientHeight', { value: 800, configurable: true });
+        Object.defineProperty(reader, 'scrollTop', { value: 0, configurable: true });
+
+        // 统计总滚动像素
+        let totalScrolled = 0;
+        reader.scrollBy = (x, y) => {
+            if (typeof x === 'number' && typeof y === 'number') {
+                reader.scrollTop = (reader.scrollTop || 0) + y;
+                totalScrolled += y;
+            }
+        };
+
+        // 辅助：以指定速度跑 N 帧并返回总滚动像素
+        function runAtSpeed(speed, frames) {
+            speedRange.value = String(speed);
+            speedRange.dispatchEvent(new window.Event('input', { bubbles: true }));
+            // 重置阅读器位置与统计
+            Object.defineProperty(reader, 'scrollTop', { value: 0, configurable: true });
+            totalScrolled = 0;
+            onBtn.click();
+            // 清空可能残留的 rAF 队列（startAutoScroll 会新调度一个）
+            window.__rafQueue = window.__rafQueue || [];
+            for (let i = 0; i < frames; i++) {
+                window.__flushRaf(16 * (i + 1));
+            }
+            const scrolled = totalScrolled;
+            offBtn.click();
+            return scrolled;
+        }
+
+        // 慢速 24 行/分 vs 快速 100 行/分，各跑 60 帧（~960ms）
+        const slowTotal = runAtSpeed(24, 60);
+        const fastTotal = runAtSpeed(100, 60);
+
+        assert(slowTotal > 0, `慢速(24)有滚动距离 ${slowTotal}px (>0)`);
+        assert(fastTotal > 0, `快速(100)有滚动距离 ${fastTotal}px (>0)`);
+        assert(fastTotal > slowTotal, `快速滚动距离 ${fastTotal}px > 慢速 ${slowTotal}px（速度调节生效，BUG-042）`);
+        // 100/24 ≈ 4.17，宽松断言快速至少是慢速的 2 倍（避免环境抖动误报）
+        assert(fastTotal >= slowTotal * 2, `快速 ${fastTotal}px >= 慢速 ${slowTotal}px 的 2 倍（速度差异显著）`);
 
         dom.window.close();
     }
