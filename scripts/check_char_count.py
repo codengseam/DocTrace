@@ -29,6 +29,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.utils.quality import strip_frontmatter  # noqa: E402  (sys.path 需先就位)
+
 # 中英文标点 + 空白 + Markdown 符号，均不计入字数
 _PUNCT_CHARS = (
     # 中文标点
@@ -99,15 +104,6 @@ def cn_to_int(s: str) -> int:
 
     # 单字
     return _CN_DIGITS.get(s, -1)
-
-
-# frontmatter 跳过：开头 --- ... ---
-FRONTMATTER_RE = re.compile(r"\A---\s*\n.*?\n---\s*\n?", re.DOTALL)
-
-
-def _strip_frontmatter(text: str) -> str:
-    """移除开头的 YAML frontmatter，返回正文。"""
-    return FRONTMATTER_RE.sub("", text, count=1)
 
 
 # 引号字符集（用于 B/C 模式匹配引文边界）
@@ -217,7 +213,7 @@ def check_text(text: str) -> list[dict]:
 
     返回元素：{"line": int, "snippet": str, "expected": int, "actual": int, "pattern_type": "A"|"B"|"C"}
     """
-    body = _strip_frontmatter(text)
+    body = strip_frontmatter(text)
     offset = len(text) - len(body)
     matches = _scan(body)
 

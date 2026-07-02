@@ -810,3 +810,55 @@
   - `tests/test_reader_features.js` 测试5：断言更新为「推进 30 帧后 scrollBy 调用 ≥4 次，且每次 dy 为 ≥1 的整数」
   - `tests/test_reader_features.js` 测试28（新增）：分别以 24 行/分和 100 行/分跑 60 帧，断言快速滚动距离 > 慢速滚动距离，且快速 ≥ 慢速的 2 倍
 - **教训**：移动端浏览器对亚像素滚动 API（`scrollBy`/`scrollTop` 赋值）的取整行为比桌面端激进。任何依赖「逐帧小幅滚动」的动画（自动阅读、视差、惯性滚动）都应使用整数累积器模式，避免亚像素值被静默吞掉。速度参数的回归测试不能只验证「有滚动」，必须验证「不同速度产生不同距离」。
+
+## 一致性检测 v1.2.1 误报豁免（攻防动词/虚数前后缀/句界窗口/倒叙标注扩展）
+
+- **编号**：BUG-043
+- **首次出现**：2026-06-30
+- **类型**：数据
+- **现象**：v1.2 一致性检测上线后，全量扫描 `output/` 1300+ 文件发现 7 类系统性误报：
+  1. 攻防同句「项羽率三万骑兵破刘邦五十六万大军」被误报为同战役异兵力（攻方与守方兵力本就不同）
+  2. 虚数前缀「数十万人」与精确数「三十万」被误报为矛盾
+  3. 虚数后缀「三十余万/二十来万/三十多万」与精确数被误报为矛盾
+  4. 跨句邻战兵力被误配对（同句窗口未限定）
+  5. 「早在元始元年」「早就埋下了」等倒叙标记未豁免，正常倒叙被误报为时间线倒置
+  6. 「一个六百年的秦国」量词前缀被误判为年号
+  7. 「太建九年到十年」时间范围起点被当作独立时间点，触发逆序误报
+- **根因**：v1.2 初版规则只覆盖"理想化"的矛盾模式，未考虑中文叙事的自然表达变体（攻防句式、虚数表达、倒叙提示语、时间范围结构）。纯规则检测若不针对真实语料做误报豁免，会把大量正常文本标记为矛盾，导致规则不可用。
+- **修复**：在 `src/utils/consistency.py` 新增 7 类误报豁免机制：
+  1. `_ATTACK_DEFENSE_VERBS` 攻防动词表 + 主动/被动语态识别 → 攻防同句不报同战役异兵力
+  2. `_VAGUE_NUMBER_PREFIXES` ("数","几") → 虚数前缀不参与精确比较
+  3. `_VAGUE_NUMBER_SUFFIXES` ("余","来","多") → 虚数后缀不参与精确比较
+  4. 句界窗口限定（`window_matches` 限定在同一句内）→ 避免跨句误抓邻战兵力
+  5. `_FLASHBACK_MARKERS` 扩展（早在/早就/要讲清/得先讲清/已经X年了/话说回 等）→ 倒叙标记豁免
+  6. 量词前缀黑名单（"一个"不算年号）
+  7. 时间范围结构检测（"X年到Y年"范围起点不作独立时间点）
+- **涉及文件**：`src/utils/consistency.py`、`.trae/skills/content-review/rules/consistency-rules.md`（§2.5 误报豁免机制汇总）、`.trae/skills/content-review/checklist.md`
+- **回归测试**：`tests/test_consistency.py:TestV121FalsePositiveRegressions`（14 个测试，覆盖 6 类豁免 + 精确数仍检测的正向断言）+ `TestVagueNumberSuffixExemption`（4 个测试，覆盖第 7 类虚数后缀豁免）
+- **教训/沉淀**：
+  1. **纯规则检测必须在真实语料上跑全量扫描验证**：v1.2 初版只跑构造用例，上线后全量扫描暴露 7 类系统性误报。规则检测的"正确性"不只看构造用例通过，更看真实语料的误报率。
+  2. **误报豁免优先于漏报**：宁可标记需人工复核，也不静默放过真矛盾；但豁免必须有对应的回归测试，防止豁免过度导致漏报。
+  3. **每个豁免绑定至少 1 个真实误报案例**：7 类豁免全部来自 `output/` 全量扫描的真实文件，非凭空构造。这保证豁免针对真实问题，非过度设计。
+  4. **豁免机制应文档化**：在 `consistency-rules.md` §2.5 汇总所有豁免机制，避免规则与代码脱节。
+
+## 质检层 fiction archetype 路由 ValueError（跨层 archetype 白名单不一致）
+
+- **编号**：BUG-044
+- **首次出现**：2026-07-02
+- **类型**：兼容性
+- **环境**：`output/洛克菲勒/_meta.yaml` 声明 `archetype: fiction`，调用 `check_consistency` 或 `run_content_quality_checks` 时
+- **现象**：洛克菲勒专栏（fiction 桶，32 章已落盘）调用质检层时，`consistency.py:check_consistency` 与 `content_quality.py:run_content_quality_checks` 均抛 `ValueError: archetype 必须是 narrative/modern/knowledge 之一，收到：'fiction'`，导致 fiction 桶专栏完全无法跑质检。
+- **根因**：跨层 archetype 白名单不一致——`src/utils/prompts.py:_VALID_ARCHETYPES` 含 `fiction`（设计预留），但质检层（`consistency.py` / `content_quality.py`）只接受 `narrative/modern/knowledge`。生成层（`src/main.py`）通过 BUG-029 修复的"fiction→narrative 回落"绕过，但质检层没有回落逻辑，直接 raise。这是 BUG-029 的同类问题（跨层白名单不一致），只是 BUG-029 在生成层，本 bug 在质检层。
+- **修复**：质检层将 fiction 显式接纳为合法 archetype，按 modern 分支处理：
+  1. `src/utils/consistency.py:check_consistency` 合法值集合加 `fiction`，路由逻辑 `if archetype == "narrative"` 自然让 fiction 跳过时间线倒置（与 modern 一致）。
+  2. `src/utils/content_quality.py:run_content_quality_checks` 合法值集合加 `fiction`，`is_non_narrative` 包含 fiction，中英文混杂检查 `archetype in ("modern", "fiction")` 路由到 modern 白名单（fiction 桶含 Standard Oil/John D. Rockefeller 等英文术语）。
+  3. 不走"回落 narrative"路径，因为 fiction 桶不是古籍叙事，回落会误触发年份/名家/时间线检测。
+- **涉及文件**：`src/utils/consistency.py`、`src/utils/content_quality.py`、`tests/test_consistency.py`、`tests/test_content_quality_archetype.py`
+- **回归测试**：
+  - `tests/test_consistency.py:TestArchetypeValidation` 新增 3 测试：`test_fiction_archetype_accepted`（不 raise）、`test_fiction_skips_timeline_inversion`（跳过时间线）、`test_fiction_still_detects_numeric_cross`（仍检测数值矛盾）
+  - `tests/test_content_quality_archetype.py:TestArchetypeValidation` 将 `test_fiction_archetype_not_yet_supported_raises` 改为 `test_fiction_archetype_accepted_as_modern_branch`（断言 fiction 跳过古籍专属规则）
+  - 原 `test_invalid_archetype_raises` 把 fiction 改为真正非法值 `poetry`
+- **教训/沉淀**：
+  1. **跨层 archetype 白名单必须统一管理**：BUG-029（生成层）和 BUG-044（质检层）是同一根因的两次发作——archetype 白名单散落在 4 个文件（prompts.py / workflow.py / consistency.py / content_quality.py），各层独立维护导致漂移。**建议：把 _VALID_ARCHETYPES 提取为单一信源（如 src/utils/archetypes.py），各层 import 复用。**
+  2. **fiction 桶质检路由策略应与生成层解耦**：生成层 fiction 仍回落 narrative（因 prompts/fiction/ 未建），但质检层 fiction 按 modern 分支处理（因 fiction 内容是现代商战小说，无古籍年份/字号结构）。两层路由策略可以不同，关键是从内容特征出发而非从 prompt 文件存在性出发。
+  3. **测试断言"未落地"会过期**：原 `test_fiction_archetype_not_yet_supported_raises` 断言 fiction raise，但 fiction 桶实际已落盘（洛克菲勒 32 章），测试与生产事实脱节。**测试断言"未落地"类用例必须在落地时同步更新，否则会阻塞合理修复。**
