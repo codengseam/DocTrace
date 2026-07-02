@@ -374,29 +374,38 @@
         `;
     }
 
+    // 四类映射：把原 _meta.yaml 中的 category 归到人 / 事 / 财 / 世
+    function mapToQuadrant(category) {
+        const map = {
+            '人': '人', '心': '人', '养生': '人', '职场': '人', '礼': '人',
+            '事': '事', '技': '事', '学': '事', '驾': '事',
+            '财': '财', '商': '财',
+            '世': '世', '经': '世', '史': '世', '升学': '世'
+        };
+        return map[category] || '世';
+    }
+
     function renderCategoryTabs() {
         const container = elements.categoryTabs;
         container.innerHTML = '';
 
-        const allBtn = document.createElement('button');
-        allBtn.className = 'category-tab' + (state.selectedCategory === 'all' ? ' active' : '');
-        allBtn.textContent = '全部';
-        allBtn.dataset.category = 'all';
-        allBtn.type = 'button';
-        allBtn.role = 'tab';
-        allBtn.setAttribute('aria-selected', state.selectedCategory === 'all' ? 'true' : 'false');
-        allBtn.addEventListener('click', () => selectCategory('all'));
-        container.appendChild(allBtn);
+        const tabs = [
+            { key: 'all', label: '全部' },
+            { key: '人', label: '人' },
+            { key: '事', label: '事' },
+            { key: '财', label: '财' },
+            { key: '世', label: '世' }
+        ];
 
-        state.categories.forEach((cat) => {
+        tabs.forEach((tab) => {
             const btn = document.createElement('button');
-            btn.className = 'category-tab' + (state.selectedCategory === cat ? ' active' : '');
-            btn.textContent = cat;
-            btn.dataset.category = cat;
+            btn.className = 'category-tab' + (state.selectedCategory === tab.key ? ' active' : '');
+            btn.textContent = tab.label;
+            btn.dataset.category = tab.key;
             btn.type = 'button';
             btn.role = 'tab';
-            btn.setAttribute('aria-selected', state.selectedCategory === cat ? 'true' : 'false');
-            btn.addEventListener('click', () => selectCategory(cat));
+            btn.setAttribute('aria-selected', state.selectedCategory === tab.key ? 'true' : 'false');
+            btn.addEventListener('click', () => selectCategory(tab.key));
             container.appendChild(btn);
         });
     }
@@ -411,7 +420,7 @@
         let books = state.booksData;
 
         if (state.selectedCategory !== 'all') {
-            books = books.filter((book) => book.category === state.selectedCategory);
+            books = books.filter((book) => mapToQuadrant(book.category) === state.selectedCategory);
         }
 
         const query = state.bookshelfQuery.trim().toLowerCase();
@@ -420,8 +429,9 @@
                 const title = (book.title || '').toLowerCase();
                 const author = (book.author || '').toLowerCase();
                 const category = (book.category || '').toLowerCase();
+                const quadrant = mapToQuadrant(book.category).toLowerCase();
                 const description = (book.description || '').toLowerCase();
-                return title.includes(query) || author.includes(query) || category.includes(query) || description.includes(query);
+                return title.includes(query) || author.includes(query) || category.includes(query) || quadrant.includes(query) || description.includes(query);
             });
         }
 
@@ -458,7 +468,7 @@
 
             const category = document.createElement('div');
             category.className = 'book-category';
-            category.textContent = book.category || '未分类';
+            category.textContent = mapToQuadrant(book.category);
             info.appendChild(category);
 
             const title = document.createElement('div');
