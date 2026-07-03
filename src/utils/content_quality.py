@@ -21,7 +21,9 @@ from src.utils.quality import (
     check_modern_jargon,
     check_numeric_facts,
     check_sublimation_quota,
+    strip_frontmatter,
 )
+from src.utils.consistency import check_consistency
 
 # 内联跳转引用（必须清理）
 INLINE_REF_PATTERNS = [
@@ -205,15 +207,6 @@ class ContentQualityReport:
     details: Dict[str, List[str]] = field(default_factory=dict)
 
 
-def _strip_frontmatter(content: str) -> str:
-    """去掉 YAML frontmatter，返回正文。"""
-    if content.startswith("---"):
-        end = content.find("---", 3)
-        if end > 0:
-            return content[end + 3 :].strip()
-    return content.strip()
-
-
 def _extract_title(content: str) -> str:
     """从 YAML frontmatter 中提取 title。"""
     if not content.startswith("---"):
@@ -246,7 +239,7 @@ def check_citation_density(content: str, max_per_1k: int = 3) -> List[str]:
 
     规则：每 max_per_1k 中文字符不超过 1 处「——《XX》」式引用。
     """
-    body = _strip_frontmatter(content)
+    body = strip_frontmatter(content)
     # 去掉文末来源区域
     ref_split = re.split(r"\n##?\s*参考来源", body)
     narrative = ref_split[0] if ref_split else body
@@ -281,7 +274,7 @@ def check_years_present(content: str) -> List[str]:
 
     仅对 narrative 桶调用（modern/knowledge 在 run_content_quality_checks 中按 archetype 跳过）。
     """
-    body = _strip_frontmatter(content)
+    body = strip_frontmatter(content)
     if not YEAR_PATTERN.search(body):
         return ["正文未检测到关键年份/时间标注，请确认是否需要补充"]
     return []
@@ -292,7 +285,7 @@ def check_famous_critics(content: str) -> List[str]:
 
     仅对 narrative 桶调用（modern/knowledge 在 run_content_quality_checks 中按 archetype 跳过）。
     """
-    body = _strip_frontmatter(content)
+    body = strip_frontmatter(content)
 
     found = [name for name in FAMOUS_CRITICS if name in body]
 
@@ -341,7 +334,7 @@ def check_internal_repetition(content: str) -> List[str]:
 
     简单启发式：连续出现 2 次及以上的古文引用视为重复。
     """
-    body = _strip_frontmatter(content)
+    body = strip_frontmatter(content)
     quotes = re.findall(r"「([^」]{5,30})」", body)
     seen = set()
     dupes = set()
@@ -367,7 +360,7 @@ def check_cross_chapter_jump(content: str) -> List[str]:
 
 def check_mixed_language_knowledge(content: str) -> List[str]:
     """knowledge 桶版中英文混杂检查，剔除技术术语白名单。"""
-    body = _strip_frontmatter(content)
+    body = strip_frontmatter(content)
     cleaned = body
     # 按长度降序替换，避免短词部分替换长词（如 Token 先替换会破坏 Tokenizer）
     for word in sorted(KNOWLEDGE_TERMS_WHITELIST, key=len, reverse=True):
@@ -409,7 +402,7 @@ def _check_soul_dimension(content: str, cliches_result: dict) -> List[str]:
     cliches_result 复用主流程已跑的 check_ai_cliches 结果，避免重复扫描。
     """
     issues: List[str] = []
-    body = _strip_frontmatter(content)
+    body = strip_frontmatter(content)
 
     # §9.1 灵魂三问启发式近似
     issues.extend(_check_soul_three_questions(body))
@@ -497,7 +490,7 @@ def _check_soul_three_questions(body: str) -> List[str]:
 
 def check_soft_ai_pattern(content: str, max_count: int = 3) -> List[str]:
     """检查「不是X，是Y」软性 AI 句式是否超过上限。"""
-    body = _strip_frontmatter(content)
+    body = strip_frontmatter(content)
     matches = SOFT_AI_PATTERN.findall(body)
     if len(matches) > max_count:
         return [
@@ -508,14 +501,14 @@ def check_soft_ai_pattern(content: str, max_count: int = 3) -> List[str]:
 
 def check_redundant_citation(content: str) -> List[str]:
     """检查引用标注冗余：正文已写明出处，句末又挂「大意据《XX》」。"""
-    body = _strip_frontmatter(content)
+    body = strip_frontmatter(content)
     matches = REDUNDANT_CITATION_PATTERN.findall(body)
     return [f"引用标注冗余：正文已写明出处，句末又挂「大意据《XX》」"] if matches else []
 
 
 def check_modern_jargon_terms(content: str) -> List[str]:
     """检查现代术语硬套（底层逻辑、底层操作系统等）。"""
-    body = _strip_frontmatter(content)
+    body = strip_frontmatter(content)
     issues = []
     for term in MODERN_JARGON_TERMS:
         if term in body:
@@ -526,7 +519,7 @@ def check_modern_jargon_terms(content: str) -> List[str]:
 
 def check_mixed_language_modern(content: str) -> List[str]:
     """现代职场专栏版中英文混杂检查，剔除行业通用词白名单。"""
-    body = _strip_frontmatter(content)
+    body = strip_frontmatter(content)
     # 先把白名单词替换为占位，避免误报
     cleaned = body
     for word in MODERN_ENGLISH_WHITELIST:
@@ -554,7 +547,7 @@ def filter_ai_tone_for_modern(issues: List[str]) -> List[str]:
 
 def check_common_typos(content: str) -> List[str]:
     """检查常见错别字。"""
-    body = _strip_frontmatter(content)
+    body = strip_frontmatter(content)
     issues = []
     for wrong, right in COMMON_TYPOS.items():
         if wrong in body:
@@ -567,7 +560,7 @@ def check_title_hierarchy(content: str) -> List[str]:
 
     若正文出现「^# 」（一级标题）且同时有「## 参考来源」，提示层级倒置。
     """
-    body = _strip_frontmatter(content)
+    body = strip_frontmatter(content)
     has_h1_chapter = bool(re.search(r"^# [^#]", body, re.MULTILINE))
     has_h2_sources = bool(re.search(r"^##\s*参考来源", body))
     # 允许首个 # 作为文档大标题
@@ -582,7 +575,7 @@ def check_temporal_order(content: str) -> List[str]:
 
     仅对 narrative 桶调用（modern/knowledge 在 run_content_quality_checks 中按 archetype 跳过）。
     """
-    body = _strip_frontmatter(content)
+    body = strip_frontmatter(content)
     # 用 (?:^|\n) 匹配首段（strip 后 body 以 ## 开头，首个 ## 前无 \n）
     sections = re.split(r"(?:^|\n)## ", body)
     issues = []
@@ -607,12 +600,14 @@ def run_content_quality_checks(content: str, archetype: str = "narrative") -> Co
     details: Dict[str, List[str]] = {}
 
     # archetype 合法性校验（fail-fast 优于静默误路由）
-    if archetype not in ("narrative", "modern", "knowledge"):
+    # fiction 桶（"七实三虚"小说）按 modern 分支处理：跳过古籍专属规则，
+    # 放宽 AI 味检测，用 modern 桶白名单（与 consistency.py 路由一致）
+    if archetype not in ("narrative", "modern", "knowledge", "fiction"):
         raise ValueError(
-            f"archetype 必须是 narrative/modern/knowledge 之一，收到：{archetype!r}"
+            f"archetype 必须是 narrative/modern/knowledge/fiction 之一，收到：{archetype!r}"
         )
 
-    is_non_narrative = archetype in ("modern", "knowledge")
+    is_non_narrative = archetype in ("modern", "knowledge", "fiction")
 
     # 1. 真实性
     details["truth"] = []
@@ -625,7 +620,7 @@ def run_content_quality_checks(content: str, archetype: str = "narrative") -> Co
 
     # check_numeric_facts（通用，全桶都跑；禁区红线：quality.py 内部零改动，调用层按 archetype 过滤 manual_review）
     # 注意：strip frontmatter 避免 frontmatter 中的数字（如 sort:1）被误标
-    numeric_result = check_numeric_facts(_strip_frontmatter(content))
+    numeric_result = check_numeric_facts(strip_frontmatter(content))
     for err in numeric_result["auto_errors"]:
         details["truth"].append(
             f"数字事实硬错误：{err['pattern']}（应为 {err['expected']}，实际 {err['actual']}）"
@@ -647,7 +642,8 @@ def run_content_quality_checks(content: str, archetype: str = "narrative") -> Co
     if archetype == "narrative":
         details["readability"].extend(check_modern_jargon(content))
     # 中英文混杂检查按桶选白名单
-    if archetype == "modern":
+    # fiction 桶用 modern 白名单（商战小说含 Standard Oil/John D. Rockefeller 等英文术语）
+    if archetype in ("modern", "fiction"):
         details["readability"].extend(check_mixed_language_modern(content))
     elif archetype == "knowledge":
         details["readability"].extend(check_mixed_language_knowledge(content))
@@ -664,7 +660,7 @@ def run_content_quality_checks(content: str, archetype: str = "narrative") -> Co
     details["readability"].extend(check_title_hierarchy(content))
 
     # check_ai_cliches（通用，全桶都跑；命中 ≥3 次为 warning）
-    cliches_result = check_ai_cliches(_strip_frontmatter(content))
+    cliches_result = check_ai_cliches(strip_frontmatter(content))
     if cliches_result["level"] == "warning":
         details["readability"].append(
             f"AI套话黑名单命中 {cliches_result['count']} 次：{cliches_result['hits']}"
@@ -686,20 +682,29 @@ def run_content_quality_checks(content: str, archetype: str = "narrative") -> Co
     # 5. 灵魂维度（content-quality.md §9.2/9.3/9.4 自动部分；§9.1 三问仍需人工）
     details["soul"] = _check_soul_dimension(content, cliches_result)
 
+    # 6. 一致性维度（consistency-rules.md §2，前后矛盾/数据交叉矛盾/实体不一致）
+    # v1.2 新增：补齐"前后矛盾"检测缺口，纯规则无需 LLM
+    consistency_report = check_consistency(content, archetype=archetype)
+    details["consistency"] = [
+        f"[{issue.severity}] {issue.message}" for issue in consistency_report.issues
+    ]
+
     for key in details:
         issues.extend(details[key])
 
-    # 计分：从 100 起扣
+    # 计分：从 100 起扣（六维度，v1.2 新增 consistency 维度）
     score = 100
-    score -= min(20, len(details["truth"]) * 5)      # 真实性问题每项扣 5 分，上限 20
-    score -= min(20, len(details["readability"]) * 2) # 可读性问题每项扣 2 分，上限 20
-    score -= min(10, len(details["sequence"]) * 5)    # 顺序问题每项扣 5 分，上限 10
-    score -= min(15, len(details["citation"]) * 3)    # 引用问题每项扣 3 分，上限 15
-    score -= min(15, len(details["soul"]) * 3)        # 灵魂问题每项扣 3 分，上限 15
+    score -= min(20, len(details["truth"]) * 5)            # 真实性问题每项扣 5 分，上限 20
+    score -= min(20, len(details["readability"]) * 2)      # 可读性问题每项扣 2 分，上限 20
+    score -= min(10, len(details["sequence"]) * 5)         # 顺序问题每项扣 5 分，上限 10
+    score -= min(15, len(details["citation"]) * 3)         # 引用问题每项扣 3 分，上限 15
+    score -= min(15, len(details["soul"]) * 3)             # 灵魂问题每项扣 3 分，上限 15
+    # 一致性维度：用 ConsistencyReport.score（0-10）的反向作为扣分（10 分制）
+    score -= (10 - consistency_report.score)
     score = max(0, score)
 
     return ContentQualityReport(
-        passed=score >= 85,
+        passed=score >= 85 and consistency_report.passed,
         score=score,
         issues=issues,
         details=details,
@@ -717,9 +722,14 @@ def format_report(report: ContentQualityReport) -> str:
         "### 问题分布",
     ]
     for category, items in report.details.items():
-        label = {"truth": "真实性", "readability": "可读性", "sequence": "顺序", "citation": "引用克制"}.get(
-            category, category
-        )
+        label = {
+            "truth": "真实性",
+            "readability": "可读性",
+            "sequence": "顺序",
+            "citation": "引用克制",
+            "soul": "灵魂",
+            "consistency": "一致性",
+        }.get(category, category)
         lines.append(f"\n#### {label}（{len(items)} 项）")
         if items:
             for item in items:

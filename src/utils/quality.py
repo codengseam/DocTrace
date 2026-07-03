@@ -15,6 +15,14 @@ AI_PATTERNS_EXPLICIT = [
     r"从这个角度来看",
     r"让我们",
     r"从某种意义上说",
+    # v1.2.2 补齐（2025-2026 新出现的高频过渡套话，纯规则 0 误报）
+    r"换句话说",
+    r"不仅.*而且",
+    r"一言以蔽之",
+    r"说到底",
+    r"归根结底",
+    r"由此可见",
+    r"不难看出",
 ]
 
 # 软性 AI 套路句式（LoopAgent 第1章测评后新增）
@@ -361,6 +369,26 @@ def _strip_punct_for_char_count(s: str) -> str:
         "#*- >`|"
     )
     return "".join(ch for ch in s if ch not in _PUNCT)
+
+
+def strip_frontmatter(content: str) -> str:
+    """去掉 YAML frontmatter，返回正文（单一信源）。
+
+    供 check_char_count.py / consistency.py / content_quality.py 等所有质检模块复用，
+    避免在各处独立实现导致行为漂移。
+
+    解析规则：
+    - 仅当内容以 ``---\\n`` 开头才视为有 frontmatter
+    - 找到下一个独立的 ``---`` 行作为结束符
+    - 若未找到闭合 ``---``，原样返回（不去掉开头）
+    """
+    if not content.startswith("---"):
+        return content.strip()
+    # 严格匹配：--- 必须独占一行
+    m = re.match(r"^---\s*\n(.*?)\n---\s*\n?", content, re.DOTALL)
+    if m:
+        return content[m.end():].strip()
+    return content.strip()
 
 
 _CN_DIGITS_MAP = {

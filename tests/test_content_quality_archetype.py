@@ -501,8 +501,8 @@ class TestLegacyHelpersRemoved:
 class TestArchetypeValidation:
     """非法 archetype 应 fail-fast 抛 ValueError，不静默误路由。
 
-    防止拼写错误（如 'narrativ'）或未来 fiction 桶未落地时传入 'fiction'
-    导致行为不可预测（跳过古籍规则却用严格混杂检查的混合态）。
+    防止拼写错误（如 'narrativ'）导致行为不可预测。
+    v1.2.2 起 fiction 桶在质检层合法（按 modern 分支处理），不再 raise。
     """
 
     def test_empty_archetype_raises(self):
@@ -517,11 +517,23 @@ class TestArchetypeValidation:
         with pytest.raises(ValueError, match="archetype"):
             run_content_quality_checks(content, archetype="narrativ")  # 少了个 e
 
-    def test_fiction_archetype_not_yet_supported_raises(self):
-        """fiction 桶尚未落地，传入应抛 ValueError（而非静默走混合态）。"""
-        content = _make_content("测试书", "内容")
-        with pytest.raises(ValueError, match="archetype"):
-            run_content_quality_checks(content, archetype="fiction")
+    def test_fiction_archetype_accepted_as_modern_branch(self):
+        """v1.2.2: fiction 桶在质检层合法，按 modern 分支处理（不 raise）。
+
+        回归 BUG-044：修复前 fiction 在 content_quality.py 抛 ValueError，
+        导致洛克菲勒专栏（archetype: fiction）无法跑质检。
+        fiction 桶是"七实三虚"小说，路由到 modern 分支：
+        - 跳过古籍专属规则（年份/名家/时间线）
+        - 用 modern 桶白名单（含 Standard Oil 等英文术语）
+        - 放宽 AI 味检测
+        """
+        content = _make_content("洛克菲勒", "1865 年拍卖 72500 美元。")
+        report = run_content_quality_checks(content, archetype="fiction")
+        assert report is not None
+        # fiction 应跳过古籍专属的年份/名家检测（与 modern 一致）
+        truth_issues = report.details.get("truth", [])
+        year_issues = [i for i in truth_issues if "年份" in i or "名家" in i]
+        assert len(year_issues) == 0, f"fiction 应跳过古籍专属规则，实际报: {year_issues}"
 
     def test_none_archetype_raises(self):
         """None archetype 应抛 ValueError（而非被当成非 narrative 静默过滤）。"""
